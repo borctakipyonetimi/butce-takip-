@@ -62,12 +62,12 @@ export const AIChat: React.FC<AIChatProps> = ({ debts, incomes, expenses, instal
         throw new Error("API Anahtarı bulunamadı. Lütfen GitHub Secrets ayarlarını kontrol edin.");
       }
 
-      const totalDebtsVal = stats?.totalDebts || 0;
-      const totalIncomesVal = stats?.totalIncomes || 0;
-      const totalExpensesVal = stats?.totalExpenses || 0;
+      const totalDebtsVal = stats ? stats.totalDebts : 0;
+      const totalIncomesVal = stats ? stats.totalIncomes : 0;
+      const totalExpensesVal = stats ? stats.totalExpenses : 0;
       const netStatusVal = totalIncomesVal - totalExpensesVal;
-      const debtsCount = debts?.length || 0;
-      const installmentsCount = installmentDebts?.length || 0;
+      const debtsCount = debts ? debts.length : 0;
+      const installmentsCount = installmentDebts ? installmentDebts.length : 0;
 
       const budgetContext = " Kullanicinin Mevcut Finansal Durumu: " +
         " - Toplam Borc: " + totalDebtsVal + 
@@ -104,7 +104,12 @@ export const AIChat: React.FC<AIChatProps> = ({ debts, incomes, expenses, instal
       }
 
       const data = await response.json();
-      const replyText = data?.candidates?.?[0]?.content?.parts?.?[0]?.text || "Mesajınızı tam olarak analiz edemedim, lütfen tekrar sormayı deneyin.";
+      
+      // Klasik ve hatasız nesne doğrulama yöntemi
+      let replyText = "Mesajınızı tam olarak analiz edemedim, lütfen tekrar sormayı deneyin.";
+      if (data && data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0]) {
+        replyText = data.candidates[0].content.parts[0].text || replyText;
+      }
       
       setMessages((prev) => [...prev, { sender: "bot", text: replyText }]);
     } catch (err: any) {
