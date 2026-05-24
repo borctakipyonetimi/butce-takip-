@@ -1,0 +1,120 @@
+@import "tailwindcss";
+
+/* Enable selector-based dark mode in Tailwind CSS v4 */
+@variant dark (&:where(.dark, .dark *));
+
+/* Global high-performance transitions and high-contrast color styles */
+body {
+  background-color: #f8fafc;
+  color: #0f172a;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+body.dark {
+  background-color: #0f172a;
+  color: #f1f5f9;
+}
+
+/* Theme overrides mapping Indigo scale to the selected user theme style */
+.theme-green {
+  --color-indigo-50: #f0fdf4 !important;
+  --color-indigo-100: #dcfce7 !important;
+  --color-indigo-200: #bbf7d0 !important;
+  --color-indigo-300: #86efac !important;
+  --color-indigo-400: #4ade80 !important;
+  --color-indigo-500: #22c55e !important;
+  --color-indigo-600: #10b981 !important;
+  --color-indigo-700: #047857 !important;
+  --color-indigo-800: #065f46 !important;
+  --color-indigo-900: #064e3b !important;
+  --color-indigo-950: #022c22 !important;
+}
+
+.theme-purple {
+  --color-indigo-50: #faf5ff !important;
+  --color-indigo-100: #f3e8ff !important;
+  --color-indigo-200: #e9d5ff !important;
+  --color-indigo-300: #d8b4fe !important;
+  --color-indigo-400: #c084fc !important;
+  --color-indigo-500: #a855f7 !important;
+  --color-indigo-600: #8b5cf6 !important;
+  --color-indigo-700: #6d28d9 !important;
+  --color-indigo-800: #5b21b6 !important;
+  --color-indigo-900: #4c1d95 !important;
+  --color-indigo-950: #2e1065 !important;
+}
+
+.theme-orange {
+  --color-indigo-50: #fff7ed !important;
+  --color-indigo-100: #ffedd5 !important;
+  --color-indigo-200: #fed7aa !important;
+  --color-indigo-300: #fdbb74 !important;
+  --color-indigo-400: #fb923c !important;
+  --color-indigo-500: #f97316 !important;
+  --color-indigo-600: #ea580c !important;
+  --color-indigo-700: #c2410c !important;
+  --color-indigo-800: #9a3412 !important;
+  --color-indigo-900: #7c2d12 !important;
+  --color-indigo-950: #431407 !important;
+}
+
+/* Custom animations helper */
+@keyframes clock-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.85; transform: scale(0.98); }
+}
+
+.animate-clock-pulse {
+  animation: clock-pulse 2s infinite ease-in-out;
+}
+
+/* Premium dashboard card mesh background gradients and animations */
+@keyframes float-ball {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(15px, -15px) scale(1.15); }
+}
+
+@keyframes gradient-shift {
+  0% { bg-gradient-position: 0% 50%; }
+  50% { bg-gradient-position: 100% 50%; }
+  100% { bg-gradient-position: 0% 50%; }
+}
+
+.animate-float-slow {
+  animation: float-ball 8s infinite ease-in-outAlt;
+}
+
+.animate-float-reverse {
+  animation: float-ball 12s infinite ease-in-out reverse;
+}
+
+.banner-premium-gradient {
+  background: linear-gradient(135deg, #1e1b4b 0%, #311042 40%, #032b30 100%);
+  background-size: 200% 200%;
+}
+
+/* Simulated Phone Native Slide Alert Keyframe */
+@keyframes slide-phone-alert {
+  0% { transform: translateY(-130%); opacity: 0; }
+  12% { transform: translateY(0); opacity: 1; }
+  88% { transform: translateY(0); opacity: 1; }
+  100% { transform: translateY(-130%); opacity: 0; }
+}
+
+.animate-phone-alert {
+  animation: slide-phone-alert 4.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Turkish waving flag animation */
+@keyframes wave-flag {
+  0%, 100% { transform: translateY(0) rotate(0); }
+  25% { transform: translateY(-1px) rotate(2deg); }
+  50% { transform: translateY(1px) rotate(-2deg); }
+  75% { transform: translateY(-0.5px) rotate(1deg); }
+}
+
+.animate-wave-flag {
+  display: inline-block;
+  animation: wave-flag 2.5s infinite ease-in-out;
+  transform-origin: bottom center;
+}

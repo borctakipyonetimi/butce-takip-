@@ -1,0 +1,227 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+import React, { useState } from "react";
+import { PlusCircle, Trash2, Edit, PiggyBank, Calendar, DollarSign, Wallet } from "lucide-react";
+import { Income } from "../types";
+import { DoughnutChart, LineChart } from "./BudgetCharts";
+import { useCurrency } from "../utils/CurrencyContext";
+
+interface IncomesListProps {
+  incomes: Income[];
+  onSaveIncome: (income: Partial<Income>) => void;
+  onDeleteIncome: (id: number) => void;
+}
+
+export const IncomesList: React.FC<IncomesListProps> = ({ incomes, onSaveIncome, onDeleteIncome }) => {
+  const { format, currencySymbol } = useCurrency();
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalTitle, setModalTitle] = useState("Gelir Ekle");
+  const [incomeId, setIncomeId] = useState<number | undefined>(undefined);
+  const [name, setName] = useState("");
+  const [amount, setAmount] = useState("");
+  const [date, setDate] = useState("");
+
+  const handleOpenAdd = () => {
+    setModalTitle("Gelir Ekle");
+    setIncomeId(undefined);
+    setName("");
+    setAmount("");
+    setDate(new Date().toISOString().slice(0, 10));
+    setIsModalOpen(true);
+  };
+
+  const handleOpenEdit = (inc: Income) => {
+    setModalTitle("Gelir Düzenle");
+    setIncomeId(inc.id);
+    setName(inc.name);
+    setAmount(inc.amount.toString());
+    setDate(inc.date ? inc.date.slice(0, 10) : new Date().toISOString().slice(0, 10));
+    setIsModalOpen(true);
+  };
+
+  const handleSave = () => {
+    const parsedAmount = parseFloat(amount);
+    if (!name.trim()) {
+      alert("Lütfen gelir adını girin.");
+      return;
+    }
+    if (isNaN(parsedAmount) || parsedAmount <= 0) {
+      alert("Lütfen geçerli bir gelir tutarı girin.");
+      return;
+    }
+
+    onSaveIncome({
+      id: incomeId,
+      name: name.trim(),
+      amount: parsedAmount,
+      date: date || new Date().toISOString(),
+    });
+    setIsModalOpen(false);
+  };
+
+  const totalIncomes = incomes.reduce((s, i) => s + i.amount, 0);
+
+  // Formatting colors for doughnut items
+  const colors = ["#10b981", "#3b82f6", "#f59e0b", "#8b5cf6", "#ec4899", "#14b8a6", "#64748b"];
+  const doughnutData = incomes.map((i, idx) => ({
+    label: i.name,
+    value: i.amount,
+    color: colors[idx % colors.length],
+  }));
+
+  // Historical sorted trends
+  const trendSorted = [...incomes].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  const trendLabels = trendSorted.map(t => t.name);
+  const trendValues = trendSorted.map(t => t.amount);
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-bold flex items-center gap-2 text-slate-800 dark:text-slate-100">
+          <PiggyBank className="w-5 h-5 text-emerald-500" /> GELİRLER
+        </h2>
+        <button
+          onClick={handleOpenAdd}
+          className="px-3.5 py-1.5 bg-emerald-600 text-white hover:bg-emerald-700 text-xs font-bold rounded-xl flex items-center gap-1.5 transition active:scale-95 shadow-sm"
+        >
+          <PlusCircle className="w-4 h-4" /> Gelir Ekle
+        </button>
+      </div>
+
+      <div className="p-4 bg-emerald-50/50 dark:bg-emerald-950/20 text-emerald-950 dark:text-emerald-300 rounded-2xl flex items-center justify-between font-bold text-xs">
+        <span>Aylık Toplam Gelir Kazancı:</span>
+        <span className="text-base text-emerald-600 dark:text-emerald-400 font-mono">{format(totalIncomes)}</span>
+      </div>
+
+      <div className="grid gap-6 md:grid-cols-2">
+        {/* Left Side: Listing */}
+        <div className="space-y-3">
+          <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wide">Gelir Kayıtları</h4>
+          {incomes.length === 0 ? (
+            <div className="text-center py-6 text-xs text-slate-400 font-medium">
+              Henüz bir gelir kaydı bulunmuyor.
+            </div>
+          ) : (
+            incomes.map((i) => (
+              <div
+                key={i.id}
+                className="p-3 bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700/50 shadow-sm flex items-center justify-between transition hover:shadow-md"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 flex items-center justify-center shrink-0">
+                    <Wallet className="w-5 h-5 text-emerald-500" />
+                  </div>
+                  <div>
+                    <p className="font-bold text-xs text-slate-800 dark:text-slate-100">{i.name}</p>
+                    <p className="text-[10px] text-slate-400 flex items-center gap-0.5 font-medium">
+                      <Calendar className="w-3 h-3" /> {new Date(i.date).toLocaleDateString("tr-TR")}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <span className="font-extrabold text-sm text-emerald-600 dark:text-emerald-400 font-mono">
+                    {format(i.amount)}
+                  </span>
+                  <div className="flex items-center">
+                    <button
+                      onClick={() => handleOpenEdit(i)}
+                      className="p-1.5 text-slate-400 hover:text-slate-800 dark:hover:text-slate-100 rounded-lg transition"
+                    >
+                      <Edit className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={() => onDeleteIncome(i.id)}
+                      className="p-1.5 text-rose-400 hover:text-rose-600 dark:hover:text-rose-300 rounded-lg transition"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Right Side: Visual Graphs */}
+        <div className="space-y-6">
+          {incomes.length > 0 && (
+            <>
+              <div className="p-4 bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700/50 shadow-sm space-y-2">
+                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wide text-center">Gelir Dağılım Grafiği</h4>
+                <DoughnutChart data={doughnutData} />
+              </div>
+
+              {trendValues.length > 1 && (
+                <div className="p-4 bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700/50 shadow-sm space-y-2">
+                  <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wide text-center">Gelir Eğilim Çizgisi</h4>
+                  <LineChart labels={trendLabels} values={trendValues} lineColor="#10b981" />
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Income Add/Edit Modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 rounded-3xl p-6 w-full max-w-sm space-y-4 shadow-xl">
+            <h4 className="text-base font-bold flex items-center gap-1.5 border-b pb-2 dark:border-slate-700">
+              <DollarSign className="w-5 h-5 text-emerald-500" /> {modalTitle}
+            </h4>
+            <div className="space-y-3">
+              <div>
+                <label className="text-[10px] font-bold text-slate-400 block mb-1">GELİR BAŞLIĞI</label>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Maaş, prim, kira geliri vb."
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-bold text-slate-400 block mb-1">GELİR MİKTARI</label>
+                <input
+                  type="number"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  placeholder="₺15000"
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-bold text-slate-400 block mb-1">TAHSİLAT TARİHİ</label>
+                <input
+                  type="date"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs dark:text-white"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-2 pt-2">
+              <button
+                onClick={() => setIsModalOpen(false)}
+                className="flex-1 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-slate-200 rounded-xl font-bold text-xs"
+              >
+                İptal
+              </button>
+              <button
+                onClick={handleSave}
+                className="flex-1 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs"
+              >
+                Kaydet
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
