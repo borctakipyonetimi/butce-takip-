@@ -1,12 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { GoogleGenerativeAI } from '@google/genai';
-import { Send, Sparkles, MessageSquare, AlertCircle } from 'lucide-react';
 
 interface Message {
   id: string;
   text: string;
   sender: 'user' | 'ai';
-  timestamp: Date;
 }
 
 export function AIChat() {
@@ -14,23 +11,15 @@ export function AIChat() {
     {
       id: 'welcome',
       text: 'Merhaba! Ben bütçe ve finans yapay zekası asistanınızım. Harcamalarınızı, borçlarınızı analiz edebilir ve size tasarruf ipuçları sunabilirim. Nasıl yardımcı olabilirim?',
-      sender: 'ai',
-      timestamp: new Date()
+      sender: 'ai'
     }
   ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Doğrudan tarayıcıdan Gemini modeline bağlanıyoruz
-  const genAI = new GoogleGenerativeAI("AIzaSyAbSGGo_wbm6gzCaOxXazHITbxIYHzDXQc");
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
   useEffect(() => {
-    scrollToBottom();
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
   const handleSend = async (e: React.FormEvent) => {
@@ -41,102 +30,59 @@ export function AIChat() {
     setInput('');
     setIsLoading(true);
 
-    const newUserMessage: Message = {
-      id: Date.now().toString(),
-      text: userMessageText,
-      sender: 'user',
-      timestamp: new Date()
-    };
-
-    setMessages(prev => [...prev, newUserMessage]);
+    setMessages(prev => [...prev, { id: Date.now().toString(), text: userMessageText, sender: 'user' }]);
 
     try {
-      // Backend /api/chat yerine doğrudan Google Gemini API'ına istek atıyoruz
-      const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
-      
-      // Finans asistanı kişiliği kazandırmak için sistem talimatı ekliyoruz
-      const prompt = `Sen bütçe, borç takibi ve kişisel finans konularında uzman bir yapay zeka asistanısın. Kullanıcının şu mesajına yardımcı, motive edici ve çözüm odaklı bir finansal danışman gibi Türkçe cevap ver: ${userMessageText}`;
-      
-      const result = await model.generateContent(prompt);
-      const responseText = result.response.text();
+      // Hiçbir kütüphaneye ihtiyaç duymadan doğrudan Google API'sine bağlanıyoruz
+      const response = await fetch(
+        `https://googleapis.com`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: `Sen bir finans danışmanısın. Şu soruya Türkçe cevap ver: ${userMessageText}` }] }]
+          })
+        }
+      );
 
-      const newAIMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        text: responseText || 'Anlayamadım, lütfen tekrar dener misiniz?',
-        sender: 'ai',
-        timestamp: new Date()
-      };
+      const data = await response.json();
+      const responseText = data?.candidates?.[0]?.content?.parts?.[0]?.text || 'Anlayamadım, tekrar dener misiniz?';
 
-      setMessages(prev => [...prev, newAIMessage]);
+      setMessages(prev => [...prev, { id: (Date.now() + 1).toString(), text: responseText, sender: 'ai' }]);
     } catch (error) {
-      console.error('Gemini API Hatası:', error);
-      setMessages(prev => [...prev, {
-        id: (Date.now() + 1).toString(),
-        text: 'Üzgünüm, yapay zeka servisiyle iletişim kurulurken bir hata oluştu. Lütfen bağlantınızı kontrol edip tekrar deneyin.',
-        sender: 'ai',
-        timestamp: new Date()
-      }]);
+      setMessages(prev => [...prev, { id: (Date.now() + 1).toString(), text: 'Bağlantı hatası oluştu.', sender: 'ai' }]);
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="flex flex-col h-[500px] bg-white dark:bg-slate-900 rounded-xl shadow-md overflow-hidden border border-slate-100 dark:border-slate-800">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-violet-600 to-indigo-600 p-4 text-white flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Sparkles className="w-5 h-5 animate-pulse" />
-          <h3 className="font-semibold text-lg">HESAP YAPAY ZEKASI</h3>
-        </div>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '450px', background: '#fff', borderRadius: '12px', overflow: 'hidden', border: '1px solid #e2e8f0' }}>
+      <div style={{ background: '#4f46e5', padding: '12px', color: '#fff', fontWeight: 'bold' }}>
+        HESAP YAPAY ZEKASI
       </div>
-
-      {/* Messages Feed */}
-      <div className="flex-1 p-4 overflow-y-auto space-y-4">
+      <div style={{ flex: 1, padding: '16px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px' }}>
         {messages.map((msg) => (
-          <div
-            key={msg.id}
-            className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
-          >
-            <div
-              className={`max-w-[80%] rounded-2xl p-3 text-sm ${
-                msg.sender === 'user'
-                  ? 'bg-violet-600 text-white rounded-br-none'
-                  : 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 rounded-bl-none'
-              }`}
-            >
-              <p className="whitespace-pre-wrap">{msg.text}</p>
+          <div key={msg.id} style={{ display: 'flex', justifyContent: msg.sender === 'user' ? 'flex-end' : 'flex-start' }}>
+            <div style={{ maxWidth: '80%', padding: '10px 14px', borderRadius: '12px', fontSize: '14px', background: msg.sender === 'user' ? '#4f46e5' : '#f1f5f9', color: msg.sender === 'user' ? '#fff' : '#1e293b' }}>
+              {msg.text}
             </div>
           </div>
         ))}
-        {isLoading && (
-          <div className="flex justify-start">
-            <div className="bg-slate-100 dark:bg-slate-800 rounded-2xl p-3 text-sm text-slate-500 rounded-bl-none flex items-center gap-2">
-              <span className="w-2 h-2 bg-violet-600 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
-              <span className="w-2 h-2 bg-violet-600 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
-              <span className="w-2 h-2 bg-violet-600 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
-            </div>
-          </div>
-        )}
+        {isLoading && <div style={{ color: '#64748b', fontSize: '13px' }}>Düşünüyor...</div>}
         <div ref={messagesEndRef} />
       </div>
-
-      {/* Input Form */}
-      <form onSubmit={handleSend} className="p-3 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 flex gap-2">
+      <form onSubmit={handleSend} style={{ padding: '12px', borderTop: '1px solid #e2e8f0', display: 'flex', gap: '8px' }}>
         <input
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="Yapay zekaya bütçeni sor..."
+          placeholder="Sorunuzu yazın..."
           disabled={isLoading}
-          className="flex-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 dark:text-white"
+          style={{ flex: 1, padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', outline: 'none' }}
         />
-        <button
-          type="submit"
-          disabled={isLoading || !input.trim()}
-          className="bg-violet-600 hover:bg-violet-700 disabled:opacity-50 text-white p-2 rounded-lg transition-colors"
-        >
-          <Send className="w-4 h-4" />
+        <button type="submit" disabled={isLoading || !input.trim()} style={{ background: '#4f46e5', color: '#fff', padding: '8px 16px', borderRadius: '6px', border: 'none', cursor: 'pointer' }}>
+          Gönder
         </button>
       </form>
     </div>
