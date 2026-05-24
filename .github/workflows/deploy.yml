@@ -2,7 +2,7 @@ name: Deploy Vite Site to Pages
 
 on:
   push:
-    branches: ["main"] # Eğer ana dalınızın adı master ise burayı master yapın
+    branches: ["main"]
 
 permissions:
   contents: read
