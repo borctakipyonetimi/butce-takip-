@@ -26,7 +26,6 @@ export const AIChat: React.FC<AIChatProps> = ({ debts, incomes, expenses, instal
   const [inputValue, setInputValue] = useState("");
   const [loading, setLoading] = useState(false);
   
-  // Custom scroll refs to target ONLY the scrollable chat container, preventing parent window scroll jump
   const chatContainerRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = (behavior: "smooth" | "auto" = "smooth") => {
@@ -39,9 +38,7 @@ export const AIChat: React.FC<AIChatProps> = ({ debts, incomes, expenses, instal
   };
 
   useEffect(() => {
-    // Only scroll if there are user messages or loading transitions, avoiding auto-scrolling the parent viewport on initial mount
     if (messages.length > 1 || loading) {
-      // Small timeout guarantees layout has finished rendering new nodes
       const t = setTimeout(() => scrollToBottom("smooth"), 80);
       return () => clearTimeout(t);
     }
@@ -59,34 +56,55 @@ export const AIChat: React.FC<AIChatProps> = ({ debts, incomes, expenses, instal
     setLoading(true);
 
     try {
-      const response = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          message: question,
-          context: {
-            debts,
-            incomes,
-            expenses,
-            installmentDebts,
-            stats,
-          },
-          chatHistory: messages.slice(-10),
-        }),
-      });
+      const apiKey = import.meta.env.VITE_GEMINI_API_KEY || import.meta.env.VITE_GOOGLE_API_KEY || import.meta.env.VITE_API_KEY;
+
+      if (!apiKey) {
+        throw new Error("API Anahtarı bulunamadı. Lütfen GitHub Secrets ayarlarını kontrol edin.");
+      }
+
+      const budgetContext = `
+        Kullanıcının Mevcut Finansal Durumu:
+        - Toplam Borç: ${stats?.totalDebts || 0}
+        - Toplam Gelir: ${stats?.totalIncomes || 0}
+        - Toplam Gider: ${stats?.totalExpenses || 0}
+        - Net Durum: ${(stats?.totalIncomes || 0) - (stats?.totalExpenses || 0)}
+        - Borç Sayısı: ${debts?.length || 0}
+        - Taksit Sayısı: ${installmentDebts?.length || 0}
+      `;
+
+      const response = await fetch(
+        `https://googleapis.com{apiKey}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [
+              {
+                parts: [
+                  {
+                    text: `Sen profesyonel bir finans, bütçe ve borç yönetim uzmanısın. Kullanıcıya net, samimi, Türkçe ve finansal açıdan mantıklı tavsiyeler ver. \\n\\n\${budgetContext}\\n\\nKullanıcının Sorusu: \${question}`
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      );
 
       if (!response.ok) {
-        throw new Error("Yapay zeka servisi yanıt vermedi.");
+        throw new Error("Yapay zeka servisi API bağlantı hatası verdi.");
       }
 
       const data = await response.json();
-      setMessages((prev) => [...prev, { sender: "bot", text: data.reply }]);
+      const replyText = data?.candidates?.[0]?.content?.parts?.[0]?.text || "Mesajınızı tam olarak analiz edemedim, lütfen tekrar sormayı deneyin.";
+      
+      setMessages((prev) => [...prev, { sender: "bot", text: replyText }]);
     } catch (err: any) {
       setMessages((prev) => [
         ...prev,
         {
           sender: "bot",
-          text: `⚠️ Maalesef asistanla bağlantı kurulurken bir sorun oluştu: ${err.message}. Local verileriniz güvendedir!`,
+          text: `⚠️ Maalesef asistanla bağlantı kurulurken bir sorun oluştu: \${err.message}. Local verileriniz güvendedir!`,
         },
       ]);
     } finally {
@@ -97,28 +115,16 @@ export const AIChat: React.FC<AIChatProps> = ({ debts, incomes, expenses, instal
   const handleQuickQuestion = (qn: string) => {
     handleSend(qn);
   };
-
   return (
     <div className="space-y-6 animate-fade-in">
-      
-      {/* Dynamic Animated Header Section */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200/60 dark:border-slate-800/85">
         <div className="flex items-center gap-3">
           <div className="relative">
-            {/* Pulsing ambient glowing background halo */}
             <motion.div
               className="absolute inset-x-[-4px] inset-y-[-4px] bg-gradient-to-tr from-indigo-500/25 to-pink-500/25 rounded-2xl blur-md"
-              animate={{
-                scale: [1, 1.25, 1],
-                opacity: [0.4, 0.8, 0.4],
-              }}
-              transition={{
-                repeat: Infinity,
-                duration: 2.5,
-                ease: "easeInOut",
-              }}
+              animate={{ scale: [1, 1.25, 1], opacity: [0.4, 0.8, 0.4] }}
+              transition={{ repeat: Infinity, duration: 2.5, ease: "easeInOut" }}
             />
-            {/* Spinning geometric background decoration (no random Hydration bugs) */}
             <motion.div
               className="absolute inset-0 border-2 border-indigo-500/30 rounded-2xl"
               animate={{ rotate: 360 }}
@@ -133,16 +139,9 @@ export const AIChat: React.FC<AIChatProps> = ({ debts, incomes, expenses, instal
               <h2 className="text-md sm:text-lg font-black tracking-tight text-slate-800 dark:text-slate-100 uppercase">
                 FİNANSAL DANIŞMANLIK & AKILLI ANALİZ PORTALI
               </h2>
-              {/* Pulsing state indicator badge */}
               <motion.span
-                animate={{
-                  scale: [1, 1.08, 1],
-                }}
-                transition={{
-                  repeat: Infinity,
-                  duration: 2,
-                  ease: "easeInOut"
-                }}
+                animate={{ scale: [1, 1.08, 1] }}
+                transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
                 className="px-2.5 py-0.5 text-[9px] font-black tracking-widest bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-full border border-emerald-500/20 uppercase shrink-0"
               >
                 AKTİF DESTEK ⚡
@@ -155,7 +154,6 @@ export const AIChat: React.FC<AIChatProps> = ({ debts, incomes, expenses, instal
         </div>
       </div>
 
-      {/* Security and Info Banner */}
       <div className="p-4 bg-gradient-to-r from-indigo-500/5 to-purple-500/5 dark:from-indigo-500/10 dark:to-purple-500/10 rounded-2xl flex items-start gap-3.5 border border-indigo-100/30 dark:border-indigo-900/20 relative overflow-hidden">
         <div className="absolute right-0 top-0 translate-x-4 -translate-y-4 text-indigo-500/5 pointer-events-none">
           <Brain className="w-24 h-24" />
@@ -171,12 +169,20 @@ export const AIChat: React.FC<AIChatProps> = ({ debts, incomes, expenses, instal
         </div>
       </div>
 
-      {/* Chat Messages Area */}
-      <div className="p-1 border border-slate-200/50 dark:border-slate-800/80 bg-slate-50/30 dark:bg-slate-900/30 rounded-3xl shadow-xs">
-        <div
-          ref={chatContainerRef}
-          className="h-100 overflow-y-auto space-y-4 p-4 pr-1.5 scrollbar-thin scrollbar-thumb-slate-250 scroll-smooth"
-        >
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+        <button onClick={() => handleQuickQuestion("Mevcut bütçeme göre borçlarımı en hızlı nasıl kapatabilirim?")} className="p-3 text-left bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800/80 rounded-xl hover:border-indigo-500 dark:hover:border-indigo-500 transition-all text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-2">
+          <Flame className="w-4 h-4 text-orange-500 shrink-0" /> Borç Kapatma Stratejisi
+        </button>
+        <button onClick={() => handleQuickQuestion("Aylık harcamalarımı azaltmak için bana tasarruf ipuçları verir misin?")} className="p-3 text-left bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800/80 rounded-xl hover:border-indigo-500 dark:hover:border-indigo-500 transition-all text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-2">
+          <Target className="w-4 h-4 text-indigo-500 shrink-0" /> Tasarruf Önerileri
+        </button>
+        <button onClick={() => handleQuickQuestion("Gelir ve gider dengemi analiz edip genel bir finansal check-up yapar mısın?")} className="p-3 text-left bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800/80 rounded-xl hover:border-indigo-500 dark:hover:border-indigo-500 transition-all text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-2">
+          <MessageSquareCode className="w-4 h-4 text-violet-500 shrink-0" /> Finansal Check-up
+        </button>
+      </div>
+
+      <div className="p-1 border border-slate-200/50 dark:border-slate-800/80 bg-slate-50/30 dark:bg-slate-900/30 rounded-3xl shadow-sm">
+        <div ref={chatContainerRef} className="h-96 overflow-y-auto space-y-4 p-4 pr-1.5 scrollbar-thin">
           <AnimatePresence initial={false}>
             {messages.map((msg, idx) => {
               const isUser = msg.sender === "user";
@@ -185,149 +191,46 @@ export const AIChat: React.FC<AIChatProps> = ({ debts, incomes, expenses, instal
                   key={idx}
                   initial={{ opacity: 0, y: 15, scale: 0.98 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
-                  transition={{ duration: 0.3, ease: "easeOut" }}
-                  className={`flex items-start gap-3 max-w-[85%] ${
-                    isUser ? "ml-auto flex-row-reverse" : "mr-auto"
-                  }`}
+                  className={`flex items-start gap-3 max-w-[85%] \${isUser ? "ml-auto flex-row-reverse" : "mr-auto"}`}
                 >
-                  {/* Sender Avatar */}
-                  <div
-                    className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 shadow-xs relative overflow-hidden transition-all ${
-                      isUser
-                        ? "bg-slate-800 text-white"
-                        : "bg-gradient-to-tr from-indigo-600 to-indigo-500 text-white"
-                    }`}
-                  >
-                    {!isUser && (
-                      <motion.div
-                        className="absolute inset-0 bg-white/20"
-                        animate={{ opacity: [0, 0.3, 0] }}
-                        transition={{ repeat: Infinity, duration: 2 }}
-                      />
-                    )}
+                  <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 text-xs \${isUser ? "bg-slate-800 text-white" : "bg-indigo-600 text-white"}`}>
                     {isUser ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
                   </div>
-
-                  {/* Message Bubble */}
-                  <div className="space-y-1">
-                    <span className={`text-[9px] font-black tracking-wider uppercase block text-slate-400 dark:text-slate-500 ${isUser ? "text-right" : "text-left"}`}>
-                      {isUser ? "Siz" : "Hesap Yapay Zekası"}
-                    </span>
-                    <div
-                      className={`px-4 py-3 rounded-2xl text-xs md:text-sm shadow-xs whitespace-pre-wrap leading-relaxed transition-all duration-300 ${
-                        isUser
-                          ? "bg-gradient-to-r from-indigo-600 to-indigo-500 text-white rounded-tr-none hover:shadow-md"
-                          : "bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 rounded-tl-none border border-slate-200/40 dark:border-slate-700/60 hover:shadow-md"
-                      }`}
-                    >
-                      {msg.text}
-                    </div>
+                  <div className={`p-3 rounded-2xl text-xs font-medium leading-relaxed \${isUser ? "bg-indigo-600 text-white rounded-tr-none" : "bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800/60 text-slate-800 dark:text-slate-200 rounded-tl-none shadow-xs"}`}>
+                    <p className="whitespace-pre-wrap">{msg.text}</p>
                   </div>
                 </motion.div>
               );
             })}
-          </AnimatePresence>
-
-          {loading && (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="flex items-start gap-3 max-w-[80%] mr-auto"
-            >
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 to-indigo-500 text-white flex items-center justify-center shadow-xs animate-pulse">
-                <Bot className="w-4 h-4" />
-              </div>
-              <div className="space-y-1">
-                <span className="text-[9px] font-black tracking-wider uppercase text-slate-400 dark:text-slate-500 block">
-                  Hesap Yapay Zekası
-                </span>
-                <div className="px-4 py-3 rounded-2xl bg-white dark:bg-slate-800 text-xs text-slate-400 dark:text-slate-500 border border-slate-200/40 dark:border-slate-700/60 shadow-xs flex items-center gap-2">
-                  <span className="font-semibold text-indigo-500 animate-pulse">Bütçeniz analiz ediliyor</span>
-                  <span className="flex items-center gap-0.5 mt-0.5">
-                    <motion.span
-                      animate={{ y: [0, -3, 0] }}
-                      transition={{ repeat: Infinity, duration: 0.6, delay: 0 }}
-                      className="w-1.5 h-1.5 bg-indigo-500 rounded-full"
-                    />
-                    <motion.span
-                      animate={{ y: [0, -3, 0] }}
-                      transition={{ repeat: Infinity, duration: 0.6, delay: 0.15 }}
-                      className="w-1.5 h-1.5 bg-indigo-500 rounded-full"
-                    />
-                    <motion.span
-                      animate={{ y: [0, -3, 0] }}
-                      transition={{ repeat: Infinity, duration: 0.6, delay: 0.3 }}
-                      className="w-1.5 h-1.5 bg-indigo-500 rounded-full"
-                    />
-                  </span>
+            {loading && (
+              <div className="flex items-start gap-3 mr-auto max-w-[85%]">
+                <div className="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center text-xs">
+                  <Bot className="w-4 h-4" />
+                </div>
+                <div className="p-3 bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800/60 text-slate-400 rounded-2xl rounded-tl-none shadow-xs flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 bg-indigo-600 rounded-full animate-bounce" style={{ animationDelay: "0ms" }}></span>
+                  <span className="w-1.5 h-1.5 bg-indigo-600 rounded-full animate-bounce" style={{ animationDelay: "150ms" }}></span>
+                  <span className="w-1.5 h-1.5 bg-indigo-600 rounded-full animate-bounce" style={{ animationDelay: "300ms" }}></span>
                 </div>
               </div>
-            </motion.div>
-          )}
+            )}
+          </AnimatePresence>
         </div>
-      </div>
 
-      {/* Suggested Quick Questions Panel with beautiful tag stylings */}
-      <div className="space-y-2">
-        <span className="text-[10px] font-black tracking-widest text-slate-400 dark:text-slate-500 uppercase flex items-center gap-1.5">
-          <MessageSquareCode className="w-3.5 h-3.5 text-indigo-500" /> Önerilen Hızlı Sorular
-        </span>
-        <div className="flex flex-wrap gap-2.5">
-          {[
-            {
-              text: "Mevcut bütçemin genel risk durumu nedir?",
-              label: "🔍 Bütçe Risk Durumum",
-              color: "hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-950/20 dark:hover:text-blue-400",
-            },
-            {
-              text: "Borçlarımı en hızlı nasıl kapatabilirim? Kartopu mu Avalanche mi?",
-              label: "🚀 Borç Kapatma Stratejileri",
-              color: "hover:bg-amber-50 hover:text-amber-600 dark:hover:bg-amber-950/20 dark:hover:text-amber-400",
-            },
-            {
-              text: "Gereksiz harcamaları azaltıp nasıl tasarruf fonu yaparım?",
-              label: "🎯 Tasarruf Yönetimi",
-              color: "hover:bg-emerald-50 hover:text-emerald-600 dark:hover:bg-emerald-950/20 dark:hover:text-emerald-400",
-            },
-          ].map((qn, i) => (
-            <motion.button
-              key={i}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => handleQuickQuestion(qn.text)}
-              disabled={loading}
-              className={`text-[11px] font-semibold bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-250/30 dark:border-slate-700/50 px-3.5 py-2 rounded-xl transition duration-200 cursor-pointer shadow-3xs hover:shadow-xs disabled:opacity-40 disabled:cursor-not-allowed ${qn.color}`}
-            >
-              {qn.label}
-            </motion.button>
-          ))}
-        </div>
+        <form onSubmit={(e) => { e.preventDefault(); handleSend(); }} className="p-2 bg-white dark:bg-slate-900 rounded-2xl mt-1 border-t border-slate-100 dark:border-slate-800/60 flex gap-2">
+          <input
+            type="text"
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            placeholder="Yapay zekaya bütçeni sor..."
+            disabled={loading}
+            className="flex-1 bg-slate-50 dark:bg-slate-950 px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 outline-none focus:ring-1 focus:ring-indigo-500 border border-transparent dark:border-slate-800/40"
+          />
+          <button type="submit" disabled={loading || !inputValue.trim()} className="p-2.5 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-colors disabled:opacity-40">
+            <Send className="w-4 h-4" />
+          </button>
+        </form>
       </div>
-
-      {/* Message Input Box with modern border glows */}
-      <div className="flex gap-2">
-        <input
-          type="text"
-          value={inputValue}
-          onChange={(e) => setInputValue(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !loading && inputValue.trim()) handleSend();
-          }}
-          disabled={loading}
-          placeholder="Örn: Bu ayki bütçe hedeflerimi aşmamak için ne yapmalıyım?"
-          className="flex-1 px-4 py-3 bg-white dark:bg-slate-800 dark:text-white border border-slate-200 dark:border-slate-700 focus:border-indigo-500 rounded-2xl text-xs md:text-sm focus:outline-none focus:ring-4 focus:ring-indigo-500/10 placeholder-slate-400 dark:placeholder-slate-500 shadow-2xs font-medium"
-        />
-        <motion.button
-          whileHover={{ scale: 1.03 }}
-          whileTap={{ scale: 0.97 }}
-          onClick={() => handleSend()}
-          disabled={loading || !inputValue.trim()}
-          className="w-12 h-12 bg-gradient-to-tr from-indigo-600 to-indigo-500 hover:from-indigo-700 hover:to-indigo-600 text-white font-bold rounded-2xl flex items-center justify-center shadow-md shadow-indigo-500/10 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed shrink-0 cursor-pointer"
-        >
-          <Send className="w-4.5 h-4.5" />
-        </motion.button>
-      </div>
-
     </div>
   );
 };
