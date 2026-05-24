@@ -62,18 +62,26 @@ export const AIChat: React.FC<AIChatProps> = ({ debts, incomes, expenses, instal
         throw new Error("API Anahtarı bulunamadı. Lütfen GitHub Secrets ayarlarını kontrol edin.");
       }
 
-      const budgetContext = `
-        Kullanıcının Mevcut Finansal Durumu:
-        - Toplam Borç: ${stats?.totalDebts || 0}
-        - Toplam Gelir: ${stats?.totalIncomes || 0}
-        - Toplam Gider: ${stats?.totalExpenses || 0}
-        - Net Durum: ${(stats?.totalIncomes || 0) - (stats?.totalExpenses || 0)}
-        - Borç Sayısı: ${debts?.length || 0}
-        - Taksit Sayısı: ${installmentDebts?.length || 0}
-      `;
+      const totalDebtsVal = stats?.totalDebts || 0;
+      const totalIncomesVal = stats?.totalIncomes || 0;
+      const totalExpensesVal = stats?.totalExpenses || 0;
+      const netStatusVal = totalIncomesVal - totalExpensesVal;
+      const debtsCount = debts?.length || 0;
+      const installmentsCount = installmentDebts?.length || 0;
+
+      const budgetContext = " Kullanicinin Mevcut Finansal Durumu: " +
+        " - Toplam Borc: " + totalDebtsVal + 
+        " - Toplam Gelir: " + totalIncomesVal + 
+        " - Toplam Gider: " + totalExpensesVal + 
+        " - Net Durum: " + netStatusVal + 
+        " - Borc Sayisi: " + debtsCount + 
+        " - Taksit Sayisi: " + installmentsCount;
+
+      const fullPrompt = "Sen profesyonel bir finans, bütçe ve borç yönetim uzmanısın. Kullanıcıya net, samimi, Türkçe ve finansal açıdan mantıklı tavsiyeler ver. " + 
+        budgetContext + " Kullanicinin Sorusu: " + question;
 
       const response = await fetch(
-        `https://googleapis.com{apiKey}`,
+        "https://googleapis.com" + apiKey,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -82,12 +90,12 @@ export const AIChat: React.FC<AIChatProps> = ({ debts, incomes, expenses, instal
               {
                 parts: [
                   {
-                    text: `Sen profesyonel bir finans, bütçe ve borç yönetim uzmanısın. Kullanıcıya net, samimi, Türkçe ve finansal açıdan mantıklı tavsiyeler ver. \\n\\n\${budgetContext}\\n\\nKullanıcının Sorusu: \${question}`
+                    text: fullPrompt
                   }
                 ]
               }
             ]
-          }
+          })
         }
       );
 
@@ -96,7 +104,7 @@ export const AIChat: React.FC<AIChatProps> = ({ debts, incomes, expenses, instal
       }
 
       const data = await response.json();
-      const replyText = data?.candidates?.[0]?.content?.parts?.[0]?.text || "Mesajınızı tam olarak analiz edemedim, lütfen tekrar sormayı deneyin.";
+      const replyText = data?.candidates?.?[0]?.content?.parts?.?[0]?.text || "Mesajınızı tam olarak analiz edemedim, lütfen tekrar sormayı deneyin.";
       
       setMessages((prev) => [...prev, { sender: "bot", text: replyText }]);
     } catch (err: any) {
@@ -104,7 +112,7 @@ export const AIChat: React.FC<AIChatProps> = ({ debts, incomes, expenses, instal
         ...prev,
         {
           sender: "bot",
-          text: `⚠️ Maalesef asistanla bağlantı kurulurken bir sorun oluştu: \${err.message}. Local verileriniz güvendedir!`,
+          text: "⚠️ Maalesef asistanla bağlantı kurulurken bir sorun oluştu: " + err.message + ". Local verileriniz güvendedir!",
         },
       ]);
     } finally {
@@ -186,17 +194,20 @@ export const AIChat: React.FC<AIChatProps> = ({ debts, incomes, expenses, instal
           <AnimatePresence initial={false}>
             {messages.map((msg, idx) => {
               const isUser = msg.sender === "user";
+              const userStyle = "bg-indigo-600 text-white rounded-tr-none";
+              const botStyle = "bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800/60 text-slate-800 dark:text-slate-200 rounded-tl-none shadow-xs";
+              
               return (
                 <motion.div
                   key={idx}
                   initial={{ opacity: 0, y: 15, scale: 0.98 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
-                  className={`flex items-start gap-3 max-w-[85%] \${isUser ? "ml-auto flex-row-reverse" : "mr-auto"}`}
+                  className={"flex items-start gap-3 max-w-[85%] " + (isUser ? "ml-auto flex-row-reverse" : "mr-auto")}
                 >
-                  <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 text-xs \${isUser ? "bg-slate-800 text-white" : "bg-indigo-600 text-white"}`}>
+                  <div className={"w-8 h-8 rounded-xl flex items-center justify-center shrink-0 text-xs " + (isUser ? "bg-slate-800 text-white" : "bg-indigo-600 text-white")}>
                     {isUser ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
                   </div>
-                  <div className={`p-3 rounded-2xl text-xs font-medium leading-relaxed \${isUser ? "bg-indigo-600 text-white rounded-tr-none" : "bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800/60 text-slate-800 dark:text-slate-200 rounded-tl-none shadow-xs"}`}>
+                  <div className={"p-3 rounded-2xl text-xs font-medium leading-relaxed " + (isUser ? userStyle : botStyle)}>
                     <p className="whitespace-pre-wrap">{msg.text}</p>
                   </div>
                 </motion.div>
