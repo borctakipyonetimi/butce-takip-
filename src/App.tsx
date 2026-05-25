@@ -255,31 +255,74 @@ export default function App() {
     }
   };
 
+  // Timezone-and-platform robust local datetime parser
+  const parseLocalOrUTCString = (dateStr: string): Date => {
+    try {
+      if (dateStr.includes("T")) {
+        const [datePart, timePart] = dateStr.split("T");
+        const [year, month, day] = datePart.split("-").map(Number);
+        const [hour, minute] = timePart.split(":").map(Number);
+        return new Date(year, month - 1, day, hour, minute || 0, 0, 0);
+      } else {
+        const [year, month, day] = dateStr.split("-").map(Number);
+        return new Date(year, month - 1, day, 0, 0, 0, 0);
+      }
+    } catch (e) {
+      console.warn("Date parsing error callback:", e, dateStr);
+      return new Date(dateStr);
+    }
+  };
+
   const sendSystemNotification = (title: string, body: string, persist = true) => {
-    // 1. Synthesize premium system-styled double beep chime sound
+    // 1. Trigger robust physical phone buzzer vibration
+    if (typeof navigator !== "undefined" && navigator.vibrate) {
+      navigator.vibrate([300, 100, 300, 100, 400, 120, 300, 100, 500]);
+    }
+
+    // 2. Synthesize premium high-volume electronic wrist-watch digital beep alarm sound
     try {
       const AudioCtxConstructor = window.AudioContext || (window as any).webkitAudioContext;
       if (AudioCtxConstructor) {
         const audioCtx = new AudioCtxConstructor();
+        // Resume if suspended to guarantee auditory trigger
+        if (audioCtx.state === "suspended") {
+          audioCtx.resume();
+        }
+
         const osc = audioCtx.createOscillator();
         const gainNode = audioCtx.createGain();
         osc.connect(gainNode);
         gainNode.connect(audioCtx.destination);
-        osc.type = "sine";
         
-        // Double electronic ping chime
-        osc.frequency.setValueAtTime(587.33, audioCtx.currentTime); // D5
-        osc.frequency.setValueAtTime(880, audioCtx.currentTime + 0.12); // A5
-        gainNode.gain.setValueAtTime(0.12, audioCtx.currentTime);
-        gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
-        osc.start();
-        osc.stop(audioCtx.currentTime + 0.4);
+        // Use Sawtooth waveform for clear whistle-like high volume notice
+        osc.type = "sawtooth";
+        
+        // Energetic triple digital alarm beep motif
+        const nowTime = audioCtx.currentTime;
+        
+        // Beep 1
+        osc.frequency.setValueAtTime(987.77, nowTime); // B5 (Bright high pitch alarm)
+        gainNode.gain.setValueAtTime(0.35, nowTime);
+        gainNode.gain.setValueAtTime(0, nowTime + 0.15);
+        
+        // Beep 2
+        osc.frequency.setValueAtTime(987.77, nowTime + 0.22);
+        gainNode.gain.setValueAtTime(0.35, nowTime + 0.22);
+        gainNode.gain.setValueAtTime(0, nowTime + 0.37);
+        
+        // Beep 3
+        osc.frequency.setValueAtTime(1174.66, nowTime + 0.44); // D6 (Final high peak notice)
+        gainNode.gain.setValueAtTime(0.40, nowTime + 0.44);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, nowTime + 0.69);
+        
+        osc.start(nowTime);
+        osc.stop(nowTime + 0.72);
       }
     } catch (e) {
-      console.log("Audio scale playback ignored:", e);
+      console.log("Audio context synthetic alarm sound suppressed by browser interaction limits:", e);
     }
 
-    // 2. Trigger standard phone OS notification or Service Worker background push
+    // 3. Trigger standard phone OS notification or Service Worker background push
     if (typeof window !== "undefined") {
       const hasNotification = "Notification" in window;
       const isGranted = hasNotification && (Notification.permission === "granted" || (Notification as any).permission === "granted");
@@ -296,7 +339,11 @@ export default function App() {
               body: body,
               icon: defaultIcon,
               badge: defaultIcon,
-              vibrate: [200, 100, 200]
+              vibrate: [300, 100, 300, 100, 400, 120, 300, 100, 500],
+              sound: "default",
+              tag: "butcempro-alert",
+              renotify: true,
+              requireInteraction: true
             } as any);
             sentDirectly = true;
           }
@@ -312,10 +359,11 @@ export default function App() {
               body: body,
               icon: defaultIcon,
               badge: defaultIcon,
-              vibrate: [200, 100, 200],
+              vibrate: [300, 100, 300, 100, 400, 120, 300, 100, 500],
+              sound: "default",
               tag: "butcempro-alert",
               renotify: true,
-              requireInteraction: false
+              requireInteraction: true
             } as any).catch(swError => {
               console.warn("ServiceWorker showNotification failed inside package container:", swError);
             });
@@ -326,7 +374,7 @@ export default function App() {
       }
     }
 
-    // 3. Fallback and visually reinforce with sliding phone-alert graphic
+    // 4. Fallback and visually reinforce with sliding phone-alert graphic
     setIsPhoneAlert({ visible: true, title, body });
     // Dismiss after 4 seconds
     setTimeout(() => {
@@ -387,37 +435,17 @@ export default function App() {
   useEffect(() => { expensesRef.current = expenses; }, [expenses]);
   useEffect(() => { expenseCategoriesRef.current = expenseCategories; }, [expenseCategories]);
 
-  const hasInitializedAlarms = useRef(false);
-  const expiredAlarmsOnStart = useRef<Set<number>>(new Set());
-
   // High-Precision Real-time Automated Alarm Checking Engine
   useEffect(() => {
-    const checkAlarmsInterval = setInterval(() => {
+    const checkScheduledAlarms = () => {
       const now = new Date();
       const nowTime = now.getTime();
       const currentAlarms = alarmsRef.current;
 
-      // First run: mark any currently past alarm on startup as "expired/legacy" to avoid false automatic triggers on load
-      if (!hasInitializedAlarms.current) {
-        currentAlarms.forEach((a) => {
-          if (a.date) {
-            const alarmTime = new Date(a.date).getTime();
-            if (!isNaN(alarmTime) && alarmTime <= nowTime) {
-              expiredAlarmsOnStart.current.add(a.id);
-            }
-          }
-        });
-        hasInitializedAlarms.current = true;
-        console.log("Alarms background tracker initialized. Legacy alarm IDs excluded:", Array.from(expiredAlarmsOnStart.current));
-      }
-
       // Check for valid active alarms that are due now
       const dueAlarms = currentAlarms.filter((a) => {
         if (!a.date) return false;
-        // Skip alarms marked as expired on start to avoid triggering old data
-        if (expiredAlarmsOnStart.current.has(a.id)) return false;
-
-        const alarmTime = new Date(a.date).getTime();
+        const alarmTime = parseLocalOrUTCString(a.date).getTime();
         return !isNaN(alarmTime) && alarmTime <= nowTime;
       });
 
@@ -466,9 +494,29 @@ export default function App() {
           expenseCategoriesRef.current
         );
       }
-    }, 4000); // 4-second check rate gives ultra-rapid responsiveness
+    };
 
-    return () => clearInterval(checkAlarmsInterval);
+    // Run initial instant check right away on load/resume
+    checkScheduledAlarms();
+
+    const checkAlarmsInterval = setInterval(checkScheduledAlarms, 2000); // 2-second check rate gives ultra-rapid responsiveness
+
+    // Instant check when user unlocks their phone / turns on their screen and returns to the app
+    const handleVisibilityChange = () => {
+      if (typeof document !== "undefined" && document.visibilityState === "visible") {
+        console.log("Device woke up or tab focused - running instant high precision alarms check...");
+        checkScheduledAlarms();
+      }
+    };
+
+    window.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("focus", checkScheduledAlarms);
+
+    return () => {
+      clearInterval(checkAlarmsInterval);
+      window.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("focus", checkScheduledAlarms);
+    };
   }, []);
 
   // Automatically scroll to the very top of the window when switching active tabs
