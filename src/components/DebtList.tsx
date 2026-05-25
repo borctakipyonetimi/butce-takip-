@@ -187,9 +187,6 @@ export const DebtList: React.FC<DebtListProps> = ({
           paidInstallmentCount: paidCount,
           firstDueDate: dueDate || new Date().toISOString().slice(0, 10),
         });
-        if (createAlarm && dueDate) {
-          onAddAlarm(`Taksit Ödemesi: ${name.trim()}`, dueDate);
-        }
       }
     } else {
       onSaveDebt({
@@ -199,7 +196,7 @@ export const DebtList: React.FC<DebtListProps> = ({
         paid: parsedPaid,
         category,
         dueDate,
-      }, createAlarm);
+      }, false);
     }
 
     setIsModalOpen(false);
@@ -763,19 +760,6 @@ export const DebtList: React.FC<DebtListProps> = ({
                   )}
                 </div>
               )}
-
-              <div className="flex items-center gap-2 py-1">
-                <input
-                  type="checkbox"
-                  id="notif_check"
-                  checked={createAlarm}
-                  onChange={(e) => setCreateAlarm(e.target.checked)}
-                  className="w-4 h-4 accent-indigo-600 rounded"
-                />
-                <label htmlFor="notif_check" className="text-xs font-semibold text-slate-500 select-none cursor-pointer">
-                  💡 Takvime Hatırlatıcı Kur (Alarm)
-                </label>
-              </div>
             </div>
 
             <div className="flex gap-2 pt-2">

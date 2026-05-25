@@ -24,6 +24,7 @@ import {
   Sparkles,
   HelpingHand,
   Clock,
+  RotateCw,
   LayoutDashboard,
   HelpCircle,
   BookOpen,
@@ -1712,6 +1713,19 @@ export default function App() {
               className="p-2 lg:p-2.5 bg-white/5 hover:bg-white/10 border border-white/10 active:scale-95 rounded-xl transition-all text-white flex items-center justify-center duration-300 cursor-pointer shadow-inner shrink-0"
             >
               {darkMode ? <Sun className="w-4 h-4 text-amber-300" /> : <Moon className="w-4 h-4 text-sky-200" />}
+            </button>
+
+            <button
+              onClick={() => {
+                triggerToast("Uygulama Yenileniyor... 🔄");
+                setTimeout(() => {
+                  window.location.reload();
+                }, 350);
+              }}
+              title="Sayfayı Yenile"
+              className="p-2 lg:p-2.5 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 border border-indigo-500/20 active:scale-95 rounded-xl transition-all flex items-center justify-center duration-300 cursor-pointer shrink-0"
+            >
+              <RotateCw className="w-4 h-4 text-indigo-400 animate-spin [animation-duration:15s]" />
             </button>
           </div>
           
