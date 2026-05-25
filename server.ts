@@ -126,9 +126,9 @@ Görevlerin:
       parts: [{ text: message }],
     });
 
-    // Enforce an active 9-second timeout to prevent API hangs or slow responses in Cloud environments
+    // Enforce an active 30-second timeout to prevent API hangs or slow responses in Cloud environments
     const timeoutPromise = new Promise<never>((_, reject) => {
-      setTimeout(() => reject(new Error("Timeout after 9000ms: Gemini API calls are taking too long due to rate limits or connection restrictions.")), 9000);
+      setTimeout(() => reject(new Error("Timeout after 30000ms: Gemini API calls are taking too long due to rate limits or connection restrictions.")), 30000);
     });
 
     const geminiPromise = aiClient.models.generateContent({

@@ -118,3 +118,80 @@ body.dark {
   animation: wave-flag 2.5s infinite ease-in-out;
   transform-origin: bottom center;
 }
+
+/* ==========================================================================
+   HIGH-CONTRAST LIGHT MODE EXTRA-VISIBILITY STYLE OVERRIDES
+   ========================================================================== */
+
+/* Target the layout wrapper and background and make it pop out beautifully */
+html:not(.dark) body,
+html:not(.dark) .bg-\[\#f8fafc\] {
+  background-color: #f1f5f9 !important; /* Richer gray-slate background for perfect contrast with cards */
+}
+
+/* Elevate and outline card containers beautifully in Light Mode */
+html:not(.dark) .bg-white {
+  border: 1px solid #cbd5e1 !important; /* Visible clean outline */
+  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.05), 0 1px 2px rgba(15, 17, 32, 0.04) !important; /* Distinct shadow depth */
+}
+
+/* Ensure secondary slate dividers and backgrounds are highly visible */
+html:not(.dark) .bg-slate-50,
+html:not(.dark) .bg-slate-100\/40,
+html:not(.dark) .bg-slate-50\/50 {
+  background-color: #e2e8f0/70 !important;
+  border-color: #cbd5e1 !important;
+}
+
+/* Precise list of light slate border custom overrides to guarantee visibility */
+html:not(.dark) .border-slate-100,
+html:not(.dark) .border-slate-200,
+html:not(.dark) .border-slate-200\/40,
+html:not(.dark) .border-slate-250\/30,
+html:not(.dark) .border-slate-200\/55,
+html:not(.dark) .border-slate-200\/50,
+html:not(.dark) .border-slate-200\/60,
+html:not(.dark) .border-slate-205\/60,
+html:not(.dark) .border-slate-200\/80,
+html:not(.dark) .border-slate-300,
+html:not(.dark) .border-slate-100\/60,
+html:not(.dark) .border-slate-100\/80 {
+  border-color: #cbd5e1 !important; /* Solid Slate-300 */
+}
+
+/* Make tables, input groups and list dividers highly prominent in Light Mode */
+html:not(.dark) input,
+html:not(.dark) select,
+html:not(.dark) textarea {
+  border: 1.5px solid #cbd5e1 !important;
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+}
+
+html:not(.dark) input:focus,
+html:not(.dark) select:focus,
+html:not(.dark) textarea:focus {
+  border-color: #6366f1 !important; /* Indigo brand outline on focus */
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15) !important;
+}
+
+html:not(.dark) .border-b {
+  border-bottom-color: #cbd5e1 !important;
+}
+
+html:not(.dark) .border-t {
+  border-top-color: #cbd5e1 !important;
+}
+
+html:not(.dark) .divide-y > :not([hidden]) ~ :not([hidden]) {
+  border-color: #cbd5e1 !important;
+}
+
+/* Make icons and metadata inside Light Mode distinct */
+html:not(.dark) .text-slate-400 {
+  color: #64748b !important; /* Deepen to Slate-500 for better contrast */
+}
+
+html:not(.dark) .text-slate-500 {
+  color: #475569 !important; /* Deepen to Slate-600 */
+}
