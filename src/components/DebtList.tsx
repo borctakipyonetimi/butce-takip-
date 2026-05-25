@@ -7,6 +7,7 @@ import React, { useState, useEffect } from "react";
 import { PlusCircle, Printer, FileText, CheckCircle2, Circle, AlertCircle, Edit, Trash2, Calendar, ClipboardList, ArrowUpDown, Sparkles } from "lucide-react";
 import { Debt, InstallmentDebt } from "../types";
 import { useCurrency } from "../utils/CurrencyContext";
+import { DoughnutChart } from "./BudgetCharts";
 
 interface DebtListProps {
   debts: Debt[];
@@ -17,6 +18,7 @@ interface DebtListProps {
   onAddAlarm: (title: string, date: string) => void;
   themeColor: string;
   onSaveInstallment?: (installment: Partial<InstallmentDebt>) => void;
+  installmentDebts?: InstallmentDebt[];
 }
 
 export const DebtList: React.FC<DebtListProps> = ({
@@ -28,6 +30,7 @@ export const DebtList: React.FC<DebtListProps> = ({
   onAddAlarm,
   themeColor,
   onSaveInstallment,
+  installmentDebts = [],
 }) => {
   const { format, currencySymbol } = useCurrency();
   const [activeTab, setActiveTab] = useState<"unpaid" | "paid" | "all">("unpaid");
@@ -101,7 +104,25 @@ export const DebtList: React.FC<DebtListProps> = ({
       return 0;
     });
 
-  const totalAmount = debts.reduce((sum, d) => sum + d.amount, 0);
+  // Helpers for formatting numbers with dots (e.g., 100.000.000)
+  const formatNumberWithDots = (val: string): string => {
+    // Strip everything except digits
+    const cleaned = val.replace(/\D/g, "");
+    if (!cleaned) return "";
+    return cleaned.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  };
+
+  const parseNumberFromDots = (val: string): number => {
+    const cleaned = val.replace(/\./g, "");
+    return parseFloat(cleaned) || 0;
+  };
+
+  const monthlyInstallmentsTotal = installmentDebts.reduce((sum, inst) => {
+    if (inst.paidInstallmentCount >= inst.installmentCount) return sum;
+    return sum + (inst.totalAmount / inst.installmentCount);
+  }, 0);
+
+  const totalAmount = debts.reduce((sum, d) => sum + d.amount, 0) + monthlyInstallmentsTotal;
   const totalPaid = debts.reduce((sum, d) => sum + d.paid, 0);
   const totalRemaining = totalAmount - totalPaid;
 
@@ -123,8 +144,8 @@ export const DebtList: React.FC<DebtListProps> = ({
     setModalTitle("Borç Düzenle");
     setDebtId(d.id);
     setName(d.name);
-    setAmount(d.amount.toString());
-    setPaid(d.paid.toString());
+    setAmount(formatNumberWithDots(d.amount.toString()));
+    setPaid(formatNumberWithDots(d.paid.toString()));
     setCategory(d.category);
     setDueDate(d.dueDate || "");
     setCreateAlarm(false);
@@ -133,8 +154,8 @@ export const DebtList: React.FC<DebtListProps> = ({
   };
 
   const handleSave = () => {
-    const parsedAmount = parseFloat(amount);
-    const parsedPaid = parseFloat(paid) || 0;
+    const parsedAmount = parseNumberFromDots(amount);
+    const parsedPaid = parseNumberFromDots(paid);
 
     if (!name.trim()) {
       alert("Lütfen geçerli bir borç adı giriniz.");
@@ -287,13 +308,6 @@ export const DebtList: React.FC<DebtListProps> = ({
             <PlusCircle className="w-3.5 h-3.5" /> Ekle
           </button>
         </div>
-      </div>
-
-      {/* Stats Summary Panel */}
-      <div className="p-4 bg-indigo-50/50 dark:bg-indigo-950/20 text-indigo-950 dark:text-indigo-200 rounded-2xl flex flex-wrap justify-between gap-4 font-bold text-xs">
-        <div>Toplam Borç: <span className="text-sm block text-indigo-600 dark:text-indigo-400 font-mono">{format(totalAmount)}</span></div>
-        <div>Toplam Ödenen: <span className="text-sm block text-emerald-600 dark:text-emerald-400 font-mono">{format(totalPaid)}</span></div>
-        <div>Toplam Kalan: <span className="text-sm block text-rose-600 dark:text-rose-400 font-mono">{format(totalRemaining)}</span></div>
       </div>
 
       {/* Tabs list and sorting mechanism */}
@@ -461,6 +475,69 @@ export const DebtList: React.FC<DebtListProps> = ({
         )}
       </div>
 
+      {/* Taksitli Borç Planları - Hızlı Erişim Paneli */}
+      <div className="p-5 bg-white dark:bg-slate-800 rounded-3xl border border-slate-200/50 dark:border-slate-700/60 shadow-xs space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Calendar className="w-5 h-5 text-indigo-500" />
+            <h3 className="text-xs font-black tracking-wider text-slate-800 dark:text-slate-100 uppercase">
+              📊 Aktif Taksitli Borç Planlarınız (Hızlı Erişim)
+            </h3>
+          </div>
+          <span className="px-2.5 py-1 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 text-[10px] font-extrabold rounded-full">
+            {installmentDebts.length} Aktif Plan
+          </span>
+        </div>
+
+        {installmentDebts.length === 0 ? (
+          <p className="text-xs text-slate-400 dark:text-slate-500 font-semibold italic text-center py-2">
+            Eklenmiş taksitli borç planı bulunmamaktadır. "Taksitli Borçlar" sekmesinden veya yukarıdaki borç ekleme penceresindeki taksit seçeneğinden yeni planlar oluşturabilirsiniz.
+          </p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs text-slate-500 dark:text-slate-400 border-collapse">
+              <thead>
+                <tr className="border-b border-slate-100 dark:border-slate-700/50 pb-2 text-[10px] uppercase font-black tracking-wider text-slate-400">
+                  <th className="py-2">Borç Planı</th>
+                  <th className="py-2">Toplam Borç</th>
+                  <th className="py-2">Ödenen Vade</th>
+                  <th className="py-2">Aylık Taksit</th>
+                  <th className="py-2">Kalan Ödeme</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-50 dark:divide-slate-700/30">
+                {installmentDebts.map((inst) => {
+                  const monthly = inst.totalAmount / inst.installmentCount;
+                  const paidValue = inst.paidInstallmentCount * monthly;
+                  const remainingValue = inst.totalAmount - paidValue;
+                  const isCompleted = inst.paidInstallmentCount >= inst.installmentCount;
+
+                  return (
+                    <tr key={inst.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-900/10 transition duration-150">
+                      <td className="py-2.5 font-bold text-slate-800 dark:text-slate-100 flex items-center gap-1.5 font-sans">
+                        <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 shrink-0" />
+                        {inst.name}
+                        {isCompleted && (
+                          <span className="px-1.5 py-0.5 bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-400 text-[8px] font-black rounded-lg">ÖDENDİ</span>
+                        )}
+                      </td>
+                      <td className="py-2.5 font-bold text-slate-700 dark:text-slate-300 font-mono">{format(inst.totalAmount)}</td>
+                      <td className="py-2.5 font-bold text-slate-600 dark:text-slate-400 font-sans">
+                        {inst.paidInstallmentCount} / {inst.installmentCount} Ay
+                      </td>
+                      <td className="py-2.5 font-bold text-slate-700 dark:text-slate-300 font-mono">{format(monthly)}</td>
+                      <td className="py-2.5 font-extrabold text-indigo-600 dark:text-indigo-400 font-mono">
+                        {isCompleted ? "₺0" : format(remainingValue)}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
       {/* Borç Kapama Stratejisi Öneri Kutusu */}
       <div id="debt_strategy_advisor" className="p-5 bg-gradient-to-br from-indigo-50/70 to-slate-50/80 dark:from-slate-800/80 dark:to-slate-800/60 rounded-3xl border border-indigo-100/40 dark:border-indigo-900/40 space-y-4 shadow-sm">
         <div className="flex items-center justify-between">
@@ -555,6 +632,42 @@ export const DebtList: React.FC<DebtListProps> = ({
         </div>
       </div>
 
+      {/* Stats Summary Panel with Doughnut Visualizer at the absolute bottom */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-5 bg-white dark:bg-slate-800 rounded-3xl border border-slate-200/50 dark:border-slate-700/60 shadow-xs">
+        {/* Left Side: Stats Badges */}
+        <div className="flex flex-col justify-center space-y-3.5">
+          <h3 className="text-xs font-black tracking-wider text-slate-400 dark:text-slate-500 uppercase flex items-center gap-1.5">
+            <span>📊 BORÇ DURUM ÖZETİ</span>
+          </h3>
+          <div className="grid grid-cols-3 gap-3">
+            <div className="p-3 bg-indigo-50/50 dark:bg-indigo-950/20 text-indigo-950 dark:text-indigo-200 rounded-2xl border border-indigo-100/10">
+              <span className="text-[10px] font-bold text-slate-400 block uppercase tracking-wide font-sans">TOPLAM BORÇ</span>
+              <span className="text-xs sm:text-sm font-black font-mono text-indigo-600 dark:text-indigo-400 block truncate mt-1">{format(totalAmount)}</span>
+            </div>
+            <div className="p-3 bg-emerald-50/50 dark:bg-emerald-950/20 text-emerald-950 dark:text-emerald-200 rounded-2xl border border-emerald-100/10">
+              <span className="text-[10px] font-bold text-slate-400 block uppercase tracking-wide font-sans">ÖDENEN</span>
+              <span className="text-xs sm:text-sm font-black font-mono text-emerald-600 dark:text-emerald-400 block truncate mt-1">{format(totalPaid)}</span>
+            </div>
+            <div className="p-3 bg-rose-50/50 dark:bg-rose-950/20 text-rose-950 dark:text-rose-200 rounded-2xl border border-rose-100/10">
+              <span className="text-[10px] font-bold text-slate-400 block uppercase tracking-wide font-sans">KALAN</span>
+              <span className="text-xs sm:text-sm font-black font-mono text-rose-600 dark:text-rose-400 block truncate mt-1">{format(totalRemaining)}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Right Side: DoughnutChart widget */}
+        <div className="flex items-center justify-center p-3 bg-slate-50/50 dark:bg-slate-900/10 rounded-2xl border border-slate-100 dark:border-slate-700/30">
+          <div className="w-full max-w-xs scale-95">
+            <DoughnutChart
+              data={[
+                { label: "Ödenen Borç", value: totalPaid, color: "#10b981" },
+                { label: "Kalan Borç", value: totalRemaining, color: "#ef4444" },
+              ]}
+            />
+          </div>
+        </div>
+      </div>
+
       {/* Debt Add/Edit Dialog Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
@@ -577,21 +690,21 @@ export const DebtList: React.FC<DebtListProps> = ({
                 <div>
                   <label className="text-[10px] font-bold text-slate-400 block mb-1">TOPLAM TUTAR</label>
                   <input
-                    type="number"
+                    type="text"
                     value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
-                    placeholder="₺5000"
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs dark:text-white"
+                    onChange={(e) => setAmount(formatNumberWithDots(e.target.value))}
+                    placeholder="₺5.000"
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs dark:text-white font-mono font-bold"
                   />
                 </div>
                 <div>
                   <label className="text-[10px] font-bold text-slate-400 block mb-1">ŞİMDİ ÖDENEN (İsteğe bağlı)</label>
                   <input
-                    type="number"
+                    type="text"
                     value={paid}
-                    onChange={(e) => setPaid(e.target.value)}
+                    onChange={(e) => setPaid(formatNumberWithDots(e.target.value))}
                     placeholder="₺0"
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs dark:text-white"
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs dark:text-white font-mono font-bold"
                   />
                 </div>
               </div>

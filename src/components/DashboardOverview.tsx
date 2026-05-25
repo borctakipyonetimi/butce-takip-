@@ -199,7 +199,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
         </div>
 
         <div className="p-4 bg-rose-600 text-white rounded-3xl space-y-1 relative overflow-hidden group shadow-md hover:shadow-lg transition">
-          <span className="text-[10px] font-bold text-rose-100 block uppercase tracking-wide">KALAN BORÇ</span>
+          <span className="text-[10px] font-bold text-rose-100 block uppercase tracking-wide">BU AY ÖDENECEK BORÇ</span>
           <p className="text-sm sm:text-lg font-black font-mono">{format(stats.remaining)}</p>
           <div className="absolute right-2 bottom-1 font-black opacity-25 text-2xl">⚠️</div>
         </div>

@@ -143,7 +143,15 @@ export default function App() {
   });
   const [isAddingAlarmNew, setIsAddingAlarmNew] = useState(false);
   const [newAlarmTitle, setNewAlarmTitle] = useState("");
-  const [newAlarmDate, setNewAlarmDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [newAlarmDate, setNewAlarmDate] = useState(() => {
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    const hours = String(d.getHours()).padStart(2, '0');
+    const minutes = String(d.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  });
 
   const requestNotificationPermission = async () => {
     if (typeof window === "undefined" || !("Notification" in window)) {
@@ -281,14 +289,14 @@ export default function App() {
   // Application Intro Loading Screen states and handlers
   const [splashVisible, setSplashVisible] = useState(true);
   const [splashProgress, setSplashProgress] = useState(0);
-  const [splashStatus, setSplashStatus] = useState("Güvenli Veritabanı Şifreleniyor...");
+  const [splashStatus, setSplashStatus] = useState("Veriler Güvenle Yükleniyor...");
   const [isQuickLoggingIn, setIsQuickLoggingIn] = useState<string | null>(null);
   const [providerLoginOpen, setProviderLoginOpen] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState<"google" | "hotmail" | null>(null);
 
   useEffect(() => {
-    const totalDuration = 3500; // 3.5 seconds loading animation before opening app
-    const intervalTime = 30;
+    const totalDuration = 1000; // Ultra-fast 1 second loading for optimum stability and responsiveness
+    const intervalTime = 20;
     const steps = totalDuration / intervalTime;
     let currentStep = 0;
 
@@ -297,25 +305,21 @@ export default function App() {
       const progress = Math.min((currentStep / steps) * 100, 100);
       setSplashProgress(Math.round(progress));
 
-      if (progress < 20) {
-        setSplashStatus("Güvenli Veritabanı Şifreleniyor...");
-      } else if (progress < 40) {
-        setSplashStatus("Mali Tablolar Hazırlanıyor...");
+      if (progress < 30) {
+        setSplashStatus("Sistemler Başlatılıyor...");
       } else if (progress < 60) {
-        setSplashStatus("Analiz Göstergeleri Hesaplanıyor...");
-      } else if (progress < 80) {
-        setSplashStatus("Yapay Zeka Finans Asistanı Hazırlanıyor...");
-      } else if (progress < 95) {
-        setSplashStatus("Telefon Bildirim Kanalları Dinleniyor...");
+        setSplashStatus("Mali Tablolar Hesaplanıyor...");
+      } else if (progress < 90) {
+        setSplashStatus("AI Finans Asistanı Hazırlanıyor...");
       } else {
-        setSplashStatus("Bağlantı Kuruldu, Hoş Geldiniz!");
+        setSplashStatus("Bağlantı Kuruldu!");
       }
 
       if (progress >= 100) {
         clearInterval(interval);
         setTimeout(() => {
           setSplashVisible(false);
-        }, 120);
+        }, 80);
       }
     }, intervalTime);
 
@@ -1103,10 +1107,10 @@ export default function App() {
         {splashVisible && (
           <motion.div
             key="premium-splash-loader"
-            initial={{ opacity: 1, filter: "blur(0px)" }}
-            exit={{ opacity: 0, scale: 1.05, filter: "blur(15px)", y: -8 }}
-            transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-            className="fixed inset-0 z-[999999] flex flex-col items-center justify-center bg-[#050b14] text-white p-6 select-none overflow-hidden"
+            initial={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2, ease: "easeInOut" }}
+            className="fixed inset-0 z-[999999] flex flex-col items-center justify-center bg-slate-950 text-white p-6 select-none overflow-hidden"
           >
             {/* Background floating visual aesthetics (100% stable, no Math.random hydration bugs) */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-20">
@@ -1123,7 +1127,7 @@ export default function App() {
                   animate={{ 
                     y: [0, -15, 0],
                     x: [0, 10, 0],
-                    opacity: [0.15, 0.5, 0.15]
+                    opacity: [0.15, 0.4, 0.15]
                   }}
                   transition={{ 
                     duration: p.duration, 
@@ -1131,7 +1135,7 @@ export default function App() {
                     ease: "easeInOut",
                     delay: p.delay 
                   }}
-                  className="absolute text-indigo-500/30 text-3xl font-black font-mono"
+                  className="absolute text-indigo-400 text-3xl font-black font-mono"
                   style={{ left: p.left, top: p.top }}
                 >
                   {p.text}
@@ -1152,22 +1156,22 @@ export default function App() {
                 {/* Outer spinning ring (Clockwise) with dashes */}
                 <motion.div
                   animate={{ rotate: 360 }}
-                  transition={{ repeat: Infinity, duration: 6, ease: "linear" }}
+                  transition={{ repeat: Infinity, duration: 8, ease: "linear" }}
                   className="w-28 h-28 border border-dashed border-indigo-500/40 rounded-full absolute"
                 />
 
                 {/* Middle fast counter-spinning ring with dots */}
                 <motion.div
                   animate={{ rotate: -360 }}
-                  transition={{ repeat: Infinity, duration: 10, ease: "linear" }}
+                  transition={{ repeat: Infinity, duration: 12, ease: "linear" }}
                   className="w-24 h-24 border-2 border-dotted border-emerald-500/30 rounded-full absolute"
                 />
 
                 {/* Inner glowing element */}
                 <motion.div 
-                  whileHover={{ scale: 1.15, rotate: 15 }}
+                  whileHover={{ scale: 1.05, rotate: 10 }}
                   transition={{ type: "spring", stiffness: 300 }}
-                  className="relative w-20 h-20 bg-gradient-to-br from-slate-900 via-[#0a1122] to-indigo-950/90 border border-indigo-500/30 rounded-full flex items-center justify-center cursor-pointer shadow-inner shadow-indigo-500/50"
+                  className="relative w-20 h-20 bg-slate-900 border border-indigo-505/30 rounded-full flex items-center justify-center cursor-pointer shadow-inner shadow-indigo-500/50"
                 >
                   <Coins className="w-10 h-10 text-indigo-400 rotate-12 drop-shadow-[0_0_12px_rgba(139,92,246,0.5)]" />
                   
@@ -1184,15 +1188,15 @@ export default function App() {
               
               {/* Splendid Title Card */}
               <motion.div
-                initial={{ opacity: 0, y: 15 }}
+                initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.8, ease: "easeOut" }}
-                className="space-y-1.5"
+                transition={{ duration: 0.5, ease: "easeOut" }}
+                className="space-y-1"
               >
                 <h1 className="text-3xl sm:text-4xl font-black tracking-widest bg-gradient-to-r from-indigo-200 via-white to-emerald-300 bg-clip-text text-transparent uppercase drop-shadow-[0_4px_12px_rgba(0,0,0,0.5)]">
                   BÜTÇEM PRO
                 </h1>
-                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest flex items-center justify-center gap-1.5">
+                <p className="text-[10px] text-slate-400 font-extrabold uppercase tracking-widest flex items-center justify-center gap-1.5">
                   <span>💡 LİMİTSİZ YÖNETİM</span>
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                   <span>AI DESTEKLİ</span>
@@ -1200,7 +1204,7 @@ export default function App() {
               </motion.div>
 
               {/* Progress Slider */}
-              <div className="space-y-3 pt-2">
+              <div className="space-y-3 pt-1">
                 <div className="w-full h-2 bg-slate-900/90 rounded-full overflow-hidden border border-white/5 relative">
                   <div 
                     className="h-full bg-gradient-to-r from-indigo-500 via-purple-500 to-emerald-400 rounded-full transition-all duration-150 ease-out"
@@ -1208,9 +1212,9 @@ export default function App() {
                   />
                 </div>
                 
-                <div className="flex items-center justify-between text-[10px] font-semibold text-slate-400 px-1">
+                <div className="flex items-center justify-between text-[10px] font-bold text-slate-400 px-1">
                   <span className="animate-pulse flex items-center gap-1">
-                    <span className="w-0.5 h-0.5 rounded-full bg-indigo-400 animate-ping inline-block" />
+                    <span className="w-1 h-1 rounded-full bg-indigo-400 animate-ping inline-block" />
                     {splashStatus}
                   </span>
                   <span className="font-mono font-bold text-indigo-300 bg-indigo-950/60 px-2 py-0.5 rounded-md border border-indigo-500/10">{splashProgress}%</span>
@@ -1218,7 +1222,7 @@ export default function App() {
               </div>
 
               {/* Real-time Loading Systems Checklist */}
-              <div className="bg-slate-900/60 p-3.5 rounded-2xl border border-white/5 space-y-2 text-left max-w-xs mx-auto text-[10px] font-semibold tracking-wider">
+              <div className="bg-slate-900/60 p-3.5 rounded-2xl border border-white/5 space-y-2 text-left max-w-xs mx-auto text-[10px] font-bold tracking-wider">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span>{splashProgress >= 30 ? "🔒" : "⏳"}</span>
@@ -1226,7 +1230,7 @@ export default function App() {
                       VERİ TABANI ŞİFRELEME
                     </span>
                   </div>
-                  <span className={splashProgress >= 30 ? "text-emerald-400 font-bold" : "text-indigo-400 animate-pulse"}>
+                  <span className={splashProgress >= 30 ? "text-emerald-400 font-extrabold" : "text-indigo-400 animate-pulse"}>
                     {splashProgress >= 30 ? "BAŞARILI ✓" : "YÜKLENİYOR"}
                   </span>
                 </div>
@@ -1238,7 +1242,7 @@ export default function App() {
                       AI FİNANS ANALİZ MOTORU
                     </span>
                   </div>
-                  <span className={splashProgress >= 65 ? "text-emerald-400 font-bold" : splashProgress >= 30 ? "text-indigo-400 animate-pulse" : "text-slate-500"}>
+                  <span className={splashProgress >= 65 ? "text-emerald-400 font-extrabold" : splashProgress >= 30 ? "text-indigo-400 animate-pulse" : "text-slate-500"}>
                     {splashProgress >= 65 ? "HAZIR ✓" : splashProgress >= 30 ? "YÜKLENİYOR" : "BEKLENİYOR"}
                   </span>
                 </div>
@@ -1250,7 +1254,7 @@ export default function App() {
                       BİLDİRİM & ALARM SİNYALLERİ
                     </span>
                   </div>
-                  <span className={splashProgress >= 90 ? "text-emerald-400 font-bold" : splashProgress >= 65 ? "text-indigo-400 animate-pulse" : "text-slate-500"}>
+                  <span className={splashProgress >= 90 ? "text-emerald-400 font-extrabold" : splashProgress >= 65 ? "text-indigo-400 animate-pulse" : "text-slate-500"}>
                     {splashProgress >= 90 ? "BAĞLANDI ✓" : splashProgress >= 65 ? "YÜKLENİYOR" : "BEKLENİYOR"}
                   </span>
                 </div>
@@ -1259,18 +1263,16 @@ export default function App() {
               {/* Fast forward skip button for super fast launch */}
               <motion.button
                 type="button"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: splashProgress >= 3 ? 0.75 : 0 }}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
                 onClick={() => {
                   setSplashProgress(100);
                   setSplashStatus("Sistemler Kısayolla Başlatıldı!");
                   setTimeout(() => {
                     setSplashVisible(false);
-                  }, 120);
+                  }, 80);
                 }}
-                whileHover={{ scale: 1.05, opacity: 1, border: "1px solid rgba(139, 92, 246, 0.4)" }}
-                whileTap={{ scale: 0.95 }}
-                className="px-3.5 py-1.5 rounded-xl bg-slate-950 border border-white/5 text-[9px] font-black uppercase text-indigo-300 tracking-wider hover:bg-slate-900 cursor-pointer select-none transition-all flex items-center gap-1.5 mx-auto"
+                className="px-4 py-2 rounded-xl bg-white border border-indigo-100 text-[10px] font-black uppercase text-indigo-600 tracking-wider shadow-xs hover:bg-slate-50 cursor-pointer select-none transition-all flex items-center gap-1.5 mx-auto"
               >
                 <span>Hemen Başla</span>
                 <span>⚡</span>
@@ -1278,9 +1280,9 @@ export default function App() {
             </div>
 
             {/* Footer info lock */}
-            <div className="absolute bottom-6 text-[9px] text-slate-500 tracking-widest uppercase font-bold text-center space-y-1">
+            <div className="absolute bottom-6 text-[9px] text-slate-400 tracking-widest uppercase font-black text-center space-y-0.5">
               <div>Bütçem Pro v5.0 Ultimate Edition</div>
-              <div className="text-[7.5px] text-slate-600 font-mono tracking-normal text-center">Secure AES-256 Workspace Ingress • Verified</div>
+              <div className="text-[7.5px] text-slate-500 font-mono tracking-normal text-center">Secure AES-256 Workspace Ingress • Verified</div>
             </div>
           </motion.div>
         )}
@@ -1696,6 +1698,7 @@ export default function App() {
             onAddAlarm={handleAddAlarm}
             themeColor={colorTheme}
             onSaveInstallment={handleSaveInstallment}
+            installmentDebts={installmentDebts}
           />
         )}
 
@@ -1767,10 +1770,10 @@ export default function App() {
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Hatırlatma Tarihi</label>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Hatırlatma Tarihi ve Saati</label>
                     <input
-                      type="date"
-                      className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500 text-slate-800 dark:text-slate-100"
+                      type="datetime-local"
+                      className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500 text-slate-800 dark:text-slate-100 font-mono"
                       value={newAlarmDate}
                       onChange={(e) => setNewAlarmDate(e.target.value)}
                     />
@@ -1852,7 +1855,9 @@ export default function App() {
                       key={a.id}
                       className="p-3.5 bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700/50 flex justify-between items-center text-xs"
                     >
-                      <span className="font-semibold text-slate-700 dark:text-slate-200">🔔 {a.title} {a.date && `(${new Date(a.date).toLocaleDateString("tr-TR")})`}</span>
+                      <span className="font-semibold text-slate-700 dark:text-slate-200">
+                        🔔 {a.title} {a.date && `(${new Date(a.date).toLocaleString("tr-TR", { year: "numeric", month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })})`}
+                      </span>
                       <button onClick={() => handleDeleteAlarm(a.id)} className="text-rose-500 font-black hover:underline px-2 py-1 hover:bg-rose-50 dark:hover:bg-rose-950/20 rounded-xl transition">Sil</button>
                     </div>
                   ))

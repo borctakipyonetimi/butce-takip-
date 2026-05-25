@@ -31,6 +31,17 @@ export const InstallmentsList: React.FC<InstallmentsListProps> = ({
   const [paidInstallmentCount, setPaidInstallmentCount] = useState("0");
   const [firstDueDate, setFirstDueDate] = useState("");
 
+  const formatNumberWithDots = (val: string): string => {
+    const cleaned = val.replace(/\D/g, "");
+    if (!cleaned) return "";
+    return cleaned.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  };
+
+  const parseNumberFromDots = (val: string): number => {
+    const cleaned = val.replace(/\./g, "");
+    return parseFloat(cleaned) || 0;
+  };
+
   const handleOpenAdd = () => {
     setModalTitle("Yeni Taksitli Borç Planı");
     setInstId(undefined);
@@ -46,7 +57,7 @@ export const InstallmentsList: React.FC<InstallmentsListProps> = ({
     setModalTitle("Taksitli Borç Düzenle");
     setInstId(inst.id);
     setName(inst.name);
-    setTotalAmount(inst.totalAmount.toString());
+    setTotalAmount(formatNumberWithDots(inst.totalAmount.toString()));
     setInstallmentCount(inst.installmentCount.toString());
     setPaidInstallmentCount(inst.paidInstallmentCount.toString());
     setFirstDueDate(inst.firstDueDate ? inst.firstDueDate.slice(0, 10) : new Date().toISOString().slice(0, 10));
@@ -54,7 +65,7 @@ export const InstallmentsList: React.FC<InstallmentsListProps> = ({
   };
 
   const handleSave = () => {
-    const parsedTotal = parseFloat(totalAmount);
+    const parsedTotal = parseNumberFromDots(totalAmount);
     const parsedCount = parseInt(installmentCount);
     const parsedPaid = parseInt(paidInstallmentCount) || 0;
 
@@ -215,11 +226,11 @@ export const InstallmentsList: React.FC<InstallmentsListProps> = ({
                 <div>
                   <label className="text-[10px] font-bold text-slate-400 block mb-1">TOPLAM TUTAR</label>
                   <input
-                    type="number"
+                    type="text"
                     value={totalAmount}
-                    onChange={(e) => setTotalAmount(e.target.value)}
-                    placeholder="₺12000"
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs dark:text-white"
+                    onChange={(e) => setTotalAmount(formatNumberWithDots(e.target.value))}
+                    placeholder="₺12.000"
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs dark:text-white font-mono font-bold"
                   />
                 </div>
                 <div>
