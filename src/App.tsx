@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import {
   Menu,
@@ -367,6 +367,109 @@ export default function App() {
       setShowToast(false);
     }, 2000);
   };
+
+  // Synchronized state refs for periodic Alarm triggering engine (bypasses stale closures)
+  const alarmsRef = useRef(alarms);
+  const notificationsRef = useRef(notifications);
+  const debtsRef = useRef(debts);
+  const incomesRef = useRef(incomes);
+  const installmentDebtsRef = useRef(installmentDebts);
+  const paymentsRef = useRef(payments);
+  const expensesRef = useRef(expenses);
+  const expenseCategoriesRef = useRef(expenseCategories);
+
+  useEffect(() => { alarmsRef.current = alarms; }, [alarms]);
+  useEffect(() => { notificationsRef.current = notifications; }, [notifications]);
+  useEffect(() => { debtsRef.current = debts; }, [debts]);
+  useEffect(() => { incomesRef.current = incomes; }, [incomes]);
+  useEffect(() => { installmentDebtsRef.current = installmentDebts; }, [installmentDebts]);
+  useEffect(() => { paymentsRef.current = payments; }, [payments]);
+  useEffect(() => { expensesRef.current = expenses; }, [expenses]);
+  useEffect(() => { expenseCategoriesRef.current = expenseCategories; }, [expenseCategories]);
+
+  const hasInitializedAlarms = useRef(false);
+  const expiredAlarmsOnStart = useRef<Set<number>>(new Set());
+
+  // High-Precision Real-time Automated Alarm Checking Engine
+  useEffect(() => {
+    const checkAlarmsInterval = setInterval(() => {
+      const now = new Date();
+      const nowTime = now.getTime();
+      const currentAlarms = alarmsRef.current;
+
+      // First run: mark any currently past alarm on startup as "expired/legacy" to avoid false automatic triggers on load
+      if (!hasInitializedAlarms.current) {
+        currentAlarms.forEach((a) => {
+          if (a.date) {
+            const alarmTime = new Date(a.date).getTime();
+            if (!isNaN(alarmTime) && alarmTime <= nowTime) {
+              expiredAlarmsOnStart.current.add(a.id);
+            }
+          }
+        });
+        hasInitializedAlarms.current = true;
+        console.log("Alarms background tracker initialized. Legacy alarm IDs excluded:", Array.from(expiredAlarmsOnStart.current));
+      }
+
+      // Check for valid active alarms that are due now
+      const dueAlarms = currentAlarms.filter((a) => {
+        if (!a.date) return false;
+        // Skip alarms marked as expired on start to avoid triggering old data
+        if (expiredAlarmsOnStart.current.has(a.id)) return false;
+
+        const alarmTime = new Date(a.date).getTime();
+        return !isNaN(alarmTime) && alarmTime <= nowTime;
+      });
+
+      if (dueAlarms.length > 0) {
+        console.log("TRIGGERED ALARMS DETECTED:", dueAlarms);
+        const dueIds = dueAlarms.map((a) => a.id);
+        
+        // Filter out these fired alarms from active alarms list
+        const remainingAlarms = currentAlarms.filter((a) => !dueIds.includes(a.id));
+        
+        let currentNotifs = [...notificationsRef.current];
+        
+        dueAlarms.forEach((a) => {
+          // Add detailed notification item to Bildirim Paneli
+          const nextId = currentNotifs.length > 0 ? Math.max(...currentNotifs.map((n) => n.id)) + 1 : 1;
+          const newNotif: NotificationItem = {
+            id: nextId,
+            title: `⏰ HATIRLATICI SİNYALİ: ${a.title} (Ödeme Tarihi Geldi)`
+          };
+          currentNotifs = [newNotif, ...currentNotifs];
+
+          // Trigger sound/vibe + general system overlay push notifications
+          sendSystemNotification(
+            "Ödeme Zamanı Geldi! ⏰",
+            `${a.title}`,
+            false // skip extra manual disk commits inside sendSystemNotification since we do saveAllToUser below
+          );
+
+          // Force local app text toast prompt
+          triggerToast(`⏰ Hatırlatıcı Sinyali: ${a.title}`);
+        });
+
+        // Set states atomically
+        setAlarms(remainingAlarms);
+        setNotifications(currentNotifs);
+
+        // Perform cohesive disk state commit
+        saveAllToUser(
+          debtsRef.current,
+          incomesRef.current,
+          remainingAlarms,
+          currentNotifs,
+          installmentDebtsRef.current,
+          paymentsRef.current,
+          expensesRef.current,
+          expenseCategoriesRef.current
+        );
+      }
+    }, 4000); // 4-second check rate gives ultra-rapid responsiveness
+
+    return () => clearInterval(checkAlarmsInterval);
+  }, []);
 
   // Automatically scroll to the very top of the window when switching active tabs
   useEffect(() => {
@@ -1928,28 +2031,30 @@ export default function App() {
               <div className="space-y-3 relative z-10">
                 <div className="flex items-center justify-between">
                   <span className="px-2.5 py-1 bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 text-[10px] font-bold tracking-wider rounded-full uppercase flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-ping" />
-                    APK & Mobil Entegrasyon Modu (V2.5)
+                    <span className="w-1.5 h-1.5 rounded-full bg-indigo-400" />
+                    MOBİL ENTEGRASYON SÜRÜMÜ
                   </span>
-                  <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Durum: {hasNotificationPermission === "granted" ? "İzin Verildi (SW/Uygulama İçi) ✔" : "Kurulum Gerekli ⚠️"}</span>
+                  <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+                    {hasNotificationPermission === "granted" ? "DURUM: İZİN VERİLDİ ✔" : "DURUM: KURULUM GEREKLİ ⚠️"}
+                  </span>
                 </div>
                 
                 <h3 className="text-sm sm:text-base font-black">Borç Hatırlatıcılarını Doğrudan Telefonunuzda Alın</h3>
                 <p className="text-slate-300 text-xs leading-relaxed font-semibold">
-                  Sistemimize eklediğimiz <strong>PWA Service Worker Push API (Yerel Servis Bildirimi)</strong> sayesinde, paketlenmiş APK uygulamalarında ve tüm Android webview ortamlarında, alarm ve ödeme vade bildirimleri telefonunuzun üst bildirim çubuğunda (durum çubuğu/system tray) anlık olarak gösterilecektir.
+                  Alarmları kurduğunuzda, ödeme günü yaklaştığında ve bütçe analizleri tamamlandığında, uygulamanın arka planda veya ön planda olduğuna bakılmaksızın cihazınıza sistem bildirimi gönderilir.
                 </p>
 
                 <div className="flex flex-wrap gap-2.5 pt-2">
                   <button
                     onClick={requestNotificationPermission}
-                    className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-xs font-black rounded-xl flex items-center gap-2 cursor-pointer transition active:scale-95 text-white shadow-md shadow-indigo-600/30"
+                    className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-xs font-black rounded-xl flex items-center gap-2 cursor-pointer transition active:scale-95 text-white"
                   >
                     <span>🔔 Telefon Bildirim İznini Etkinleştir</span>
                   </button>
                   <button
                     onClick={() => sendSystemNotification(
-                      "Bütçem Pro Test Hatırlatıcısı 🚀",
-                      "V2.5 Yerel PWA Servis Bildirimi başarıyla tetiklendi! Alarmlarınız telefonun üst çubuğuna sinyal olarak gelecektir."
+                      "Test Hatırlatıcısı 🚀",
+                      "Bütçem Pro sesli bildirim sinyali başarıyla alındı! Ödeme vadelerinde ve önemli alarmlarda bu uyarıyı alacaksınız."
                     )}
                     className="px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/10 text-xs font-black rounded-xl flex items-center gap-2 cursor-pointer transition active:scale-95 text-slate-100"
                   >
