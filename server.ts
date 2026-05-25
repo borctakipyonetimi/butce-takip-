@@ -17,23 +17,26 @@ let cachedAi: GoogleGenAI | null = null;
 
 function getGeminiClient(): GoogleGenAI | null {
   const currentKey = process.env.GEMINI_API_KEY;
-  if (!currentKey) {
+  if (!currentKey || currentKey.trim() === "") {
     cachedAi = null;
     cachedApiKey = undefined;
     return null;
   }
 
-  if (currentKey !== cachedApiKey || !cachedAi) {
+  const cleanKey = currentKey.trim();
+
+  if (cleanKey !== cachedApiKey || !cachedAi) {
     try {
       cachedAi = new GoogleGenAI({
-        apiKey: currentKey,
+        apiKey: cleanKey,
         httpOptions: {
           headers: {
             'User-Agent': 'aistudio-build',
           },
         },
       });
-      cachedApiKey = currentKey;
+      cachedApiKey = cleanKey;
+      console.log("[Gemini API Client] Successfully initialized with a valid key format.");
     } catch (err) {
       console.error("Gemini API Client Initialization Error:", err);
       return null;
@@ -51,7 +54,6 @@ app.post("/api/chat", async (req, res) => {
 
   const aiClient = getGeminiClient();
   if (!aiClient) {
-    // Generate a beautiful localized rules-based response with local calculator if Gemini key is missing
     const stats = context?.stats;
     const totalDebt = stats?.totalDebt || 0;
     const remaining = stats?.remaining || 0;
@@ -106,7 +108,7 @@ Kullanıcının bütçe durumuna ilişkin güncel veriler aşağıdadır:
 Görevlerin:
 1. Gelir/gider ve kalan borç analizini yaparak kullanıcının risk seviyesini (Yüksek, Orta, Düşük) belirle.
 2. Tasarruf, borç kapatma stratejileri (Kartopu / Çığ yöntemleri vb.) hakkında pratik öneriler ver.
-3. Kullanıcının yazdığı mesoruları finansal verileri baz alarak dost canlısı, rasyonel ve cesaretlendirici bir tonla somutlaştırarak cevapla.
+3. Kullanıcının yazdığı soruları finansal verileri baz alarak dost canlısı, rasyonel ve cesaretlendirici bir tonla somutlaştırarak cevapla.
 4. Cevaplarının okunabilirliği için markdown, başlıklar ve maddeler kullan.`;
 
     const contents = [];
@@ -124,7 +126,12 @@ Görevlerin:
       parts: [{ text: message }],
     });
 
-    const response = await aiClient.models.generateContent({
+    // Enforce an active 9-second timeout to prevent API hangs or slow responses in Cloud environments
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error("Timeout after 9000ms: Gemini API calls are taking too long due to rate limits or connection restrictions.")), 9000);
+    });
+
+    const geminiPromise = aiClient.models.generateContent({
       model: "gemini-3.5-flash",
       contents: contents,
       config: {
@@ -133,9 +140,12 @@ Görevlerin:
       },
     });
 
+    const response = await Promise.race([geminiPromise, timeoutPromise]);
     res.json({ reply: response.text });
   } catch (error: any) {
     const errMsg = error?.message || error?.toString() || "";
+    console.error("[Gemini API Error Diagnostics]:", error);
+
     const isKeyError = errMsg.toLowerCase().includes("expired") || 
                        errMsg.toLowerCase().includes("key") || 
                        errMsg.toLowerCase().includes("credential") || 
@@ -144,8 +154,14 @@ Görevlerin:
                        errMsg.toLowerCase().includes("api_key_invalid") ||
                        errMsg.toLowerCase().includes("forbidden");
 
+    const isTimeout = errMsg.toLowerCase().includes("timeout") ||
+                      errMsg.toLowerCase().includes("deadline") ||
+                      errMsg.toLowerCase().includes("duration");
+
     if (isKeyError) {
       console.warn(`[Gemini API Config Alert] API Key is inactive or expired: ${errMsg.slice(0, 150)}`);
+    } else if (isTimeout) {
+      console.warn(`[Gemini API Config Alert] API Request timed out: ${errMsg.slice(0, 150)}`);
     } else {
       console.warn(`[Gemini API Service Warn] General AI fetch failure, falling back to offline calculator: ${errMsg.slice(0, 150)}`);
     }
@@ -165,6 +181,8 @@ Görevlerin:
       advice += `1. Ekranın sağ üst köşesindeki **Settings** (Çark) menüsünü açın.\n`;
       advice += `2. **Secrets** (veya Environment Variables) kısmına gidin.\n`;
       advice += `3. Süresi dolan veya geçersiz olan \`GEMINI_API_KEY\` değerini geçerli yeni bir model anahtarıyla yenileyin.\n\n`;
+    } else if (isTimeout) {
+      advice += `Yapay zeka asistanı bağlantı zaman aşımına uğradı (Uzak sunucu yanıt vermedi). Ancak endişelenmeyin, yerel akıllı hesaplama motorumuz bütçe verilerinizi anında analiz etti!\n\n`;
     } else {
       advice += `Geçici bir ağ veya servis kısıtlaması nedeniyle model asistanımıza bağlanılamadı. Endişelenmeyin, yerel akıllı hesaplama motorumuz bütçe verilerinizi anında analiz etti!\n\n`;
     }

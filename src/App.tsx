@@ -489,7 +489,8 @@ export default function App() {
   // Overall totals
   const totalDebt = totalNormalDebt + totalInstallmentAmount;
   const totalPaid = totalNormalPaid + totalInstallmentPaid;
-  const remainingDebtValue = totalDebt - totalPaid;
+  // Taksitli borçların sadece o ayki taksiti, kalan borç kısmına eklensin
+  const remainingDebtValue = (totalNormalDebt - totalNormalPaid) + monthlyInstallmentsDue;
 
   // Correct calculation of remaining reserve (Total Income - Total Expense - Total Paid Debt)
   const netIncomeValue = totalIncome - totalExpense - totalPaid;
@@ -1694,6 +1695,7 @@ export default function App() {
             onToggleDebtPaid={handleToggleDebtPaid}
             onAddAlarm={handleAddAlarm}
             themeColor={colorTheme}
+            onSaveInstallment={handleSaveInstallment}
           />
         )}
 

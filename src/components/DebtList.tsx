@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect } from "react";
 import { PlusCircle, Printer, FileText, CheckCircle2, Circle, AlertCircle, Edit, Trash2, Calendar, ClipboardList, ArrowUpDown, Sparkles } from "lucide-react";
-import { Debt } from "../types";
+import { Debt, InstallmentDebt } from "../types";
 import { useCurrency } from "../utils/CurrencyContext";
 
 interface DebtListProps {
@@ -16,6 +16,7 @@ interface DebtListProps {
   onToggleDebtPaid: (id: number) => void;
   onAddAlarm: (title: string, date: string) => void;
   themeColor: string;
+  onSaveInstallment?: (installment: Partial<InstallmentDebt>) => void;
 }
 
 export const DebtList: React.FC<DebtListProps> = ({
@@ -26,6 +27,7 @@ export const DebtList: React.FC<DebtListProps> = ({
   onToggleDebtPaid,
   onAddAlarm,
   themeColor,
+  onSaveInstallment,
 }) => {
   const { format, currencySymbol } = useCurrency();
   const [activeTab, setActiveTab] = useState<"unpaid" | "paid" | "all">("unpaid");
@@ -47,6 +49,8 @@ export const DebtList: React.FC<DebtListProps> = ({
   const [category, setCategory] = useState("Diğer");
   const [dueDate, setDueDate] = useState("");
   const [createAlarm, setCreateAlarm] = useState(false);
+  const [isInstallment, setIsInstallment] = useState(false);
+  const [installmentCount, setInstallmentCount] = useState("12");
 
   const categories = ["Kredi Kartı", "Konut", "Araç", "Sağlık", "Eğitim", "Diğer"];
 
@@ -110,6 +114,8 @@ export const DebtList: React.FC<DebtListProps> = ({
     setCategory("Diğer");
     setDueDate("");
     setCreateAlarm(false);
+    setIsInstallment(false);
+    setInstallmentCount("12");
     setIsModalOpen(true);
   };
 
@@ -122,6 +128,7 @@ export const DebtList: React.FC<DebtListProps> = ({
     setCategory(d.category);
     setDueDate(d.dueDate || "");
     setCreateAlarm(false);
+    setIsInstallment(false);
     setIsModalOpen(true);
   };
 
@@ -142,14 +149,37 @@ export const DebtList: React.FC<DebtListProps> = ({
       return;
     }
 
-    onSaveDebt({
-      id: debtId,
-      name: name.trim(),
-      amount: parsedAmount,
-      paid: parsedPaid,
-      category,
-      dueDate,
-    }, createAlarm);
+    if (isInstallment && debtId === undefined) {
+      const count = parseInt(installmentCount) || 12;
+      if (count <= 0) {
+        alert("Lütfen geçerli bir taksit sayısı giriniz (en az 1).");
+        return;
+      }
+      const perMonth = parsedAmount / count;
+      const paidCount = Math.min(count, Math.round(parsedPaid / perMonth));
+
+      if (onSaveInstallment) {
+        onSaveInstallment({
+          name: name.trim(),
+          totalAmount: parsedAmount,
+          installmentCount: count,
+          paidInstallmentCount: paidCount,
+          firstDueDate: dueDate || new Date().toISOString().slice(0, 10),
+        });
+        if (createAlarm && dueDate) {
+          onAddAlarm(`Taksit Ödemesi: ${name.trim()}`, dueDate);
+        }
+      }
+    } else {
+      onSaveDebt({
+        id: debtId,
+        name: name.trim(),
+        amount: parsedAmount,
+        paid: parsedPaid,
+        category,
+        dueDate,
+      }, createAlarm);
+    }
 
     setIsModalOpen(false);
   };
@@ -590,6 +620,37 @@ export const DebtList: React.FC<DebtListProps> = ({
                   />
                 </div>
               </div>
+              {debtId === undefined && (
+                <div className="space-y-3.5 bg-slate-50/50 dark:bg-slate-900/30 p-3 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700/80">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="installment_check"
+                      checked={isInstallment}
+                      onChange={(e) => setIsInstallment(e.target.checked)}
+                      className="w-4 h-4 accent-indigo-600 rounded cursor-pointer"
+                    />
+                    <label htmlFor="installment_check" className="text-xs font-bold text-slate-600 dark:text-slate-300 select-none cursor-pointer">
+                      📊 Taksitli Olarak Kaydet (Taksitler Bölümü)
+                    </label>
+                  </div>
+                  
+                  {isInstallment && (
+                    <div className="space-y-1 animate-fade-in pl-6">
+                      <label className="text-[10px] font-bold text-indigo-500 block mb-1">TAKSİT SAYISI (VADE AYI)</label>
+                      <input
+                        type="number"
+                        min="1"
+                        value={installmentCount}
+                        onChange={(e) => setInstallmentCount(e.target.value)}
+                        placeholder="Örn: 12"
+                        className="w-full px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs dark:text-white font-bold font-mono"
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div className="flex items-center gap-2 py-1">
                 <input
                   type="checkbox"
