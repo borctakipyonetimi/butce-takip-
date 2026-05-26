@@ -335,55 +335,6 @@ Görevlerin:
           </p>
         </div>
       </div>
-
-      {/* GitHub Pages Gemini API Key Configuration Panel */}
-      <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-3xl border border-slate-200/50 dark:border-slate-700/65 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-        <div className="space-y-0.5">
-          <p className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-1.5">
-            🔑 Live Yapay Zeka Entegrasyonu (GitHub Pages için)
-          </p>
-          <p className="text-slate-500 dark:text-slate-400 font-semibold leading-relaxed">
-            Siteniz statik sunucuda (GitHub vb.) yayındayken asistanı aktifleştirmek için kendi ücretsiz Gemini API keyinizi buraya tanımlayabilirsiniz.
-          </p>
-        </div>
-        <button
-          onClick={() => setShowApiKeyField(!showApiKeyField)}
-          className="px-3.5 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 dark:bg-indigo-950/40 dark:text-indigo-450 dark:hover:bg-indigo-950/60 text-[10px] font-black uppercase rounded-xl transition shrink-0 cursor-pointer"
-        >
-          {showApiKeyField ? "Kapat" : apiKeyInput ? "Anahtarı Değiştir 🔑" : "API Anahtarı Ekle 🔑"}
-        </button>
-      </div>
-
-      {showApiKeyField && (
-        <div className="p-4 bg-white dark:bg-slate-800 border border-slate-200/50 dark:border-slate-700/60 rounded-3xl space-y-3 shadow-sm animate-fade-in">
-          <div className="space-y-1.5">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Gemini API Key</label>
-            <div className="flex gap-2">
-              <input
-                type="password"
-                value={apiKeyInput}
-                onChange={(e) => setApiKeyInput(e.target.value)}
-                placeholder="AI Studio'dan aldığınız AIzaSy... anahtarını buraya yapıştırın"
-                className="flex-1 px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:border-indigo-500 rounded-xl text-xs dark:text-white"
-              />
-              <button
-                onClick={() => {
-                  localStorage.setItem("user_gemini_api_key", apiKeyInput.trim());
-                  setShowApiKeyField(false);
-                  window.dispatchEvent(new CustomEvent("trigger-toast", { detail: apiKeyInput.trim() ? "Gemini API Anahtarı Kaydedildi! 🔑" : "API Anahtarı Kaldırıldı." }));
-                }}
-                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-black rounded-xl text-xs transition active:scale-95 cursor-pointer"
-              >
-                Kaydet
-              </button>
-            </div>
-            <p className="text-[10px] text-slate-400 font-semibold leading-relaxed">
-              🔑 API Anahtarı sadece sizin tarayıcınızda (localStorage) saklanır, sunucularımıza gitmez. Ücretsiz anahtar almak için <a href="https://aistudio.google.com/" target="_blank" rel="noopener noreferrer" className="text-indigo-500 underline font-extrabold hover:text-indigo-600 transition">Google AI Studio</a> sayfasını ziyaret edebilirsiniz.
-            </p>
-          </div>
-        </div>
-      )}
-
       {/* Chat Messages Area */}
       <div className="p-1 border border-slate-200/50 dark:border-slate-800/80 bg-slate-50/30 dark:bg-slate-900/30 rounded-3xl shadow-xs">
         <div

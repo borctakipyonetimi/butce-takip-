@@ -40,7 +40,9 @@ import {
   Share2,
   Facebook,
   Link,
-  Twitter
+  Twitter,
+  Volume2,
+  VolumeX
 } from "lucide-react";
 import {
   Debt,
@@ -129,6 +131,15 @@ export default function App() {
   const [colorTheme, setColorTheme] = useState<string>(() => {
     return localStorage.getItem("colorTheme") || "default";
   });
+
+  // Sound settings and Notification Filters state
+  const [soundEnabled, setSoundEnabled] = useState<boolean>(() => {
+    return localStorage.getItem("soundEnabled") !== "0";
+  });
+  const [useSystemSound, setUseSystemSound] = useState<boolean>(() => {
+    return localStorage.getItem("useSystemSound") === "1";
+  });
+  const [notifFilter, setNotifFilter] = useState<"all" | "alarm" | "system">("all");
 
   // Register Service Worker and inject Android WebView Polyfill for System Tray Push Notifications
   useEffect(() => {
@@ -280,47 +291,73 @@ export default function App() {
       navigator.vibrate([300, 100, 300, 100, 400, 120, 300, 100, 500]);
     }
 
-    // 2. Synthesize premium high-volume electronic wrist-watch digital beep alarm sound
-    try {
-      const AudioCtxConstructor = window.AudioContext || (window as any).webkitAudioContext;
-      if (AudioCtxConstructor) {
-        const audioCtx = new AudioCtxConstructor();
-        // Resume if suspended to guarantee auditory trigger
-        if (audioCtx.state === "suspended") {
-          audioCtx.resume();
-        }
+    // 2. Synthesize premium audio beep or system chime only if sound is enabled
+    if (soundEnabled) {
+      try {
+        const AudioCtxConstructor = window.AudioContext || (window as any).webkitAudioContext;
+        if (AudioCtxConstructor) {
+          const audioCtx = new AudioCtxConstructor();
+          // Resume if suspended to guarantee auditory trigger
+          if (audioCtx.state === "suspended") {
+            audioCtx.resume();
+          }
 
-        const osc = audioCtx.createOscillator();
-        const gainNode = audioCtx.createGain();
-        osc.connect(gainNode);
-        gainNode.connect(audioCtx.destination);
-        
-        // Use Sawtooth waveform for clear whistle-like high volume notice
-        osc.type = "sawtooth";
-        
-        // Energetic triple digital alarm beep motif
-        const nowTime = audioCtx.currentTime;
-        
-        // Beep 1
-        osc.frequency.setValueAtTime(987.77, nowTime); // B5 (Bright high pitch alarm)
-        gainNode.gain.setValueAtTime(0.35, nowTime);
-        gainNode.gain.setValueAtTime(0, nowTime + 0.15);
-        
-        // Beep 2
-        osc.frequency.setValueAtTime(987.77, nowTime + 0.22);
-        gainNode.gain.setValueAtTime(0.35, nowTime + 0.22);
-        gainNode.gain.setValueAtTime(0, nowTime + 0.37);
-        
-        // Beep 3
-        osc.frequency.setValueAtTime(1174.66, nowTime + 0.44); // D6 (Final high peak notice)
-        gainNode.gain.setValueAtTime(0.40, nowTime + 0.44);
-        gainNode.gain.exponentialRampToValueAtTime(0.01, nowTime + 0.69);
-        
-        osc.start(nowTime);
-        osc.stop(nowTime + 0.72);
+          const osc = audioCtx.createOscillator();
+          const gainNode = audioCtx.createGain();
+          osc.connect(gainNode);
+          gainNode.connect(audioCtx.destination);
+          
+          if (useSystemSound) {
+            // Soft pleasant professional software system chime (C5 -> E5 -> G5)
+            osc.type = "sine";
+            const nowTime = audioCtx.currentTime;
+            
+            // Note 1 (C5)
+            osc.frequency.setValueAtTime(523.25, nowTime);
+            gainNode.gain.setValueAtTime(0.20, nowTime);
+            gainNode.gain.setValueAtTime(0, nowTime + 0.15);
+            
+            // Note 2 (E5)
+            osc.frequency.setValueAtTime(659.25, nowTime + 0.18);
+            gainNode.gain.setValueAtTime(0.20, nowTime + 0.18);
+            gainNode.gain.setValueAtTime(0, nowTime + 0.33);
+            
+            // Note 3 (G5)
+            osc.frequency.setValueAtTime(783.99, nowTime + 0.36);
+            gainNode.gain.setValueAtTime(0.25, nowTime + 0.36);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, nowTime + 0.65);
+            
+            osc.start(nowTime);
+            osc.stop(nowTime + 0.70);
+          } else {
+            // Sawtooth wrist-watch digital beep alarm sound
+            osc.type = "sawtooth";
+            const nowTime = audioCtx.currentTime;
+            
+            // Beep 1
+            osc.frequency.setValueAtTime(987.77, nowTime); // B5 (Bright high pitch alarm)
+            gainNode.gain.setValueAtTime(0.35, nowTime);
+            gainNode.gain.setValueAtTime(0, nowTime + 0.15);
+            
+            // Beep 2
+            osc.frequency.setValueAtTime(987.77, nowTime + 0.22);
+            gainNode.gain.setValueAtTime(0.35, nowTime + 0.22);
+            gainNode.gain.setValueAtTime(0, nowTime + 0.37);
+            
+            // Beep 3
+            osc.frequency.setValueAtTime(1174.66, nowTime + 0.44); // D6 (Final high peak notice)
+            gainNode.gain.setValueAtTime(0.40, nowTime + 0.44);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, nowTime + 0.69);
+            
+            osc.start(nowTime);
+            osc.stop(nowTime + 0.72);
+          }
+        }
+      } catch (e) {
+        console.log("Audio context synthetic alarm sound suppressed by browser interaction limits:", e);
       }
-    } catch (e) {
-      console.log("Audio context synthetic alarm sound suppressed by browser interaction limits:", e);
+    } else {
+      console.log("Notification sound muted by user configuration settings.");
     }
 
     // 3. Trigger standard phone OS notification or Service Worker background push
@@ -435,6 +472,23 @@ export default function App() {
   useEffect(() => { paymentsRef.current = payments; }, [payments]);
   useEffect(() => { expensesRef.current = expenses; }, [expenses]);
   useEffect(() => { expenseCategoriesRef.current = expenseCategories; }, [expenseCategories]);
+
+  // Sync scheduled future active alarms to background Android / Chrome Service Worker threads
+  useEffect(() => {
+    if (typeof window !== "undefined" && "serviceWorker" in navigator) {
+      navigator.serviceWorker.ready.then((reg) => {
+        const sw = reg.active || navigator.serviceWorker.controller;
+        if (sw) {
+          sw.postMessage({
+            type: "SYNC_ALARMS",
+            alarms: alarms
+          });
+        }
+      }).catch(err => {
+        console.warn("[Background SW Sync Warn] Unable to synchronize alarms list to background service worker thread:", err);
+      });
+    }
+  }, [alarms]);
 
   // High-Precision Real-time Automated Alarm Checking Engine
   useEffect(() => {
@@ -1727,6 +1781,25 @@ export default function App() {
             >
               <RotateCw className="w-4 h-4 text-indigo-400 animate-spin [animation-duration:15s]" />
             </button>
+
+            <button
+              onClick={() => {
+                setActiveTab("notifications");
+                const el = document.getElementById("main-nav-tabs") || document.getElementById("notifications-container");
+                if (el) {
+                  el.scrollIntoView({ behavior: "smooth" });
+                }
+              }}
+              title={`Bildirimler ve Alarmlar (${notifications.length})`}
+              className="p-2 lg:p-2.5 bg-white/5 hover:bg-white/10 border border-white/10 active:scale-95 rounded-xl transition-all text-white flex items-center justify-center duration-300 cursor-pointer shadow-inner relative shrink-0"
+            >
+              <Bell className="w-4 h-4 text-indigo-300" />
+              {notifications.length > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white font-mono text-[9px] font-black h-4 min-w-[16px] px-1 rounded-full flex items-center justify-center ring-2 ring-slate-900">
+                  {notifications.length}
+                </span>
+              )}
+            </button>
           </div>
           
           <div className="flex items-center gap-2">
@@ -1787,7 +1860,52 @@ export default function App() {
           isSidebarOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <div className="p-5 space-y-5">
+        {/* Animated fluid floating vector blobs for premium backdrop depth (100% stable, zero Math.random hydration hazards) */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-[0.06] dark:opacity-[0.14] z-0">
+          <motion.div
+            animate={{
+              x: [0, 24, -14, 0],
+              y: [0, -35, 25, 0],
+              scale: [1, 1.18, 0.92, 1],
+              rotate: [0, 90, 180, 0]
+            }}
+            transition={{
+              duration: 18,
+              repeat: Infinity,
+              ease: "easeInOut"
+            }}
+            className="absolute -top-10 -left-10 w-44 h-44 rounded-full bg-gradient-to-tr from-indigo-500 to-sky-450 blur-2xl"
+          />
+          <motion.div
+            animate={{
+              x: [0, -28, 18, 0],
+              y: [0, 30, -22, 0],
+              scale: [1, 0.88, 1.12, 1],
+              rotate: [0, -90, -180, 0]
+            }}
+            transition={{
+              duration: 22,
+              repeat: Infinity,
+              ease: "easeInOut",
+              delay: 3
+            }}
+            className="absolute top-1/3 -right-12 w-48 h-48 rounded-full bg-gradient-to-tr from-emerald-500 to-teal-400 blur-2xl"
+          />
+          <motion.div
+            animate={{
+              y: [0, 50, -35, 0],
+              scale: [0.93, 1.16, 0.93]
+            }}
+            transition={{
+              duration: 25,
+              repeat: Infinity,
+              ease: "easeInOut"
+            }}
+            className="absolute bottom-12 left-6 w-38 h-38 rounded-full bg-gradient-to-tr from-purple-500 to-pink-500 blur-2xl"
+          />
+        </div>
+
+        <div className="p-5 space-y-5 relative z-10">
           {/* Workspace Title */}
           <div className="flex items-center gap-2 border-b dark:border-slate-700 pb-3">
             <Coins className="w-6 h-6 text-indigo-500 animate-pulse animate-spin [animation-duration:15s]" />
@@ -1907,7 +2025,7 @@ export default function App() {
         </div>
 
         {/* Database backup controllers inside side panel footer */}
-        <div className="p-4 border-t dark:border-slate-700 space-y-3 bg-slate-50/50 dark:bg-slate-900/40">
+        <div className="p-4 border-t dark:border-slate-700 space-y-3 bg-slate-50/50 dark:bg-slate-900/40 relative z-10">
           <div className="grid grid-cols-2 gap-1.5 text-[9px] font-bold">
             <button
               onClick={handleExportBackup}
@@ -2126,6 +2244,60 @@ export default function App() {
               </div>
             </div>
 
+            {/* Premium Sound and Alert Configuration Panel */}
+            <div className="p-5 bg-white dark:bg-slate-800 border border-slate-250/20 rounded-3xl shadow-sm space-y-4">
+              <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                <Volume2 className="w-4 h-4 text-emerald-500 animate-pulse" />
+                Sesli Sinyal ve Bildirim Zil Sesi Ayarları
+              </h3>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 font-semibold leading-relaxed">
+                Yaklaşan ödemelerin otomatik alarmlarında ve uyarı mesajlarında duyulacak bildirim zil sesini ayarlayabilirsiniz. Sistem seslerini simüle eden modern tınılar ya da klasik yüksek volümlü dijital saat uyarısını seçebilirsiniz.
+              </p>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                  <div>
+                    <span className="text-xs font-bold text-slate-700 dark:text-slate-200 block">Zil Sesi Durumu</span>
+                    <span className="text-[10px] text-slate-400 font-medium leading-none block mt-0.5">Test ve hatırlatma bip sesleri</span>
+                  </div>
+                  <button
+                    onClick={() => {
+                      const next = !soundEnabled;
+                      setSoundEnabled(next);
+                      localStorage.setItem("soundEnabled", next ? "1" : "0");
+                      triggerToast(next ? "Zil Sesi Aktif Edildi 🔔" : "Zil Sesi Sessize Alındı 🔕");
+                    }}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-black cursor-pointer transition select-none ${
+                      soundEnabled
+                        ? "bg-gradient-to-tr from-emerald-500 to-teal-500 text-white shadow-md shadow-emerald-500/10"
+                        : "bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300"
+                    }`}
+                  >
+                    {soundEnabled ? "AÇIK 🔔" : "KAPALI 🔕"}
+                  </button>
+                </div>
+
+                <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                  <div>
+                    <span className="text-xs font-bold text-slate-700 dark:text-slate-200 block">Melodi Türü</span>
+                    <span className="text-[10px] text-slate-400 font-medium leading-none block mt-0.5">Zil sesi melodi alternatifi</span>
+                  </div>
+                  <select
+                    value={useSystemSound ? "system" : "digital"}
+                    onChange={(e) => {
+                      const next = e.target.value === "system";
+                      setUseSystemSound(next);
+                      localStorage.setItem("useSystemSound", next ? "1" : "0");
+                      triggerToast(next ? "Sistem Melodisi Seçildi" : "Dijital Saat Sinyali Seçildi");
+                    }}
+                    className="px-2.5 py-1.5 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold cursor-pointer transition focus:outline-none"
+                  >
+                    <option value="digital">Dijital Saat Bipi</option>
+                    <option value="system">Sistem Melodisi (Simüle)</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
             <div className="grid gap-6 md:grid-cols-2">
               <div className="space-y-3">
                 <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wide">Aktif Hatırlatmalar (Alarmlar)</h4>
@@ -2147,19 +2319,78 @@ export default function App() {
               </div>
 
               <div className="space-y-3">
-                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wide">Bildirim Paneli</h4>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-2">
+                  <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wide flex items-center gap-1.5">
+                    💌 Bildirim Paneli
+                  </h4>
+                  <div className="flex gap-1 bg-slate-100 dark:bg-slate-900/80 p-1 rounded-xl">
+                    <button
+                      onClick={() => setNotifFilter("all")}
+                      className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all select-none cursor-pointer ${
+                        notifFilter === "all"
+                          ? "bg-indigo-600 text-white shadow-xs"
+                          : "text-slate-500 hover:text-indigo-600 dark:text-slate-400"
+                      }`}
+                    >
+                      Tümü ({notifications.length})
+                    </button>
+                    <button
+                      onClick={() => setNotifFilter("alarm")}
+                      className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all select-none cursor-pointer ${
+                        notifFilter === "alarm"
+                          ? "bg-indigo-600 text-white shadow-xs"
+                          : "text-slate-500 hover:text-indigo-600 dark:text-slate-400"
+                      }`}
+                    >
+                      Alarmlar ({notifications.filter(n => !(n.type === "system" || n.title.includes("Hoş Geldiniz") || n.title.includes("Veritabanı") || n.title.includes("Sistem") || n.title.includes("Yedek") || n.title.includes("Temizlendi") || n.title.includes("Test"))).length})
+                    </button>
+                    <button
+                      onClick={() => setNotifFilter("system")}
+                      className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all select-none cursor-pointer ${
+                        notifFilter === "system"
+                          ? "bg-indigo-600 text-white shadow-xs"
+                          : "text-slate-500 hover:text-indigo-600 dark:text-slate-400"
+                      }`}
+                    >
+                      Sistem ({notifications.filter(n => (n.type === "system" || n.title.includes("Hoş Geldiniz") || n.title.includes("Veritabanı") || n.title.includes("Sistem") || n.title.includes("Yedek") || n.title.includes("Temizlendi") || n.title.includes("Test"))).length})
+                    </button>
+                  </div>
+                </div>
+
                 {notifications.length === 0 ? (
                   <div className="text-center py-6 text-xs text-slate-405 p-4 bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-800">Yeni bildirim bulunmuyor.</div>
+                ) : notifications.filter((n) => {
+                  const isSys = n.type === "system" || n.title.includes("Hoş Geldiniz") || n.title.includes("Veritabanı") || n.title.includes("Sistem") || n.title.includes("Yedek") || n.title.includes("Temizlendi") || n.title.includes("Test");
+                  if (notifFilter === "alarm") return !isSys;
+                  if (notifFilter === "system") return isSys;
+                  return true;
+                }).length === 0 ? (
+                  <div className="text-center py-6 text-xs text-slate-400 p-4 bg-white dark:bg-slate-800 rounded-2xl border border-slate-105">Seçilen filtrede bildirim bulunmuyor.</div>
                 ) : (
-                  notifications.map((n) => (
-                    <div
-                      key={n.id}
-                      className="p-3.5 bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700/50 flex justify-between items-center text-xs"
-                    >
-                      <span className="font-semibold text-slate-700 dark:text-slate-200">💌 {n.title}</span>
-                      <button onClick={() => handleDeleteNotif(n.id)} className="text-rose-500 font-black hover:underline px-2 py-1 hover:bg-rose-50 dark:hover:bg-rose-950/20 rounded-xl transition">Sil</button>
-                    </div>
-                  ))
+                  notifications.filter((n) => {
+                    const isSys = n.type === "system" || n.title.includes("Hoş Geldiniz") || n.title.includes("Veritabanı") || n.title.includes("Sistem") || n.title.includes("Yedek") || n.title.includes("Temizlendi") || n.title.includes("Test");
+                    if (notifFilter === "alarm") return !isSys;
+                    if (notifFilter === "system") return isSys;
+                    return true;
+                  }).map((n) => {
+                    const isSys = n.type === "system" || n.title.includes("Hoş Geldiniz") || n.title.includes("Veritabanı") || n.title.includes("Sistem") || n.title.includes("Yedek") || n.title.includes("Temizlendi") || n.title.includes("Test");
+                    return (
+                      <div
+                        key={n.id}
+                        className="p-3.5 bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700/50 flex justify-between items-center text-xs animate-fade-in"
+                      >
+                        <span className="font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-2">
+                          {isSys ? (
+                            <span className="px-1.5 py-0.5 bg-sky-50 dark:bg-sky-950/30 text-sky-600 dark:text-sky-400 font-mono text-[9px] font-black rounded uppercase">SİSTEM</span>
+                          ) : (
+                            <span className="px-1.5 py-0.5 bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400 font-mono text-[9px] font-black rounded uppercase">ALARM</span>
+                          )}
+                          💌 {n.title}
+                        </span>
+                        <button onClick={() => handleDeleteNotif(n.id)} className="text-rose-500 font-black hover:underline px-2 py-1 hover:bg-rose-50 dark:hover:bg-rose-950/20 rounded-xl transition">Sil</button>
+                      </div>
+                    );
+                  })
                 )}
               </div>
             </div>
@@ -2386,9 +2617,18 @@ export default function App() {
           <span className="text-[9px] font-bold">Giderler</span>
         </button>
         <button
+          onClick={() => handleNavClick("installments")}
+          className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl transition ${
+            activeTab === "installments" ? "text-indigo-600 dark:text-indigo-400 scale-105" : "text-slate-400"
+          }`}
+        >
+          <Calendar className="w-4 h-4" />
+          <span className="text-[9px] font-bold">Taksitler</span>
+        </button>
+        <button
           onClick={() => handleNavClick("aiStrategy")}
           className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl transition ${
-            activeTab === "aiStrategy" ? "text-indigo-600 dark:text-indigo-400 scale-105 animate" : "text-slate-400"
+            activeTab === "aiStrategy" ? "text-indigo-600 dark:text-indigo-400 scale-105" : "text-slate-400"
           }`}
         >
           <Sparkles className="w-4 h-4 animate-pulse" />

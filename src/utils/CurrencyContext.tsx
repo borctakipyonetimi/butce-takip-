@@ -33,9 +33,9 @@ export const CurrencyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
     return {
       TRY: 1,
-      USD: 34.35,
-      EUR: 37.15,
-      GBP: 43.10,
+      USD: 45.85,
+      EUR: 49.85,
+      GBP: 58.20,
     };
   });
 
@@ -81,13 +81,13 @@ export const CurrencyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
     // Phase 2: Secondary back-up directly from the client side browser to multi-fallback APIs
     const apis = [
-      "https://api.frankfurter.app/latest?from=USD",
-      "https://api.frankfurter.app/latest?from=TRY",
-      "https://open.er-api.com/v6/latest/USD",
       "https://api.exchangerate-api.com/v4/latest/USD",
-      "https://open.er-api.com/v6/latest/TRY",
-      "https://api.exchangerate-api.com/v4/latest/TRY"
+      "https://open.er-api.com/v6/latest/USD"
     ];
+
+    const defaultUsd = 45.85;
+    const defaultEur = 49.85;
+    const defaultGbp = 58.20;
 
     for (const baseUrl of apis) {
       try {
@@ -104,15 +104,19 @@ export const CurrencyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
               rawRates[key.toUpperCase()] = Number(data.rates[key]);
             }
 
-            let usdRate = 34.35;
-            let eurRate = 37.15;
-            let gbpRate = 43.10;
-
             const tryInBase = rawRates.TRY;
+            if (!tryInBase && baseCode !== "TRY") {
+              throw new Error("TRY currency rate not present in this exchange API response.");
+            }
+
+            let usdRate = defaultUsd;
+            let eurRate = defaultEur;
+            let gbpRate = defaultGbp;
+
             if (baseCode === "TRY") {
-              usdRate = rawRates.USD ? (1 / rawRates.USD) : 34.35;
-              eurRate = rawRates.EUR ? (1 / rawRates.EUR) : 37.15;
-              gbpRate = rawRates.GBP ? (1 / rawRates.GBP) : 43.10;
+              usdRate = rawRates.USD ? (1 / rawRates.USD) : defaultUsd;
+              eurRate = rawRates.EUR ? (1 / rawRates.EUR) : defaultEur;
+              gbpRate = rawRates.GBP ? (1 / rawRates.GBP) : defaultGbp;
             } else if (tryInBase) {
               usdRate = tryInBase / (rawRates.USD || 1);
               eurRate = tryInBase / (rawRates.EUR || 1);
