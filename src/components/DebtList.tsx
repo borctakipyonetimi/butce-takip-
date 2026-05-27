@@ -104,12 +104,11 @@ export const DebtList: React.FC<DebtListProps> = ({
     ...activeUnpaidInstallmentDebts.map(inst => {
       const monthly = inst.totalAmount / inst.installmentCount;
       const paidValue = inst.paidInstallmentCount * monthly;
-      const remainingValue = inst.totalAmount - paidValue;
       return {
         id: inst.id,
         name: `${inst.name} (Taksitli)`,
         type: "installment" as const,
-        remaining: remainingValue,
+        remaining: monthly,
         total: inst.totalAmount,
         paid: paidValue
       };
@@ -609,7 +608,7 @@ export const DebtList: React.FC<DebtListProps> = ({
         </div>
 
         <p className="text-xs text-slate-600 dark:text-slate-300 font-semibold leading-relaxed">
-          Kalan toplam borcunuz <strong className="text-slate-800 dark:text-slate-100 font-black">{format(totalRemainingDebt)}</strong> ve aylık gelir kaynağınız <strong className="text-emerald-600 dark:text-emerald-400 font-black">{format(incomeVal)}</strong>. 
+          Bu ay ödemeniz gereken toplam borç miktarı (taksitli borçların tamamı yerine sadece bu ayki taksit tutarları dahil edilmiştir): <strong className="text-slate-800 dark:text-slate-100 font-black">{format(totalRemainingDebt)}</strong> ve aylık gelir kaynağınız <strong className="text-emerald-600 dark:text-emerald-400 font-black">{format(incomeVal)}</strong>. 
           Bu finansal verilere göre bütçeniz için en uygun borç kapatma stratejisi: <span className="text-indigo-600 dark:text-indigo-400 font-black bg-indigo-50 dark:bg-indigo-950/40 px-2 py-0.5 rounded-lg border border-indigo-100/30 dark:border-indigo-900/30">{recommendedStrategy === "snowball" ? "Kartopu (Snowball) Yöntemi" : "Çığ (Avalanche) Yöntemi"}</span>.
         </p>
 
@@ -654,12 +653,12 @@ export const DebtList: React.FC<DebtListProps> = ({
               </div>
               <h4 className="text-xs font-bold text-slate-800 dark:text-slate-100">❄️ Kartopu (Snowball) Yöntemi Nedir?</h4>
               <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed font-semibold">
-                Borçlarınızı faizlerinden bağımsız olarak <strong>en küçük tutardan en büyüğe</strong> doğru sıralayıp en küçüğünü hemen kapatma üzerine kurulu psikolojik odaklı yöntemdir. Küçük borçları kapatmak size zafer hissi ve motivasyon kazandırarak büyük borçları öderken dirençli olmanızı sağlar.
+                Borçlarınızı faizlerinden bağımsız olarak <strong>bu ay ödenecek en küçük tutardan en büyüğe</strong> doğru sıralayıp en küçüğünü hemen kapatma üzerine kurulu psikolojik odaklı yöntemdir. Küçük borçları kapatmak size zafer hissi ve motivasyon kazandırarak büyük borçları öderken dirençli olmanızı sağlar.
               </p>
               {smallestDebt ? (
                 <div className="p-3 bg-indigo-500/5 dark:bg-indigo-950/10 border-l-[3px] border-indigo-500 rounded-lg text-[11px] font-medium text-slate-700 dark:text-slate-300 space-y-1">
                   <span className="font-black text-[10px] text-indigo-600 dark:text-indigo-400 block uppercase tracking-wide">BUGÜNKÜ AKSİYON ADAYINIZ:</span>
-                  Kalan en küçük borcunuz olan <strong className="text-indigo-600 dark:text-indigo-400 font-bold">"{smallestDebt.name}"</strong> ({format(smallestDebt.remaining)} kalan) kaydını öncelikli kapatarak Kartopu etkisini hemen başlatabilirsiniz!
+                  Bu ayki en küçük ödemeniz olan <strong className="text-indigo-600 dark:text-indigo-400 font-bold">"{smallestDebt.name}"</strong> ({smallestDebt.type === "installment" ? "bu ayki taksiti" : "kalan"} {format(smallestDebt.remaining)}) kaydını öncelikli kapatarak Kartopu etkisini hemen başlatabilirsiniz!
                 </div>
               ) : (
                 <p className="text-[10px] text-slate-400 italic">Planlanacak aktif ödenmemiş borç bulunmamaktadır.</p>
@@ -673,12 +672,12 @@ export const DebtList: React.FC<DebtListProps> = ({
               </div>
               <h4 className="text-xs font-bold text-slate-800 dark:text-slate-100">⚡ Çığ (Avalanche) Yöntemi Nedir?</h4>
               <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed font-semibold">
-                Borçlarınızı <strong>en yüksek tutara (veya yüksek faize)</strong> sahip olanından başlayarak kapatma üzerine kurulu rasyonel, matematiksel yöntemdir. Bütçe açısından en akılcı ve finansal maliyeti en çok düşüren yoldur.
+                Borçlarınızı <strong>bu ay ödenecek en yüksek tutara</strong> sahip olanından başlayarak kapatma üzerine kurulu rasyonel, matematiksel yöntemdir. Bütçe açısından en akılcı ve finansal maliyeti en çok düşüren yoldur.
               </p>
               {largestDebt ? (
                 <div className="p-3 bg-amber-500/5 dark:bg-amber-950/10 border-l-[3px] border-amber-500 rounded-lg text-[11px] font-medium text-slate-700 dark:text-slate-300 space-y-1">
                   <span className="font-black text-[10px] text-amber-600 dark:text-amber-400 block uppercase tracking-wide">BUGÜNKÜ AKSİYON ADAYINIZ:</span>
-                  En büyük borç yükünüz olan <strong className="text-amber-600 dark:text-amber-400 font-bold">"{largestDebt.name}"</strong> ({format(largestDebt.remaining)} kalan) kaydına asgari ödemenin üzerinde ekstra kaynak aktararak Çığ etkisinden yararlanabilirsiniz!
+                  En büyük aylık borç yükünüz olan <strong className="text-amber-600 dark:text-amber-400 font-bold">"{largestDebt.name}"</strong> ({largestDebt.type === "installment" ? "bu ayki taksiti" : "kalan"} {format(largestDebt.remaining)}) kaydına asgari ödemenin üzerinde ekstra kaynak aktararak Çığ etkisinden yararlanabilirsiniz!
                 </div>
               ) : (
                 <p className="text-[10px] text-slate-400 italic">Planlanacak aktif ödenmemiş borç bulunmamaktadır.</p>
