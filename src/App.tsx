@@ -141,7 +141,7 @@ export default function App() {
   });
   const [notifFilter, setNotifFilter] = useState<"all" | "alarm" | "system">("all");
 
-  // Register Service Worker and inject Android WebView Polyfill for System Tray Push Notifications
+  // Register Service Worker and inject Android WebView Polyfill for System Tray Push Notifications and Audio Gesture Unlocker
   useEffect(() => {
     if (typeof window !== "undefined") {
       // 1. Register Service Worker to unlock navigator.serviceWorker.ready -> showNotification
@@ -171,7 +171,7 @@ export default function App() {
               navigator.serviceWorker.ready.then((reg) => {
                 reg.showNotification(title, {
                   body: options?.body,
-                  icon: options?.icon || "https://cdn-icons-png.flaticon.com/512/5968/5968292.png",
+                  icon: options?.icon || "/logo.png",
                   vibrate: [200, 100, 200],
                   tag: "butcempro-alert",
                   renotify: true
@@ -186,6 +186,41 @@ export default function App() {
         (window as any).Notification = FallbackNotification as any;
         setHasNotificationPermission("granted");
       }
+
+      // 3. Audio Autoplay Gesture Unlocker for iOS, Android, Chrome & WebViews
+      let unlocked = false;
+      const unlockAudio = () => {
+        if (unlocked) return;
+        
+        // Try to play a silent WAV to authorize subsequent HTML5 Audio requests
+        const silentAudio = new Audio("data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==");
+        silentAudio.play()
+          .then(() => {
+            unlocked = true;
+            console.log("Audio session unlocked dynamically via user gesture.");
+            window.removeEventListener("click", unlockAudio);
+            window.removeEventListener("touchstart", unlockAudio);
+          })
+          .catch((e) => {
+            console.warn("Silent audio context unlock deferred:", e);
+          });
+
+        // Also resume Web Audio context
+        try {
+          const AudioCtxConstructor = window.AudioContext || (window as any).webkitAudioContext;
+          if (AudioCtxConstructor) {
+            const testCtx = new AudioCtxConstructor();
+            if (testCtx.state === "suspended") {
+              testCtx.resume();
+            }
+          }
+        } catch (e) {
+          console.warn("Web Audio Context automatic resume error:", e);
+        }
+      };
+
+      window.addEventListener("click", unlockAudio, { passive: true });
+      window.addEventListener("touchstart", unlockAudio, { passive: true });
     }
   }, []);
 
@@ -291,123 +326,144 @@ export default function App() {
       navigator.vibrate([300, 100, 300, 100, 400, 120, 300, 100, 500]);
     }
 
-    // 2. Synthesize premium audio beep or system chime only if sound is enabled
+    // 2. Synthesize or play premium audio chime only if sound is enabled
     if (soundEnabled) {
-      try {
-        const AudioCtxConstructor = window.AudioContext || (window as any).webkitAudioContext;
-        if (AudioCtxConstructor) {
-          const audioCtx = new AudioCtxConstructor();
-          // Resume if suspended to guarantee auditory trigger
-          if (audioCtx.state === "suspended") {
-            audioCtx.resume();
-          }
+      const audioUrl = useSystemSound
+        ? "https://assets.mixkit.co/active_storage/sfx/2568/2568-84.wav" // Soft professional system chime
+        : "https://assets.mixkit.co/active_storage/sfx/2869/2869-84.wav"; // Bright digital watch beep alarm
 
-          const osc = audioCtx.createOscillator();
-          const gainNode = audioCtx.createGain();
-          osc.connect(gainNode);
-          gainNode.connect(audioCtx.destination);
-          
-          if (useSystemSound) {
-            // Soft pleasant professional software system chime (C5 -> E5 -> G5)
-            osc.type = "sine";
-            const nowTime = audioCtx.currentTime;
+      let isAudioPlayed = false;
+      const runSynthFallback = () => {
+        if (isAudioPlayed) return;
+        try {
+          const AudioCtxConstructor = window.AudioContext || (window as any).webkitAudioContext;
+          if (AudioCtxConstructor) {
+            const audioCtx = new AudioCtxConstructor();
+            if (audioCtx.state === "suspended") {
+              audioCtx.resume();
+            }
+
+            const osc = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            osc.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
             
-            // Note 1 (C5)
-            osc.frequency.setValueAtTime(523.25, nowTime);
-            gainNode.gain.setValueAtTime(0.20, nowTime);
-            gainNode.gain.setValueAtTime(0, nowTime + 0.15);
-            
-            // Note 2 (E5)
-            osc.frequency.setValueAtTime(659.25, nowTime + 0.18);
-            gainNode.gain.setValueAtTime(0.20, nowTime + 0.18);
-            gainNode.gain.setValueAtTime(0, nowTime + 0.33);
-            
-            // Note 3 (G5)
-            osc.frequency.setValueAtTime(783.99, nowTime + 0.36);
-            gainNode.gain.setValueAtTime(0.25, nowTime + 0.36);
-            gainNode.gain.exponentialRampToValueAtTime(0.01, nowTime + 0.65);
-            
-            osc.start(nowTime);
-            osc.stop(nowTime + 0.70);
-          } else {
-            // Sawtooth wrist-watch digital beep alarm sound
-            osc.type = "sawtooth";
-            const nowTime = audioCtx.currentTime;
-            
-            // Beep 1
-            osc.frequency.setValueAtTime(987.77, nowTime); // B5 (Bright high pitch alarm)
-            gainNode.gain.setValueAtTime(0.35, nowTime);
-            gainNode.gain.setValueAtTime(0, nowTime + 0.15);
-            
-            // Beep 2
-            osc.frequency.setValueAtTime(987.77, nowTime + 0.22);
-            gainNode.gain.setValueAtTime(0.35, nowTime + 0.22);
-            gainNode.gain.setValueAtTime(0, nowTime + 0.37);
-            
-            // Beep 3
-            osc.frequency.setValueAtTime(1174.66, nowTime + 0.44); // D6 (Final high peak notice)
-            gainNode.gain.setValueAtTime(0.40, nowTime + 0.44);
-            gainNode.gain.exponentialRampToValueAtTime(0.01, nowTime + 0.69);
-            
-            osc.start(nowTime);
-            osc.stop(nowTime + 0.72);
+            if (useSystemSound) {
+              osc.type = "sine";
+              const nowTime = audioCtx.currentTime;
+              osc.frequency.setValueAtTime(523.25, nowTime);
+              gainNode.gain.setValueAtTime(0.20, nowTime);
+              gainNode.gain.setValueAtTime(0, nowTime + 0.15);
+              
+              osc.frequency.setValueAtTime(659.25, nowTime + 0.18);
+              gainNode.gain.setValueAtTime(0.20, nowTime + 0.18);
+              gainNode.gain.setValueAtTime(0, nowTime + 0.33);
+              
+              osc.frequency.setValueAtTime(783.99, nowTime + 0.36);
+              gainNode.gain.setValueAtTime(0.25, nowTime + 0.36);
+              gainNode.gain.exponentialRampToValueAtTime(0.01, nowTime + 0.65);
+              
+              osc.start(nowTime);
+              osc.stop(nowTime + 0.70);
+            } else {
+              osc.type = "sawtooth";
+              const nowTime = audioCtx.currentTime;
+              osc.frequency.setValueAtTime(987.77, nowTime);
+              gainNode.gain.setValueAtTime(0.35, nowTime);
+              gainNode.gain.setValueAtTime(0, nowTime + 0.15);
+              
+              osc.frequency.setValueAtTime(987.77, nowTime + 0.22);
+              gainNode.gain.setValueAtTime(0.35, nowTime + 0.22);
+              gainNode.gain.setValueAtTime(0, nowTime + 0.37);
+              
+              osc.frequency.setValueAtTime(1174.66, nowTime + 0.44);
+              gainNode.gain.setValueAtTime(0.40, nowTime + 0.44);
+              gainNode.gain.exponentialRampToValueAtTime(0.01, nowTime + 0.69);
+              
+              osc.start(nowTime);
+              osc.stop(nowTime + 0.72);
+            }
           }
+        } catch (synthError) {
+          console.log("Synthesizer fallback suppressed by restriction:", synthError);
         }
-      } catch (e) {
-        console.log("Audio context synthetic alarm sound suppressed by browser interaction limits:", e);
+      };
+
+      try {
+        const audio = new Audio(audioUrl);
+        audio.volume = 0.90;
+        audio.play()
+          .then(() => {
+            isAudioPlayed = true;
+            console.log("Premium HTML5 notification audio played successfully.");
+          })
+          .catch((e) => {
+            console.warn("HTML5 premium audio blocked, playing Web Audio synth...", e);
+            runSynthFallback();
+          });
+      } catch (err) {
+        console.warn("Audio element failed to load/play, using synthetic fallback:", err);
+        runSynthFallback();
       }
     } else {
       console.log("Notification sound muted by user configuration settings.");
     }
 
-    // 3. Trigger standard phone OS notification or Service Worker background push
+    // 3. Trigger robust Standard phone OS Notification or Service Worker background push
     if (typeof window !== "undefined") {
       const hasNotification = "Notification" in window;
       const isGranted = hasNotification && (Notification.permission === "granted" || (Notification as any).permission === "granted");
 
       if (isGranted) {
-        let sentDirectly = false;
-        try {
-          // Attempt standard browser native notification construction
-          const defaultIcon = "https://cdn-icons-png.flaticon.com/512/5968/5968292.png";
-          // We check if it is our polyfill or standard class
-          const isNative = (Notification as any).toString().indexOf("FallbackNotification") === -1;
-          if (isNative) {
-            new Notification(title, {
-              body: body,
-              icon: defaultIcon,
-              badge: defaultIcon,
-              vibrate: [300, 100, 300, 100, 400, 120, 300, 100, 500],
-              sound: "default",
-              tag: "butcempro-alert",
-              renotify: true,
-              requireInteraction: true
-            } as any);
-            sentDirectly = true;
-          }
-        } catch (e) {
-          console.log("Native Notification constructor rejected direct action on Android Chrome/WebView. Routing to Service Worker registration...", e);
-        }
+        const appIcon = window.location.origin + "/logo.png";
+        let sentWithSW = false;
 
-        // Trigger Service Worker Native notification (Required for Android tray & APK containers to successfully render push notifications)
-        if (!sentDirectly && "serviceWorker" in navigator) {
+        const triggerDirectNotificationFallback = () => {
+          if (sentWithSW) return;
+          try {
+            const isNative = (Notification as any).toString().indexOf("FallbackNotification") === -1;
+            if (isNative) {
+              new Notification(title, {
+                body: body,
+                icon: appIcon,
+                badge: appIcon,
+                vibrate: [300, 100, 300, 100, 400, 120, 300, 100, 500],
+                sound: "default",
+                tag: "butcempro-alert",
+                renotify: true,
+                requireInteraction: true
+              } as any);
+            }
+          } catch (e) {
+            console.log("Direct Native Notification failed fallback:", e);
+          }
+        };
+
+        // ALWAYS prefer Service Worker showNotification for Android drawer & system tray delivery
+        if ("serviceWorker" in navigator) {
           navigator.serviceWorker.ready.then((reg) => {
-            const defaultIcon = "https://cdn-icons-png.flaticon.com/512/5968/5968292.png";
             reg.showNotification(title, {
               body: body,
-              icon: defaultIcon,
-              badge: defaultIcon,
+              icon: appIcon,
+              badge: appIcon,
               vibrate: [300, 100, 300, 100, 400, 120, 300, 100, 500],
               sound: "default",
               tag: "butcempro-alert",
               renotify: true,
               requireInteraction: true
-            } as any).catch(swError => {
-              console.warn("ServiceWorker showNotification failed inside package container:", swError);
+            } as any).then(() => {
+              sentWithSW = true;
+              console.log("Notification sent successfully through active Service Worker registration.");
+            }).catch(swError => {
+              console.warn("ServiceWorker showNotification failed, trying fallback...", swError);
+              triggerDirectNotificationFallback();
             });
           }).catch(err => {
-            console.warn("ServiceWorker ready check failed:", err);
+            console.warn("ServiceWorker ready promise rejected, trying fallback...", err);
+            triggerDirectNotificationFallback();
           });
+        } else {
+          triggerDirectNotificationFallback();
         }
       }
     }

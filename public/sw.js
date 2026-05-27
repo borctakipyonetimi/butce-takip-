@@ -72,8 +72,8 @@ function rescheduleAlarms() {
         // Trigger background Android status bar notification
         self.registration.showNotification("Ödeme Hatırlatıcı Sinyali! ⏰", {
           body: `Borç Ödeme Zamanı: ${alarm.title}`,
-          icon: "https://cdn-icons-png.flaticon.com/512/5968/5968292.png",
-          badge: "https://cdn-icons-png.flaticon.com/512/5968/5968292.png",
+          icon: "/logo.png",
+          badge: "/logo.png",
           vibrate: [300, 100, 300, 100, 400, 120, 300, 100, 500],
           tag: `alarm-${alarm.id}`,
           renotify: true,
