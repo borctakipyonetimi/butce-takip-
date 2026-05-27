@@ -801,6 +801,52 @@ export default function App() {
   const currentMonthIdx = new Date().getMonth();
   const currentYearVal = new Date().getFullYear();
 
+  const isPaymentThisMonth = (dateStr: string) => {
+    const d = new Date(dateStr);
+    return d.getMonth() === currentMonthIdx && d.getFullYear() === currentYearVal;
+  };
+
+  const simpleDebtsPaymentsThisMonth = debts.map((d) => {
+    const paidThisMonth = payments
+      .filter((p) => p.debtId === d.id && p.type === "manual" && isPaymentThisMonth(p.date))
+      .reduce((sum, p) => sum + p.amount, 0);
+
+    const remainingNow = Math.max(0, d.amount - d.paid);
+    const startingValThisMonth = remainingNow + paidThisMonth;
+
+    return {
+      id: d.id,
+      startingValThisMonth,
+      remainingNow,
+    };
+  });
+
+  const installmentPaymentsThisMonth = installmentDebts.map((inst) => {
+    const perMonth = inst.totalAmount / (inst.installmentCount || 1);
+    const paidThisMonth = payments
+      .filter((p) => p.debtId === inst.id && p.type === "installment" && isPaymentThisMonth(p.date))
+      .reduce((sum, p) => sum + p.amount, 0);
+
+    const isActiveThisMonth = inst.paidInstallmentCount < inst.installmentCount || paidThisMonth > 0;
+
+    const startingValThisMonth = isActiveThisMonth ? perMonth : 0;
+    const remainingNow = isActiveThisMonth ? Math.max(0, perMonth - paidThisMonth) : 0;
+
+    return {
+      id: inst.id,
+      startingValThisMonth,
+      remainingNow,
+    };
+  });
+
+  const computedThisMonthTotalBorc =
+    simpleDebtsPaymentsThisMonth.reduce((sum, item) => sum + item.startingValThisMonth, 0) +
+    installmentPaymentsThisMonth.reduce((sum, item) => sum + item.startingValThisMonth, 0);
+
+  const computedThisMonthKalanBorc =
+    simpleDebtsPaymentsThisMonth.reduce((sum, item) => sum + item.remainingNow, 0) +
+    installmentPaymentsThisMonth.reduce((sum, item) => sum + item.remainingNow, 0);
+
   const currentMonthTotalPaymentsCount = payments.filter((p) => {
     const d = new Date(p.date);
     return d.getMonth() === currentMonthIdx && d.getFullYear() === currentYearVal;
@@ -826,7 +872,9 @@ export default function App() {
     remaining: remainingDebtValue,
     totalIncome: totalIncome,
     totalExpense: totalExpense,
-    netIncome: netIncomeValue
+    netIncome: netIncomeValue,
+    thisMonthTotalBorc: computedThisMonthTotalBorc,
+    thisMonthKalanBorc: computedThisMonthKalanBorc
   };
 
   // ---------------- Profile Session Controls ----------------

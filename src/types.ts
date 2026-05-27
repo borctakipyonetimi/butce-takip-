@@ -83,4 +83,6 @@ export interface FinancialStats {
   totalIncome: number;
   totalExpense: number;
   netIncome: number;
+  thisMonthTotalBorc: number;
+  thisMonthKalanBorc: number;
 }

@@ -198,10 +198,18 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
           <div className="absolute right-2 bottom-1 font-black opacity-20 text-2xl">{currencySymbol}</div>
         </div>
 
-        <div className="p-4 bg-rose-600 text-white rounded-3xl space-y-1 relative overflow-hidden group shadow-md hover:shadow-lg transition">
-          <span className="text-[10px] font-bold text-rose-100 block uppercase tracking-wide">BU AY ÖDENECEK BORÇ</span>
-          <p className="text-sm sm:text-lg font-black font-mono">{format(stats.remaining)}</p>
-          <div className="absolute right-2 bottom-1 font-black opacity-25 text-2xl">⚠️</div>
+        <div className="flex flex-col gap-3 h-full justify-between">
+          <div className="p-3.5 bg-indigo-500/10 dark:bg-indigo-950/40 border border-indigo-500/20 text-indigo-950 dark:text-indigo-200 rounded-3xl space-y-0.5 relative overflow-hidden flex-1 shadow-sm">
+            <span className="text-[9px] font-bold text-indigo-600 dark:text-indigo-400 block uppercase tracking-wide">BU AYKİ BORÇ TOPLAMI</span>
+            <p className="text-sm sm:text-base font-extrabold font-mono">{format(stats.thisMonthTotalBorc)}</p>
+            <div className="absolute right-2 bottom-1 font-black opacity-10 text-lg">📋</div>
+          </div>
+
+          <div className="p-3.5 bg-rose-600 text-white rounded-3xl space-y-0.5 relative overflow-hidden flex-1 shadow-md hover:shadow-lg transition">
+            <span className="text-[9px] font-bold text-rose-100 block uppercase tracking-wide">BU AY KALAN BORÇ</span>
+            <p className="text-sm sm:text-base font-extrabold font-mono">{format(stats.thisMonthKalanBorc)}</p>
+            <div className="absolute right-2 bottom-1 font-black opacity-25 text-lg">⚠️</div>
+          </div>
         </div>
 
         <div className="p-4 bg-blue-600 text-white rounded-3xl space-y-1 relative overflow-hidden shadow-md transition">
