@@ -4,10 +4,11 @@
  */
 
 import React, { useState, useEffect } from "react";
-import { PlusCircle, Printer, FileText, CheckCircle2, Circle, AlertCircle, Edit, Trash2, Calendar, ClipboardList, ArrowUpDown, Sparkles } from "lucide-react";
+import { PlusCircle, Printer, FileText, CheckCircle2, Circle, AlertCircle, Edit, Trash2, Calendar, ClipboardList, ArrowUpDown, Sparkles, Camera } from "lucide-react";
 import { Debt, InstallmentDebt } from "../types";
 import { useCurrency } from "../utils/CurrencyContext";
 import { DoughnutChart } from "./BudgetCharts";
+import ReceiptScanner from "./ReceiptScanner";
 
 interface DebtListProps {
   debts: Debt[];
@@ -55,25 +56,81 @@ export const DebtList: React.FC<DebtListProps> = ({
   const [isInstallment, setIsInstallment] = useState(false);
   const [installmentCount, setInstallmentCount] = useState("12");
 
+  // AI OCR scanner state and callback
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
+  const handleScanCompleted = (result: any) => {
+    setName(result.title);
+    setAmount(result.amount.toString());
+    setPaid("0");
+    if (result.date) {
+      setDueDate(result.date);
+    }
+    // Suggest category
+    if (result.categorySuggestion) {
+      const suggested = result.categorySuggestion.toLowerCase();
+      const match = ["Kredi Kartı", "Konut", "Araç", "Sağlık", "Eğitim", "Diğer"].find(
+        (c) =>
+          c.toLowerCase().includes(suggested) ||
+          suggested.includes(c.toLowerCase())
+      );
+      if (match) {
+        setCategory(match);
+      } else {
+        setCategory("Diğer");
+      }
+    }
+    setIsScannerOpen(false);
+    setIsModalOpen(true);
+  };
+
   const categories = ["Kredi Kartı", "Konut", "Araç", "Sağlık", "Eğitim", "Diğer"];
 
   // Choose recommended strategy based on financial parameters
-  const activeUnpaidDebts = debts.filter(d => d.paid < d.amount);
-  const totalRemainingDebt = activeUnpaidDebts.reduce((sum, d) => sum + (d.amount - d.paid), 0);
+  // Combine both simple debts and remaining installments to ensure all outstanding obligations are computed
+  const activeUnpaidSingleDebts = debts.filter(d => d.paid < d.amount);
+  const activeUnpaidInstallmentDebts = installmentDebts.filter(
+    inst => inst.paidInstallmentCount < inst.installmentCount
+  );
+
+  const unifiedUnpaidDebts = [
+    ...activeUnpaidSingleDebts.map(d => ({
+      id: d.id,
+      name: d.name,
+      type: "direct" as const,
+      remaining: d.amount - d.paid,
+      total: d.amount,
+      paid: d.paid
+    })),
+    ...activeUnpaidInstallmentDebts.map(inst => {
+      const monthly = inst.totalAmount / inst.installmentCount;
+      const paidValue = inst.paidInstallmentCount * monthly;
+      const remainingValue = inst.totalAmount - paidValue;
+      return {
+        id: inst.id,
+        name: `${inst.name} (Taksitli)`,
+        type: "installment" as const,
+        remaining: remainingValue,
+        total: inst.totalAmount,
+        paid: paidValue
+      };
+    })
+  ];
+
+  const totalRemainingDebt = unifiedUnpaidDebts.reduce((sum, ud) => sum + ud.remaining, 0);
   const incomeVal = totalIncome || 0;
   
   const debtToIncomeRatio = incomeVal > 0 ? totalRemainingDebt / incomeVal : 0;
-  const hasSmallDebts = activeUnpaidDebts.some(d => (d.amount - d.paid) < 2000);
+  const hasSmallDebts = unifiedUnpaidDebts.some(ud => ud.remaining < 2000);
   const recommendedStrategy = (debtToIncomeRatio > 3 || !hasSmallDebts) ? "avalanche" : "snowball";
 
   const [activeStrategyView, setActiveStrategyView] = useState<"snowball" | "avalanche" | null>(null);
   const currentStrategyView = activeStrategyView || recommendedStrategy;
 
-  const smallestDebt = activeUnpaidDebts.length > 0 
-    ? [...activeUnpaidDebts].sort((a,b) => (a.amount - a.paid) - (b.amount - b.paid))[0] 
+  const smallestDebt = unifiedUnpaidDebts.length > 0 
+    ? [...unifiedUnpaidDebts].sort((a,b) => a.remaining - b.remaining)[0] 
     : null;
-  const largestDebt = activeUnpaidDebts.length > 0
-    ? [...activeUnpaidDebts].sort((a,b) => (b.amount - b.paid) - (a.amount - a.paid))[0]
+  const largestDebt = unifiedUnpaidDebts.length > 0
+    ? [...unifiedUnpaidDebts].sort((a,b) => b.remaining - a.remaining)[0]
     : null;
 
   const filteredDebts = [...debts]
@@ -117,13 +174,9 @@ export const DebtList: React.FC<DebtListProps> = ({
     return parseFloat(cleaned) || 0;
   };
 
-  const monthlyInstallmentsTotal = installmentDebts.reduce((sum, inst) => {
-    if (inst.paidInstallmentCount >= inst.installmentCount) return sum;
-    return sum + (inst.totalAmount / inst.installmentCount);
-  }, 0);
-
-  const totalAmount = debts.reduce((sum, d) => sum + d.amount, 0) + monthlyInstallmentsTotal;
-  const totalPaid = debts.reduce((sum, d) => sum + d.paid, 0);
+  // Dynamically and robustly calculate true overall debt and payment aggregates for BOTH simple & installment debts
+  const totalAmount = debts.reduce((sum, d) => sum + d.amount, 0) + installmentDebts.reduce((sum, inst) => sum + inst.totalAmount, 0);
+  const totalPaid = debts.reduce((sum, d) => sum + d.paid, 0) + installmentDebts.reduce((sum, inst) => sum + (inst.paidInstallmentCount * (inst.totalAmount / inst.installmentCount)), 0);
   const totalRemaining = totalAmount - totalPaid;
 
   const handleOpenAdd = () => {
@@ -297,6 +350,12 @@ export const DebtList: React.FC<DebtListProps> = ({
             className="px-3 py-1.5 bg-amber-500 text-white rounded-xl text-xs font-bold flex items-center gap-1 hover:bg-amber-600 transition"
           >
             <FileText className="w-3.5 h-3.5" /> PDF Al
+          </button>
+          <button
+            onClick={() => setIsScannerOpen(true)}
+            className="px-3 py-1.5 bg-indigo-600/10 border border-indigo-500/25 text-indigo-600 dark:text-indigo-400 rounded-xl text-xs font-bold flex items-center gap-1 hover:bg-indigo-600/20 transition cursor-pointer"
+          >
+            <Camera className="w-3.5 h-3.5" /> Fatura Tara (AI)
           </button>
           <button
             onClick={handleOpenAdd}
@@ -600,7 +659,7 @@ export const DebtList: React.FC<DebtListProps> = ({
               {smallestDebt ? (
                 <div className="p-3 bg-indigo-500/5 dark:bg-indigo-950/10 border-l-[3px] border-indigo-500 rounded-lg text-[11px] font-medium text-slate-700 dark:text-slate-300 space-y-1">
                   <span className="font-black text-[10px] text-indigo-600 dark:text-indigo-400 block uppercase tracking-wide">BUGÜNKÜ AKSİYON ADAYINIZ:</span>
-                  Kalan en küçük borcunuz olan <strong className="text-indigo-600 dark:text-indigo-400 font-bold">"{smallestDebt.name}"</strong> ({format(smallestDebt.amount - smallestDebt.paid)} kalan) kaydını öncelikli kapatarak Kartopu etkisini hemen başlatabilirsiniz!
+                  Kalan en küçük borcunuz olan <strong className="text-indigo-600 dark:text-indigo-400 font-bold">"{smallestDebt.name}"</strong> ({format(smallestDebt.remaining)} kalan) kaydını öncelikli kapatarak Kartopu etkisini hemen başlatabilirsiniz!
                 </div>
               ) : (
                 <p className="text-[10px] text-slate-400 italic">Planlanacak aktif ödenmemiş borç bulunmamaktadır.</p>
@@ -619,7 +678,7 @@ export const DebtList: React.FC<DebtListProps> = ({
               {largestDebt ? (
                 <div className="p-3 bg-amber-500/5 dark:bg-amber-950/10 border-l-[3px] border-amber-500 rounded-lg text-[11px] font-medium text-slate-700 dark:text-slate-300 space-y-1">
                   <span className="font-black text-[10px] text-amber-600 dark:text-amber-400 block uppercase tracking-wide">BUGÜNKÜ AKSİYON ADAYINIZ:</span>
-                  En büyük borç yükünüz olan <strong className="text-amber-600 dark:text-amber-400 font-bold">"{largestDebt.name}"</strong> ({format(largestDebt.amount - largestDebt.paid)} kalan) kaydına asgari ödemenin üzerinde ekstra kaynak aktararak Çığ etkisinden yararlanabilirsiniz!
+                  En büyük borç yükünüz olan <strong className="text-amber-600 dark:text-amber-400 font-bold">"{largestDebt.name}"</strong> ({format(largestDebt.remaining)} kalan) kaydına asgari ödemenin üzerinde ekstra kaynak aktararak Çığ etkisinden yararlanabilirsiniz!
                 </div>
               ) : (
                 <p className="text-[10px] text-slate-400 italic">Planlanacak aktif ödenmemiş borç bulunmamaktadır.</p>
@@ -672,6 +731,18 @@ export const DebtList: React.FC<DebtListProps> = ({
             <h4 className="text-base font-bold flex items-center gap-1.5 border-b pb-2 dark:border-slate-700">
               <AlertCircle className="w-5 h-5 text-indigo-500" /> {modalTitle}
             </h4>
+
+            {/* Quick scanning action */}
+            <button
+              onClick={() => {
+                setIsModalOpen(false); // Close first to prevent backdrop overlap
+                setTimeout(() => setIsScannerOpen(true), 150);
+              }}
+              className="w-full py-2 bg-indigo-50 dark:bg-indigo-950/30 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 text-xs font-bold rounded-xl border border-dashed border-indigo-500/40 flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-3xs"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-indigo-500 animate-pulse animate-duration-1000" /> Fatura Fotoğrafı ile Otomatik Doldur
+            </button>
+
             <div className="space-y-3">
               <div>
                 <label className="text-[10px] font-bold text-slate-400 block mb-1">BORÇ TANIMI</label>
@@ -778,6 +849,14 @@ export const DebtList: React.FC<DebtListProps> = ({
             </div>
           </div>
         </div>
+      )}
+
+      {isScannerOpen && (
+        <ReceiptScanner
+          onScanCompleted={handleScanCompleted}
+          onClose={() => setIsScannerOpen(false)}
+          defaultType="debt"
+        />
       )}
     </div>
   );

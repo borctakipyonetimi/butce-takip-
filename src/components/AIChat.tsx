@@ -160,7 +160,7 @@ Mevcut Finansal Durum:
 - Toplam Gider: ₺${stats.totalExpense.toLocaleString("tr-TR")}
 - Net Kalan Bakiye: ₺${stats.netIncome.toLocaleString("tr-TR")}
 - Toplam Borç: ₺${stats.totalDebt.toLocaleString("tr-TR")}
-- Kalan Ödenecek Borç (sadece o ayki taksit dahil): ₺${stats.remaining.toLocaleString("tr-TR")}
+- Kalan Ödenecek Borç: ₺${stats.remaining.toLocaleString("tr-TR")}
 - Taksitli Borç Sayısı: ${installmentDebts.length} adet
 
 Kullanıcının Borçları:

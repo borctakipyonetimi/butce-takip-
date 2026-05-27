@@ -1,6 +1,6 @@
 {
   "name": "Borç Takip Sistemi",
   "description": "Yapay zeka asistanlı ve gelişmiş bütçe yönetimli, kategorili borç ve gelir/gider takip uygulaması.",
-  "requestFramePermissions": [],
+  "requestFramePermissions": ["camera"],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

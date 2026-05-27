@@ -1,7 +1,7 @@
 import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
-import { GoogleGenAI, ThinkingLevel } from "@google/genai";
+import { GoogleGenAI, ThinkingLevel, Type } from "@google/genai";
 import dotenv from "dotenv";
 
 dotenv.config();
@@ -9,7 +9,8 @@ dotenv.config();
 const app = express();
 const PORT = 3000;
 
-app.use(express.json());
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
 // Initialize Gemini dynamically and lazily with proper User-Agent header and environment reloading support
 let cachedApiKey: string | undefined = undefined;
@@ -210,6 +211,121 @@ Görevlerin:
     }
     
     return res.json({ reply: advice });
+  }
+});
+
+// API Route for receipt & bill OCR scanning using Gemini 3.5-Flash
+app.post("/api/scan-receipt", async (req, res) => {
+  const { image, mimeType: userMimeType } = req.body;
+  if (!image) {
+    return res.status(400).json({ error: "Lütfen taranacak fatura veya fiş görselini seçin." });
+  }
+
+  // Sanitize base64 and extract mimeType dynamically
+  let base64Data = image;
+  let detectedMimeType = userMimeType || "image/jpeg";
+
+  if (base64Data.includes(",")) {
+    const parts = base64Data.split(",");
+    const match = parts[0].match(/data:(.*?);base64/);
+    if (match) {
+      detectedMimeType = match[1];
+    }
+    base64Data = parts[1];
+  }
+
+  const aiClient = getGeminiClient();
+  
+  if (!aiClient) {
+    console.log("[Scan Receipt API] Gemini API key not set or inactive. Falling back to intelligent offline simulated scan.");
+    // Simulate smart parsing delay for superior UX feel
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+    
+    const todayStr = new Date().toISOString().split("T")[0];
+    return res.json({
+      success: true,
+      title: "Seçili Belge (Örnek Alışveriş)",
+      amount: 450.00,
+      date: todayStr,
+      categorySuggestion: "Gıda / Market",
+      type: "expense",
+      isOffline: true,
+      message: "Akıllı tarama simülasyonu çalıştırıldı. Gerçek yapay zeka tespiti için lütfen Settings > Secrets panelinden GEMINI_API_KEY tanımlayın!"
+    });
+  }
+
+  try {
+    const promptText = 
+      "Sen harika ve hassas bir belge okuma (OCR) servisisin. Ekteki görsel bir alışveriş fişi, fatura, makbuz ya da harcama belgesidir.\n\n" +
+      "Görevlerin:\n" +
+      "1. Belgedeki mağaza/satıcı/kurum adını tam olarak çıkar (örn: 'Migros Ticaret A.Ş.', 'Shell Akaryakıt', 'Elektrik Dağıtım').\n" +
+      "2. Belgedeki KDV dahil toplam ödeme tutarını (KRD ya da NAKİT toplamı) sayısal olarak bul.\n" +
+      "3. Belgedeki tarihi oku (Format: YYYY-MM-DD formatında olmalı. Eğer yıl açık değilse 2026 olarak varsay).\n" +
+      "4. En uygun harcama kategorisini öner ('Gıda', 'Ulaşım', 'Fatura', 'Alışveriş', 'Eğlence', 'Sağlık', 'Diğer' vb.).\n" +
+      "5. Bu belgenin bir peşin gider mi ('expense') yoksa bir sonraki ödemeli borç mu ('debt') olduğunu tespit et.\n\n" +
+      "Verdiğin yanıt JSON şemasına tamamen uygun, ek açıklama metni içermeyen temiz bir JSON objesi olmalıdır.";
+
+    const response = await aiClient.models.generateContent({
+      model: "gemini-3.5-flash",
+      contents: [
+        {
+          inlineData: {
+            mimeType: detectedMimeType,
+            data: base64Data,
+          },
+        },
+        {
+          text: promptText,
+        },
+      ],
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            title: {
+              type: Type.STRING,
+              description: "Satıcı veya belge unvanı (örneğin: 'Bim Birleşik Mağazalar', 'Kira Faturası')"
+            },
+            amount: {
+              type: Type.NUMBER,
+              description: "Toplam harcama veya ödeme tutarı"
+            },
+            date: {
+              type: Type.STRING,
+              description: "İşlem tarihi (Format: YYYY-MM-DD)"
+            },
+            categorySuggestion: {
+              type: Type.STRING,
+              description: "Önerilen gider/borç kategorisi ismi"
+            },
+            type: {
+              type: Type.STRING,
+              description: "'expense' veya 'debt'"
+            }
+          },
+          required: ["title", "amount"]
+        },
+        temperature: 0.2,
+      },
+    });
+
+    const parsedData = JSON.parse(response.text || "{}");
+    return res.json({
+      success: true,
+      title: parsedData.title || "Taranan Belge",
+      amount: parsedData.amount || 0.00,
+      date: parsedData.date || new Date().toISOString().split("T")[0],
+      categorySuggestion: parsedData.categorySuggestion || "Diğer",
+      type: parsedData.type || "expense",
+      isOffline: false
+    });
+  } catch (error: any) {
+    console.error("[Scan Receipt API Error]:", error);
+    return res.status(500).json({
+      error: "Belge tarama işlemi sırasında bir hata oluştu.",
+      details: error?.message || error?.toString() || ""
+    });
   }
 });
 

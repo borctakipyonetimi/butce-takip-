@@ -814,8 +814,8 @@ export default function App() {
   // Overall totals
   const totalDebt = totalNormalDebt + totalInstallmentAmount;
   const totalPaid = totalNormalPaid + totalInstallmentPaid;
-  // Taksitli borçların sadece o ayki taksiti, kalan borç kısmına eklensin
-  const remainingDebtValue = (totalNormalDebt - totalNormalPaid) + monthlyInstallmentsDue;
+  // Taksitli borçların tamamı kalan borç kısmına dahil edilerek gerçek toplam borç yükü hesaplanmalıdır
+  const remainingDebtValue = (totalNormalDebt - totalNormalPaid) + (totalInstallmentAmount - totalInstallmentPaid);
 
   // Correct calculation of remaining reserve (Total Income - Total Expense - Total Paid Debt)
   const netIncomeValue = totalIncome - totalExpense - totalPaid;
@@ -2588,53 +2588,71 @@ export default function App() {
       </main>
 
       {/* Fixed bottom navigation panel optimized for mobile view on cellphones */}
-      <footer className="fixed bottom-0 left-0 right-0 z-30 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200/50 dark:border-slate-800/80 p-2 flex justify-around select-none shadow-xl">
-        <button
-          onClick={() => handleNavClick("overview")}
-          className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl transition ${
-            activeTab === "overview" ? "text-indigo-600 dark:text-indigo-400 scale-105" : "text-slate-400"
-          }`}
-        >
-          <LayoutDashboard className="w-4 h-4" />
-          <span className="text-[9px] font-bold">Genel</span>
-        </button>
-        <button
-          onClick={() => handleNavClick("debts")}
-          className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl transition ${
-            activeTab === "debts" ? "text-indigo-600 dark:text-indigo-400 scale-105" : "text-slate-400"
-          }`}
-        >
-          <Coins className="w-4 h-4" />
-          <span className="text-[9px] font-bold">Borçlar</span>
-        </button>
-        <button
-          onClick={() => handleNavClick("expenses")}
-          className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl transition ${
-            activeTab === "expenses" ? "text-indigo-600 dark:text-indigo-400 scale-105" : "text-slate-400"
-          }`}
-        >
-          <ShoppingCart className="w-4 h-4" />
-          <span className="text-[9px] font-bold">Giderler</span>
-        </button>
-        <button
-          onClick={() => handleNavClick("installments")}
-          className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl transition ${
-            activeTab === "installments" ? "text-indigo-600 dark:text-indigo-400 scale-105" : "text-slate-400"
-          }`}
-        >
-          <Calendar className="w-4 h-4" />
-          <span className="text-[9px] font-bold">Taksitler</span>
-        </button>
-        <button
-          onClick={() => handleNavClick("aiStrategy")}
-          className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl transition ${
-            activeTab === "aiStrategy" ? "text-indigo-600 dark:text-indigo-400 scale-105" : "text-slate-400"
-          }`}
-        >
-          <Sparkles className="w-4 h-4 animate-pulse" />
-          <span className="text-[9px] font-bold">Asistan</span>
-        </button>
-      </footer>
+      {(() => {
+        const getBottomTabClass = (tabId: string) => {
+          const isActive = activeTab === tabId;
+          if (!isActive) {
+            return "flex flex-col items-center gap-0.5 px-2 py-1 rounded-xl transition-all duration-200 text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 hover:scale-105 cursor-pointer";
+          }
+          switch (colorTheme) {
+            case "green":
+              return "flex flex-col items-center gap-0.5 px-2 py-1 rounded-xl transition-all duration-200 text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-100/30 dark:border-emerald-900/30 scale-105 shadow-xs font-black cursor-pointer";
+            case "purple":
+              return "flex flex-col items-center gap-0.5 px-2 py-1 rounded-xl transition-all duration-200 text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-950/40 border border-purple-100/30 dark:border-purple-900/30 scale-105 shadow-xs font-black cursor-pointer";
+            case "orange":
+              return "flex flex-col items-center gap-0.5 px-2 py-1 rounded-xl transition-all duration-200 text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 border border-amber-100/30 dark:border-amber-900/30 scale-105 shadow-xs font-black cursor-pointer";
+            default:
+              return "flex flex-col items-center gap-0.5 px-2 py-1 rounded-xl transition-all duration-200 text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100/30 dark:border-indigo-900/30 scale-105 shadow-xs font-black cursor-pointer";
+          }
+        };
+
+        return (
+          <footer className="fixed bottom-0 left-0 right-0 z-30 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200/50 dark:border-slate-800/80 p-2 flex justify-around select-none shadow-xl">
+            <button
+              onClick={() => handleNavClick("overview")}
+              className={getBottomTabClass("overview")}
+            >
+              <LayoutDashboard className="w-4 h-4" />
+              <span className="text-[9px] font-bold">Genel</span>
+            </button>
+            <button
+              onClick={() => handleNavClick("income")}
+              className={getBottomTabClass("income")}
+            >
+              <Wallet className="w-4 h-4" />
+              <span className="text-[9px] font-bold">Gelirler</span>
+            </button>
+            <button
+              onClick={() => handleNavClick("debts")}
+              className={getBottomTabClass("debts")}
+            >
+              <Coins className="w-4 h-4" />
+              <span className="text-[9px] font-bold">Borçlar</span>
+            </button>
+            <button
+              onClick={() => handleNavClick("expenses")}
+              className={getBottomTabClass("expenses")}
+            >
+              <ShoppingCart className="w-4 h-4" />
+              <span className="text-[9px] font-bold">Giderler</span>
+            </button>
+            <button
+              onClick={() => handleNavClick("installments")}
+              className={getBottomTabClass("installments")}
+            >
+              <Calendar className="w-4 h-4" />
+              <span className="text-[9px] font-bold">Taksitler</span>
+            </button>
+            <button
+              onClick={() => handleNavClick("aiStrategy")}
+              className={getBottomTabClass("aiStrategy")}
+            >
+              <Sparkles className="w-4 h-4 animate-pulse" />
+              <span className="text-[9px] font-bold">Asistan</span>
+            </button>
+          </footer>
+        );
+      })()}
     </div>
   );
 }
