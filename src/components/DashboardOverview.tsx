@@ -186,212 +186,43 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
 
       {/* 4x Grid Stats */}
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-        <div className="p-4 bg-indigo-600 dark:bg-indigo-950/85 text-white rounded-3xl space-y-1 relative overflow-hidden group shadow-md hover:shadow-xl transition-all duration-300">
+        <div className="p-4 bg-indigo-600 dark:bg-indigo-950/85 text-white rounded-3xl space-y-1.5 relative overflow-hidden group shadow-md hover:shadow-xl transition-all duration-300 flex flex-col items-center justify-center text-center min-h-[100px]">
           <span className="text-[10px] font-bold text-indigo-200 block uppercase tracking-wide">TOPLAM BORÇ</span>
           <p className="text-sm sm:text-lg font-black font-mono">{format(stats.totalDebt)}</p>
-          <div className="absolute right-2 bottom-1 font-black opacity-15 text-2xl group-hover:scale-110 transition">{currencySymbol}</div>
         </div>
 
-        <div className="p-4 bg-emerald-600 text-white rounded-3xl space-y-1 relative overflow-hidden group shadow-md hover:shadow-lg transition">
+        <div className="p-4 bg-emerald-600 text-white rounded-3xl space-y-1.5 relative overflow-hidden group shadow-md hover:shadow-lg transition flex flex-col items-center justify-center text-center min-h-[100px]">
           <span className="text-[10px] font-bold text-emerald-100 block uppercase tracking-wide">ÖDENMİŞ KISIM</span>
           <p className="text-sm sm:text-lg font-black font-mono">{format(stats.totalPaid)}</p>
-          <div className="absolute right-2 bottom-1 font-black opacity-20 text-2xl">{currencySymbol}</div>
         </div>
 
         <div className="flex flex-col gap-3 h-full justify-between">
-          <div className="p-3.5 bg-indigo-500/10 dark:bg-indigo-950/40 border border-indigo-500/20 text-indigo-950 dark:text-indigo-200 rounded-3xl space-y-0.5 relative overflow-hidden flex-1 shadow-sm">
+          <div className="p-3.5 bg-indigo-500/10 dark:bg-indigo-950/40 border border-indigo-500/20 text-indigo-950 dark:text-indigo-200 rounded-3xl space-y-0.5 relative overflow-hidden flex-1 shadow-sm flex flex-col items-center justify-center text-center min-h-[50px]">
             <span className="text-[9px] font-bold text-indigo-600 dark:text-indigo-400 block uppercase tracking-wide">BU AYKİ BORÇ TOPLAMI</span>
             <p className="text-sm sm:text-base font-extrabold font-mono">{format(stats.thisMonthTotalBorc)}</p>
-            <div className="absolute right-2 bottom-1 font-black opacity-10 text-lg">📋</div>
           </div>
 
-          <div className="p-3.5 bg-rose-600 text-white rounded-3xl space-y-0.5 relative overflow-hidden flex-1 shadow-md hover:shadow-lg transition">
+          <div className="p-3.5 bg-rose-600 text-white rounded-3xl space-y-0.5 relative overflow-hidden flex-1 shadow-md hover:shadow-lg transition flex flex-col items-center justify-center text-center min-h-[50px]">
             <span className="text-[9px] font-bold text-rose-100 block uppercase tracking-wide">BU AY KALAN BORÇ</span>
             <p className="text-sm sm:text-base font-extrabold font-mono">{format(stats.thisMonthKalanBorc)}</p>
-            <div className="absolute right-2 bottom-1 font-black opacity-25 text-lg">⚠️</div>
           </div>
         </div>
 
-        <div className="p-4 bg-blue-600 text-white rounded-3xl space-y-1 relative overflow-hidden shadow-md transition">
+        <div className="p-4 bg-blue-600 text-white rounded-3xl space-y-1.5 relative overflow-hidden shadow-md transition flex flex-col items-center justify-center text-center min-h-[100px]">
           <span className="text-[10px] font-bold text-blue-105 block uppercase tracking-wide">AYLIK GELİR</span>
           <p className="text-sm sm:text-lg font-black font-mono">{format(stats.totalIncome)}</p>
         </div>
 
-        <div className="p-4 bg-amber-600 text-white rounded-3xl space-y-1 relative overflow-hidden shadow-md transition">
+        <div className="p-4 bg-amber-600 text-white rounded-3xl space-y-1.5 relative overflow-hidden shadow-md transition flex flex-col items-center justify-center text-center min-h-[100px]">
           <span className="text-[10px] font-bold text-amber-105 block uppercase tracking-wide">AYLIK GİDER</span>
           <p className="text-sm sm:text-lg font-black font-mono">{format(stats.totalExpense)}</p>
         </div>
 
-        <div className={`p-4 text-white rounded-3xl space-y-1 relative overflow-hidden shadow-md transition ${stats.netIncome >= 0 ? "bg-indigo-600" : "bg-red-700"}`}>
+        <div className={`p-4 text-white rounded-3xl space-y-1.5 relative overflow-hidden shadow-md transition flex flex-col items-center justify-center text-center min-h-[100px] ${stats.netIncome >= 0 ? "bg-indigo-600" : "bg-red-700"}`}>
           <span className="text-[10px] font-bold text-indigo-105 block uppercase tracking-wide">NET KALAN REZERV</span>
           <p className="text-sm sm:text-lg font-black font-mono">{format(stats.netIncome)}</p>
         </div>
       </div>
-
-      {/* Dynamic Exchange Rate Controls with Interactive Flash Sweep Animations */}
-      <motion.div
-        animate={ratesFlash ? {
-          boxShadow: [
-            "0 1px 2px 0 rgba(0, 0, 0, 0.05)",
-            "0 0 22px rgba(16, 185, 129, 0.4), 0 0 10px rgba(99, 102, 241, 0.15)",
-            "0 1px 2px 0 rgba(0, 0, 0, 0.05)"
-          ],
-          borderColor: ["rgba(226, 232, 240, 0.4)", "rgba(16, 185, 129, 0.65)", "rgba(226, 232, 240, 0.4)"],
-          scale: [1, 1.012, 1]
-        } : {}}
-        transition={{ duration: 0.85, ease: "easeInOut" }}
-        className="p-5 bg-white dark:bg-slate-800 rounded-3xl border border-slate-200/40 dark:border-slate-700/50 shadow-xs space-y-4 relative overflow-hidden"
-      >
-        {/* Shiny sweeping golden/emerald flair overlay */}
-        {ratesFlash && (
-          <motion.div
-            initial={{ left: "-100%" }}
-            animate={{ left: "200%" }}
-            transition={{ duration: 0.85, ease: "easeInOut" }}
-            className="absolute inset-y-0 w-1/3 bg-gradient-to-r from-transparent via-emerald-500/15 dark:via-emerald-400/10 to-transparent skew-x-12 pointer-events-none z-20"
-          />
-        )}
-
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex flex-col gap-1">
-            <div className="flex items-center gap-2">
-              <Coins className="w-5 h-5 text-emerald-500 animate-pulse" />
-              <h4 className="text-xs sm:text-sm font-black text-slate-800 dark:text-slate-100 uppercase tracking-wide">
-                💱 Döviz Hesaplama ve Kur Paneli
-              </h4>
-            </div>
-            {lastUpdated && (
-              <span className="text-[10px] text-slate-400 px-1 font-semibold block mt-0.5">
-                • Son Güncelleme: <span className="font-mono text-emerald-600 dark:text-emerald-400">{lastUpdated}</span>
-              </span>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            {/* Real-time sync button */}
-            <button
-              type="button"
-              disabled={isFetching}
-              onClick={async (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                // When clicking market update, we clear the manual rates flag so automatic sync works going forward
-                localStorage.removeItem("useManualRates");
-                const ok = await updateRatesFromAPI();
-                if (ok) {
-                  window.dispatchEvent(new CustomEvent("trigger-toast", { detail: "Piyasa döviz kurları otomatik güncellendi! 💹" }));
-                } else {
-                  window.dispatchEvent(new CustomEvent("trigger-toast", { detail: "Kurlar güncellenemedi, lütfen tekrar deneyin." }));
-                }
-              }}
-              className={`px-3 py-1.5 text-[10px] uppercase font-black rounded-xl transition flex items-center gap-1.5 cursor-pointer select-none active:scale-95 ${
-                isFetching
-                  ? "bg-slate-100 dark:bg-slate-800/80 text-slate-400 dark:text-slate-600 cursor-not-allowed"
-                  : "bg-emerald-50 text-emerald-600 hover:bg-emerald-100 dark:bg-emerald-950/20 dark:text-emerald-400 dark:hover:bg-emerald-950/40"
-              }`}
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${isFetching ? "animate-spin" : ""}`} />
-              {isFetching ? "Güncelleniyor..." : "Piyasadan Güncelle"}
-            </button>
-
-            <button
-              onClick={() => {
-                if (isEditingRates) {
-                  // Save custom modified kurlar
-                  const u = parseFloat(usdRateInput);
-                  const e = parseFloat(eurRateInput);
-                  const g = parseFloat(gbpRateInput);
-                  if (!isNaN(u) && !isNaN(e) && !isNaN(g) && u > 0 && e > 0 && g > 0) {
-                    const updated = { TRY: 1, USD: u, EUR: e, GBP: g };
-                    setRates(updated);
-                    localStorage.setItem("exchangeRates", JSON.stringify(updated));
-                    // Lock-in manually entered rates so they aren't overwritten on page refresh
-                    localStorage.setItem("useManualRates", "true");
-                    setIsEditingRates(false);
-                    window.dispatchEvent(new CustomEvent("trigger-toast", { detail: "Manuel döviz kurları kaydedildi! 💾" }));
-                  }
-                } else {
-                  setUsdRateInput(rates.USD.toString());
-                  setEurRateInput(rates.EUR.toString());
-                  setGbpRateInput(rates.GBP.toString());
-                  setIsEditingRates(true);
-                }
-              }}
-              className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-950 text-[10px] uppercase font-black text-indigo-600 dark:text-indigo-400 rounded-xl transition flex items-center gap-1 cursor-pointer"
-            >
-              {isEditingRates ? (
-                <>
-                  <Check className="w-3.5 h-3.5" />
-                  Kaydet
-                </>
-              ) : (
-                <>
-                  <Settings className="w-3.5 h-3.5" />
-                  Kurları Düzenle
-                </>
-              )}
-            </button>
-          </div>
-        </div>
-
-        {isEditingRates ? (
-          <div className="grid grid-cols-3 gap-3 p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800">
-            <div className="space-y-1.5 text-center">
-              <span className="text-[10px] font-bold text-slate-400">USD Kuru ($)</span>
-              <div className="flex items-center justify-center gap-1 bg-white dark:bg-slate-800 px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-750">
-                <input
-                  type="number"
-                  step="0.01"
-                  value={usdRateInput}
-                  onChange={(e) => setUsdRateInput(e.target.value)}
-                  className="w-full text-center bg-transparent border-none text-xs text-slate-800 dark:text-slate-100 font-bold outline-hidden font-mono"
-                />
-              </div>
-            </div>
-            <div className="space-y-1.5 text-center">
-              <span className="text-[10px] font-bold text-slate-400">EUR Kuru (€)</span>
-              <div className="flex items-center justify-center gap-1 bg-white dark:bg-slate-800 px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-750">
-                <input
-                  type="number"
-                  step="0.01"
-                  value={eurRateInput}
-                  onChange={(e) => setEurRateInput(e.target.value)}
-                  className="w-full text-center bg-transparent border-none text-xs text-slate-800 dark:text-slate-100 font-bold outline-hidden font-mono"
-                />
-              </div>
-            </div>
-            <div className="space-y-1.5 text-center">
-              <span className="text-[10px] font-bold text-slate-400">GBP Kuru (£)</span>
-              <div className="flex items-center justify-center gap-1 bg-white dark:bg-slate-800 px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-750">
-                <input
-                  type="number"
-                  step="0.01"
-                  value={gbpRateInput}
-                  onChange={(e) => setGbpRateInput(e.target.value)}
-                  className="w-full text-center bg-transparent border-none text-xs text-slate-800 dark:text-slate-100 font-bold outline-hidden font-mono"
-                />
-              </div>
-            </div>
-          </div>
-        ) : (
-          <div className="grid grid-cols-3 gap-3">
-            <div className="p-3 bg-slate-50/50 dark:bg-slate-900/30 rounded-2xl border border-slate-100 dark:border-slate-850 flex flex-col justify-center items-center text-center">
-              <span className="text-[10px] font-black tracking-wider text-slate-400 mb-1 uppercase">Dolar (USD)</span>
-              <span className="text-xs sm:text-sm font-black font-mono text-emerald-600 dark:text-emerald-400">1$ = ₺{rates.USD.toFixed(2)}</span>
-            </div>
-            <div className="p-3 bg-slate-50/50 dark:bg-slate-900/30 rounded-2xl border border-slate-100 dark:border-slate-850 flex flex-col justify-center items-center text-center">
-              <span className="text-[10px] font-black tracking-wider text-slate-400 mb-1 uppercase">Euro (EUR)</span>
-              <span className="text-xs sm:text-sm font-black font-mono text-blue-600 dark:text-blue-400">1€ = ₺{rates.EUR.toFixed(2)}</span>
-            </div>
-            <div className="p-3 bg-slate-50/50 dark:bg-slate-900/30 rounded-2xl border border-slate-100 dark:border-slate-850 flex flex-col justify-center items-center text-center">
-              <span className="text-[10px] font-black tracking-wider text-slate-400 mb-1 uppercase">Sterlin (GBP)</span>
-              <span className="text-xs sm:text-sm font-black font-mono text-indigo-600 dark:text-indigo-400">1£ = ₺{rates.GBP.toFixed(2)}</span>
-            </div>
-          </div>
-        )}
-        <p className="text-[10px] text-slate-400 font-semibold text-center italic leading-relaxed">
-          💡 Hesaplanan tüm verileriniz (Borçlar, Gelirler ve Giderler) üst menüdeki aktif birim olan <span className="text-emerald-500 uppercase font-black tracking-wider px-1 bg-emerald-500/10 rounded-sm">"{activeCurrency}"</span> bazında dinamik olarak güncellenmektedir.
-        </p>
-      </motion.div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1 pb-1">
         {/* Card 1: Bu Ay Ödenecek Taksit */}

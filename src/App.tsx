@@ -2161,6 +2161,7 @@ export default function App() {
             onSaveCategory={handleSaveCategory}
             onDeleteCategory={handleDeleteCategory}
             onUpdateAllCategories={handleSaveAllCategories}
+            netBalance={statsBag.netIncome}
           />
         )}
 

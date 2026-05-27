@@ -34,6 +34,7 @@ interface ExpensesListProps {
   onSaveCategory: (category: Partial<ExpenseCategory>) => void;
   onDeleteCategory: (id: number) => void;
   onUpdateAllCategories?: (categories: ExpenseCategory[]) => void;
+  netBalance?: number;
 }
 
 const getSavingTipForCategory = (name: string, icon: string): string => {
@@ -171,6 +172,7 @@ export const ExpensesList: React.FC<ExpensesListProps> = ({
   onSaveCategory,
   onDeleteCategory,
   onUpdateAllCategories,
+  netBalance,
 }) => {
   const { format, currencySymbol } = useCurrency();
   // Saving Advice / Tip Popover State
@@ -557,12 +559,31 @@ export const ExpensesList: React.FC<ExpensesListProps> = ({
         </div>
       </div>
 
-      <div className="p-4 bg-rose-50/50 dark:bg-rose-950/20 text-rose-950 dark:text-rose-300 rounded-2xl flex items-center justify-between font-bold text-xs">
-        <span>Aylık Toplam Gider Masrafı:</span>
-        <span className="text-base text-rose-600 dark:text-rose-400 font-mono">
+      <motion.div
+        initial={{ opacity: 0, y: 15, scale: 0.98 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.5, ease: "easeOut" }}
+        whileHover={{ scale: 1.01 }}
+        className="p-4 bg-rose-50/50 dark:bg-rose-950/20 text-rose-950 dark:text-rose-300 rounded-2xl flex items-center justify-between font-bold text-xs gap-3"
+      >
+        <div className="flex items-center gap-2">
+          {netBalance !== undefined && (
+            netBalance >= 0 ? (
+              <span id="expense-netbalance-success-badge" className="p-1 bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-lg flex items-center justify-center shrink-0" title="Net Bakiye Artıda - Finansal Durum Sağlıklı">
+                <Check className="w-3.5 h-3.5" />
+              </span>
+            ) : (
+              <span id="expense-netbalance-alert-badge" className="p-1 bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400 rounded-lg flex items-center justify-center shrink-0 animate-pulse" title="Net Bakiye Ekside - Lütfen Bütçenize Dikkat Edin">
+                <AlertTriangle className="w-3.5 h-3.5" />
+              </span>
+            )
+          )}
+          <span>Aylık Toplam Gider Masrafı:</span>
+        </div>
+        <span className="text-base text-rose-600 dark:text-rose-400 font-mono shrink-0">
           {format(totalExpenses)}
         </span>
-      </div>
+      </motion.div>
 
       <div className="grid gap-6 md:grid-cols-2">
         {/* Left Side: Listing */}
