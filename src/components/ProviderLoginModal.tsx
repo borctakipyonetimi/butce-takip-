@@ -15,6 +15,14 @@ import {
   User,
   Fingerprint
 } from "lucide-react";
+import {
+  signInWithPopup,
+  GoogleAuthProvider,
+  OAuthProvider,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword
+} from "firebase/auth";
+import { auth } from "../utils/firebase";
 
 interface ProviderLoginModalProps {
   isOpen: boolean;
@@ -36,8 +44,71 @@ export const ProviderLoginModal: React.FC<ProviderLoginModalProps> = ({
   const [error, setError] = useState("");
   const [syncStatus, setSyncStatus] = useState("");
   const [syncLogs, setSyncLogs] = useState<string[]>([]);
+  const [showAuthTroubleshoot, setShowAuthTroubleshoot] = useState(false);
 
   if (!isOpen || !provider) return null;
+
+  const handleGoogleLogin = async () => {
+    setError("");
+    setShowAuthTroubleshoot(false);
+    setStep("connecting");
+    setSyncLogs(["Google/Microsoft OAuth Sağlayıcısı Başlatılıyor...", "Giriş Penceresi Açılıyor..."]);
+    try {
+      if (provider === "google") {
+        const gProvider = new GoogleAuthProvider();
+        const result = await signInWithPopup(auth, gProvider);
+        const user = result.user;
+        if (user && user.email) {
+          setSyncLogs((prev) => [...prev, `Google ile Doğrulandı: ${user.email}`, "Veri Eşleme Tamamlandı."]);
+          setEmail(user.email);
+          setStep("success");
+          setTimeout(() => {
+            onLoginSuccess(user.email!);
+            // Reset states
+            setStep("email");
+            setEmail("");
+            setPassword("");
+            setError("");
+            setSyncLogs([]);
+          }, 1200);
+        }
+      } else {
+        // Microsoft Live Hotmail provider
+        const msProvider = new OAuthProvider("microsoft.com");
+        const result = await signInWithPopup(auth, msProvider);
+        const user = result.user;
+        if (user && user.email) {
+          setSyncLogs((prev) => [...prev, `Microsoft ile Doğrulandı: ${user.email}`, "Veri Eşleme Tamamlandı."]);
+          setEmail(user.email);
+          setStep("success");
+          setTimeout(() => {
+            onLoginSuccess(user.email!);
+            // Reset states
+            setStep("email");
+            setEmail("");
+            setPassword("");
+            setError("");
+            setSyncLogs([]);
+          }, 1200);
+        }
+      }
+    } catch (err: any) {
+      console.error("Popup Auth Error:", err);
+      let errorMsg = "Bağlantı iptal edildi, tarayıcı pop-up engelleyicisi tarafından durduruldu veya önizleme ortamı tarafından engellendi.";
+      
+      if (err?.code === "auth/popup-closed-by-user") {
+        errorMsg = "Giriş penceresi kullanıcı tarafından kapatıldı.";
+      } else if (err?.code === "auth/unauthorized-domain" || err?.message?.includes("unauthorized") || err?.message?.includes("invalid-action-code") || err?.message?.includes("requested action is invalid")) {
+        errorMsg = "Bu adres (etki alanı) Firebase projenizde 'Yetkilendirilmiş Etki Alanları' (Authorized Domains) listesinde ekli olmadığından Google/Microsoft Girişi engellendi.";
+      } else if (err?.message) {
+        errorMsg = err.message;
+      }
+      
+      setError(errorMsg);
+      setShowAuthTroubleshoot(true);
+      setStep("email");
+    }
+  };
 
   const handleNextStep = (e: React.FormEvent) => {
     e.preventDefault();
@@ -73,7 +144,7 @@ export const ProviderLoginModal: React.FC<ProviderLoginModalProps> = ({
     setStep("password");
   };
 
-  const handleLoginSubmit = (e: React.FormEvent) => {
+  const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
@@ -82,45 +153,71 @@ export const ProviderLoginModal: React.FC<ProviderLoginModalProps> = ({
       return;
     }
 
-    // Begin immersive OAuth/Auth secure handshake simulation
     setStep("connecting");
-    simulateConnection();
-  };
+    setSyncLogs([
+      "SSL/TLS Güvenceli Bağlantı Kuruluyor...",
+      "Kullanıcı veritabanı sorgulanıyor...",
+    ]);
 
-  const simulateConnection = () => {
-    const logs = [
-      `SSL/TLS Güvenli Handshake Başlatılıyor...`,
-      provider === "google" ? `Host: accounts.google.com` : `Host: login.live.com`,
-      `OAuth 2.0 istek parametreleri doğrulanıyor...`,
-      `Kullanıcı kimliği onaylandı: ${email}`,
-      `Token üretiliyor: sha256_aes_gcm_${Math.random().toString(36).substring(2, 10)}`,
-      `Veritabanı profil alanı tahsis ediliyor...`,
-      `Senkronizasyon Başarılı!`
-    ];
-
-    let currentLogIndex = 0;
-    setSyncStatus(logs[0]);
-    setSyncLogs([logs[0]]);
-
-    const interval = setInterval(() => {
-      currentLogIndex++;
-      if (currentLogIndex < logs.length) {
-        setSyncStatus(logs[currentLogIndex]);
-        setSyncLogs((prev) => [...prev, logs[currentLogIndex]]);
+    try {
+      // 1. Try to sign in the user
+      const result = await signInWithEmailAndPassword(auth, email, password);
+      const user = result.user;
+      setSyncLogs((prev) => [
+        ...prev,
+        `Hesaba Giriş Yapıldı: ${user.email}`,
+        "Profil başarıyla senkronize edildi!"
+      ]);
+      setStep("success");
+      setTimeout(() => {
+        onLoginSuccess(user.email!);
+        setStep("email");
+        setEmail("");
+        setPassword("");
+        setError("");
+        setSyncLogs([]);
+      }, 1200);
+    } catch (signInErr: any) {
+      // 2. If user not found or password doesn't exist, automatically register them!
+      if (
+        signInErr.code === "auth/user-not-found" ||
+        signInErr.code === "auth/invalid-credential" ||
+        signInErr.message?.includes("user-not-found") ||
+        signInErr.message?.includes("INVALID_LOGIN_CREDENTIALS") ||
+        signInErr.message?.includes("invalid-credential")
+      ) {
+        try {
+          setSyncLogs((prev) => [
+            ...prev,
+            "Hesap bulunamadı. Yeni profil oluşturuluyor...",
+          ]);
+          const result = await createUserWithEmailAndPassword(auth, email, password);
+          const user = result.user;
+          setSyncLogs((prev) => [
+            ...prev,
+            `Yeni Profil Kaydedildi: ${user.email}`,
+            "Veritabanı alanı tahsis edildi!"
+          ]);
+          setStep("success");
+          setTimeout(() => {
+            onLoginSuccess(user.email!);
+            setStep("email");
+            setEmail("");
+            setPassword("");
+            setError("");
+            setSyncLogs([]);
+          }, 1200);
+        } catch (signUpErr: any) {
+          console.error("Firebase Sign Up Error:", signUpErr);
+          setError(signUpErr.message || "Kaydolma işlemi başarısız oldu.");
+          setStep("password");
+        }
       } else {
-        clearInterval(interval);
-        setStep("success");
-        setTimeout(() => {
-          onLoginSuccess(email.trim().toLowerCase());
-          // Reset states
-          setStep("email");
-          setEmail("");
-          setPassword("");
-          setError("");
-          setSyncLogs([]);
-        }, 1200);
+        console.error("Firebase Sign In Error:", signInErr);
+        setError(signInErr.message || "Gelişmiş oturum açma doğrulaması başarısız oldu.");
+        setStep("password");
       }
-    }, 500);
+    }
   };
 
   const providerName = provider === "google" ? "Google" : "Outlook / Hotmail";
@@ -187,6 +284,21 @@ export const ProviderLoginModal: React.FC<ProviderLoginModalProps> = ({
                   </p>
                 </div>
 
+                {/* Direct Google/Microsoft OAuth Button */}
+                <div className="pb-1">
+                  <button
+                    type="button"
+                    onClick={handleGoogleLogin}
+                    className="w-full py-3 bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 font-extrabold text-xs uppercase tracking-wider rounded-xl transition-all duration-300 flex items-center justify-center gap-2 cursor-pointer active:scale-98"
+                  >
+                    {provider === "google" ? <Chrome className="w-4 h-4 text-rose-500 animate-pulse" /> : <Mail className="w-4 h-4 text-sky-450 animate-pulse" />}
+                    <span>{providerName} ile Doğrudan Bağlan</span>
+                  </button>
+                  <div className="flex items-center my-3 text-[10px] text-slate-400 uppercase font-black before:content-[''] before:flex-1 before:border-b before:border-slate-200 dark:before:border-slate-800 before:mr-2 after:content-[''] after:flex-1 after:border-b after:border-slate-200 dark:after:border-slate-800 after:ml-2">
+                    veya Manuel E-posta ile Devam Et
+                  </div>
+                </div>
+
                 <div className="space-y-1 relative">
                   <label className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">
                     Kullanıcı E-Postası
@@ -217,9 +329,51 @@ export const ProviderLoginModal: React.FC<ProviderLoginModalProps> = ({
                 </div>
 
                 {error && (
-                  <div className="p-3 bg-rose-50 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-900/30 rounded-xl flex items-start gap-2 text-rose-600 dark:text-rose-400 text-xs">
-                    <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
-                    <p className="font-semibold leading-relaxed">{error}</p>
+                  <div className="space-y-3">
+                    <div className="p-3 bg-rose-50 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-900/30 rounded-xl flex items-start gap-2 text-rose-600 dark:text-rose-400 text-xs text-left">
+                      <AlertCircle className="w-4 h-4 mt-0.5 shrink-0 text-rose-500 animate-pulse" />
+                      <div className="space-y-1">
+                        <p className="font-extrabold leading-tight">Oturum Açma Engeli</p>
+                        <p className="font-medium leading-relaxed">{error}</p>
+                      </div>
+                    </div>
+
+                    {showAuthTroubleshoot && (
+                      <div className="p-4 bg-amber-50 dark:bg-amber-950/15 border border-amber-200/50 dark:border-amber-900/20 rounded-2xl text-xs space-y-3 shadow-xs text-left">
+                        <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400 font-black uppercase text-[10px] tracking-wider">
+                          <CheckCircle2 className="w-4 h-4 text-amber-500" />
+                          <span>Hızlı Çözüm Kılavuzu</span>
+                        </div>
+                        
+                        <div className="space-y-2 text-slate-600 dark:text-slate-300 leading-relaxed font-semibold">
+                          <p className="text-[11px] font-medium">
+                            Uygulama iframe güvenceli sandbox ortamında çalıştığından, popup pencere doğrulama istekleri güvenlik engellerine takılabilir. Lütfen aşağıdaki çözüm yollarını takip edin:
+                          </p>
+                          
+                          <div className="p-2.5 bg-white dark:bg-slate-950 rounded-xl border border-slate-150 dark:border-slate-850 space-y-1.5 shadow-2xs">
+                            <span className="font-extrabold text-indigo-600 dark:text-indigo-400 block text-[10px] uppercase tracking-wider">🌟 YÖNTEM 1 (Önerilen - En Hızlı & Kolay):</span>
+                            <span className="font-medium text-[11px] block text-slate-500 dark:text-slate-400">
+                              Aşağıdaki <strong>E-Posta</strong> alanına dilediğiniz bir mail adresini yazın ve <strong>İleri</strong> butonuna basıp bir şifre (en az 6 karakter) girerek devam edin! Sistem, girilen kullanıcıyı otomatik olarak Firebase veritabanına kaydeder/girişini yapar. Sıfır ayar gerektirir!
+                            </span>
+                          </div>
+
+                          <div className="p-2.5 bg-white dark:bg-slate-950 rounded-xl border border-slate-150 dark:border-slate-850 space-y-1.5 shadow-2xs">
+                            <span className="font-extrabold text-amber-600 dark:text-amber-400 block text-[10px] uppercase tracking-wider">🛠️ YÖNTEM 2 (Firebase Authorized Domain Ayarı):</span>
+                            <span className="font-medium text-[11px] block text-slate-500 dark:text-slate-400">
+                              Google popup bağlantısının çalışması için Firebase Console &gt; Authentication &gt; Settings &gt; Authorized Domains listesine aşağıdaki adresleri eklemeniz gerekir:
+                            </span>
+                            <div className="bg-slate-50 dark:bg-slate-900/60 p-2 rounded-lg text-[9px] font-mono leading-normal select-all select-text font-bold text-rose-600 dark:text-rose-400 break-all space-y-1 border border-slate-100 dark:border-slate-800">
+                              <div>{window.location.origin}</div>
+                              <div>ais-dev-jq2fqdbd4ijsq6vv7lfvkr-200839682182.europe-west2.run.app</div>
+                              <div>ais-pre-jq2fqdbd4ijsq6vv7lfvkr-200839682182.europe-west2.run.app</div>
+                            </div>
+                            <span className="block text-[10px] text-slate-400 dark:text-slate-500 font-medium">
+                              Ayrıca Firebase Console panelinizde "Google" sağlayıcısını etkinleştirdiğinizden emin olun.
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
 

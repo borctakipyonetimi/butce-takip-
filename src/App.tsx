@@ -4,6 +4,9 @@
  */
 
 import { useState, useEffect, useRef } from "react";
+import { onAuthStateChanged, signOut } from "firebase/auth";
+import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
+import { auth, db, handleFirestoreError, OperationType } from "./utils/firebase";
 import { motion, AnimatePresence } from "motion/react";
 import {
   Menu,
@@ -717,6 +720,21 @@ export default function App() {
     triggerToast(`${selectedProvider === "google" ? "Gmail" : "Hotmail"} ile Giriş Yapıldı!`);
   };
 
+  // Listen to genuine Firebase Authentication state changes
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        const emailOrUid = user.email || user.uid;
+        setCurrentUser(emailOrUid);
+        localStorage.setItem("currentUser", emailOrUid);
+      } else {
+        setCurrentUser(null);
+        localStorage.removeItem("currentUser");
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
   // Sync theme configurations on body
   useEffect(() => {
     if (darkMode) {
@@ -745,68 +763,116 @@ export default function App() {
     document.body.classList.add(activeClass);
   }, [colorTheme]);
 
-  // Load appropriate data when user target profile changes or mounts
+  // Load appropriate data when user target profile changes or mounts (local + Firebase Firestore sync)
   useEffect(() => {
-    const spaceKey = currentUser ? `user_${currentUser}` : "user_anonymous";
-    const dataString = localStorage.getItem(spaceKey);
-    if (dataString) {
-      try {
-        const parsed = JSON.parse(dataString);
-        setDebts(parsed.debts || []);
-        setIncomes(parsed.incomes || []);
-        setAlarms(parsed.alarms || []);
-        setNotifications(parsed.notifications || []);
-        setInstallmentDebts(parsed.installmentDebts || []);
-        setPayments(parsed.payments || []);
-        setExpenses(parsed.expenses || []);
-        setExpenseCategories(
-          parsed.expenseCategories || [
-            { id: 1, name: "Kira", color: "#3b82f6", icon: "🏠" },
-            { id: 2, name: "Market", color: "#10b981", icon: "🛒" },
-            { id: 3, name: "Ulaşım", color: "#f59e0b", icon: "🚗" },
-            { id: 4, name: "Yeme İçme", color: "#ec4899", icon: "🍔" },
-            { id: 5, name: "Faturalar", color: "#ef4444", icon: "⚡" }
-          ]
-        );
-      } catch (e) {
-        console.error("Local data parsing warning:", e);
-      }
-    } else {
-      // Load standard starter mockup parameters
-      setDebts([{ id: 1, name: "Örnek Finansal Borç", amount: 5000, paid: 1500, category: "Diğer", dueDate: "" }]);
-      setIncomes([{ id: 1, name: "Aylık Maaş Geliri", amount: 20000, date: new Date().toISOString() }]);
-      setAlarms([{ id: 1, title: "Kredi Kartı Son Ödeme", date: new Date().toISOString().slice(0, 10) }]);
-      setNotifications([{ id: 1, title: "Sisteme Hoş Geldiniz! Borçlarınızı buraya kaydedebilirsiniz." }]);
-      setInstallmentDebts([
-        {
-          id: 1,
-          name: "Telefon Taksidi (Örnek)",
-          totalAmount: 12000,
-          installmentCount: 12,
-          paidInstallmentCount: 3,
-          firstDueDate: new Date().toISOString().slice(0, 10)
+    let active = true;
+
+    const loadFromLocalStorage = () => {
+      const spaceKey = currentUser ? `user_${currentUser}` : "user_anonymous";
+      const dataString = localStorage.getItem(spaceKey);
+      if (dataString) {
+        try {
+          const parsed = JSON.parse(dataString);
+          setDebts(parsed.debts || []);
+          setIncomes(parsed.incomes || []);
+          setAlarms(parsed.alarms || []);
+          setNotifications(parsed.notifications || []);
+          setInstallmentDebts(parsed.installmentDebts || []);
+          setPayments(parsed.payments || []);
+          setExpenses(parsed.expenses || []);
+          setExpenseCategories(
+            parsed.expenseCategories || [
+              { id: 1, name: "Kira", color: "#3b82f6", icon: "🏠" },
+              { id: 2, name: "Market", color: "#10b981", icon: "🛒" },
+              { id: 3, name: "Ulaşım", color: "#f59e0b", icon: "🚗" },
+              { id: 4, name: "Yeme İçme", color: "#ec4899", icon: "🍔" },
+              { id: 5, name: "Faturalar", color: "#ef4444", icon: "⚡" }
+            ]
+          );
+        } catch (e) {
+          console.error("Local data parsing warning:", e);
         }
-      ]);
-      setPayments([
-        { id: 1, debtId: 1, amount: 1500, date: new Date().toISOString(), type: "manual" },
-        { id: 2, debtId: 1, amount: 1000, date: new Date().toISOString(), type: "installment" }
-      ]);
-      setExpenses([
-        { id: 1, categoryId: 2, amount: 550, description: "Haftalık mutfak alışverişi", date: new Date().toISOString() },
-        { id: 2, categoryId: 5, amount: 240, description: "Elektrik Faturası", date: new Date().toISOString() }
-      ]);
-      setExpenseCategories([
-        { id: 1, name: "Kira", color: "#3b82f6", icon: "🏠" },
-        { id: 2, name: "Market", color: "#10b981", icon: "🛒" },
-        { id: 3, name: "Ulaşım", color: "#f59e0b", icon: "🚗" },
-        { id: 4, name: "Yeme İçme", color: "#ec4899", icon: "🍔" },
-        { id: 5, name: "Faturalar", color: "#ef4444", icon: "⚡" }
-      ]);
-    }
+      } else {
+        // Load standard starter mockup parameters
+        setDebts([{ id: 1, name: "Örnek Finansal Borç", amount: 5000, paid: 1500, category: "Diğer", dueDate: "" }]);
+        setIncomes([{ id: 1, name: "Aylık Maaş Geliri", amount: 20000, date: new Date().toISOString() }]);
+        setAlarms([{ id: 1, title: "Kredi Kartı Son Ödeme", date: new Date().toISOString().slice(0, 10) }]);
+        setNotifications([{ id: 1, title: "Sisteme Hoş Geldiniz! Borçlarınızı buraya kaydedebilirsiniz." }]);
+        setInstallmentDebts([
+          {
+            id: 1,
+            name: "Telefon Taksidi (Örnek)",
+            totalAmount: 12000,
+            installmentCount: 12,
+            paidInstallmentCount: 3,
+            firstDueDate: new Date().toISOString().slice(0, 10)
+          }
+        ]);
+        setPayments([
+          { id: 1, debtId: 1, amount: 1500, date: new Date().toISOString(), type: "manual" },
+          { id: 2, debtId: 1, amount: 1000, date: new Date().toISOString(), type: "installment" }
+        ]);
+        setExpenses([
+          { id: 1, categoryId: 2, amount: 550, description: "Haftalık mutfak alışverişi", date: new Date().toISOString() },
+          { id: 2, categoryId: 5, amount: 240, description: "Elektrik Faturası", date: new Date().toISOString() }
+        ]);
+        setExpenseCategories([
+          { id: 1, name: "Kira", color: "#3b82f6", icon: "🏠" },
+          { id: 2, name: "Market", color: "#10b981", icon: "🛒" },
+          { id: 3, name: "Ulaşım", color: "#f59e0b", icon: "🚗" },
+          { id: 4, name: "Yeme İçme", color: "#ec4899", icon: "🍔" },
+          { id: 5, name: "Faturalar", color: "#ef4444", icon: "⚡" }
+        ]);
+      }
+    };
+
+    const loadData = async () => {
+      const fbUser = auth.currentUser;
+      if (fbUser) {
+        try {
+          const userDocRef = doc(db, "users", fbUser.uid);
+          const userDoc = await getDoc(userDocRef);
+          if (active) {
+            if (userDoc.exists()) {
+              const data = userDoc.data();
+              setDebts(data.debts || []);
+              setIncomes(data.incomes || []);
+              setAlarms(data.alarms || []);
+              setNotifications(data.notifications || []);
+              setInstallmentDebts(data.installmentDebts || []);
+              setPayments(data.payments || []);
+              setExpenses(data.expenses || []);
+              setExpenseCategories(
+                data.expenseCategories || [
+                  { id: 1, name: "Kira", color: "#3b82f6", icon: "🏠" },
+                  { id: 2, name: "Market", color: "#10b981", icon: "🛒" },
+                  { id: 3, name: "Ulaşım", color: "#f59e0b", icon: "🚗" },
+                  { id: 4, name: "Yeme İçme", color: "#ec4899", icon: "🍔" },
+                  { id: 5, name: "Faturalar", color: "#ef4444", icon: "⚡" }
+                ]
+              );
+            } else {
+              loadFromLocalStorage();
+            }
+          }
+        } catch (err) {
+          console.error("Firestore loading error:", err);
+          handleFirestoreError(err, OperationType.GET, `users/${fbUser.uid}`);
+        }
+      } else {
+        loadFromLocalStorage();
+      }
+    };
+
+    loadData();
+
+    return () => {
+      active = false;
+    };
   }, [currentUser]);
 
-  // General persistent workspace saver
-  const saveAllToUser = (
+  // General persistent workspace saver (local + Firebase Firestore sync)
+  const saveAllToUser = async (
     updatedDebts: Debt[],
     updatedIncomes: Income[],
     updatedAlarms: Alarm[],
@@ -816,22 +882,35 @@ export default function App() {
     updatedExpenses: Expense[],
     updatedCategories: ExpenseCategory[]
   ) => {
+    const spaceKey = currentUser ? `user_${currentUser}` : "user_anonymous";
+    const dataBag = {
+      debts: updatedDebts,
+      incomes: updatedIncomes,
+      alarms: updatedAlarms,
+      notifications: updatedNotifs,
+      installmentDebts: updatedInstallments,
+      payments: updatedPayments,
+      expenses: updatedExpenses,
+      expenseCategories: updatedCategories
+    };
+
     try {
-      const spaceKey = currentUser ? `user_${currentUser}` : "user_anonymous";
-      const dataBag = {
-        debts: updatedDebts,
-        incomes: updatedIncomes,
-        alarms: updatedAlarms,
-        notifications: updatedNotifs,
-        installmentDebts: updatedInstallments,
-        payments: updatedPayments,
-        expenses: updatedExpenses,
-        expenseCategories: updatedCategories
-      };
       localStorage.setItem(spaceKey, JSON.stringify(dataBag));
+      
+      const fbUser = auth.currentUser;
+      if (fbUser) {
+        const userDocRef = doc(db, "users", fbUser.uid);
+        await setDoc(userDocRef, {
+          ...dataBag,
+          updatedAt: serverTimestamp()
+        });
+      }
       triggerToast("Değişiklikler Kaydedildi");
     } catch (err) {
       console.error("Critical error in saveAllToUser storage write:", err);
+      if (auth.currentUser) {
+        handleFirestoreError(err, OperationType.WRITE, `users/${auth.currentUser.uid}`);
+      }
     }
   };
 
@@ -969,6 +1048,7 @@ export default function App() {
       "Oturumu Kapat",
       "Oturumu kapatmak istediğinize emin misiniz?",
       () => {
+        signOut(auth).catch((err) => console.error("SignOut error:", err));
         setCurrentUser(null);
         localStorage.removeItem("currentUser");
         triggerToast("Oturum Kapatıldı");
