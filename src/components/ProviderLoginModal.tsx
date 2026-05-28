@@ -23,7 +23,6 @@ import {
   createUserWithEmailAndPassword
 } from "firebase/auth";
 import { auth } from "../utils/firebase";
-import { getApiUrl, getBackendUrl } from "../utils/api";
 
 interface ProviderLoginModalProps {
   isOpen: boolean;
@@ -81,7 +80,7 @@ export const ProviderLoginModal: React.FC<ProviderLoginModalProps> = ({
 
     const inter = setInterval(async () => {
       try {
-        const res = await fetch(getApiUrl(`/api/auth-bridge/status/${code}`));
+        const res = await fetch(`/api/auth-bridge/status/${code}`);
         if (!res.ok) {
           clearInterval(inter);
           return;
@@ -163,7 +162,7 @@ export const ProviderLoginModal: React.FC<ProviderLoginModalProps> = ({
         "Sunucu ile anahtar değişimi yapılıyor...",
       ]);
       try {
-        const response = await fetch(getApiUrl("/api/auth-bridge/create"), {
+        const response = await fetch("/api/auth-bridge/create", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ provider })
@@ -527,7 +526,7 @@ export const ProviderLoginModal: React.FC<ProviderLoginModalProps> = ({
                   </div>
                   
                   <div className="bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-150 dark:border-slate-850 break-all select-all select-text font-mono text-[10px] text-indigo-600 dark:text-indigo-400 font-extrabold text-center relative group">
-                    {getBackendUrl()}/?pair={pairingCode}
+                    {window.location.origin}/?pair={pairingCode}
                   </div>
 
                   <div className="flex items-start gap-2">
@@ -542,7 +541,7 @@ export const ProviderLoginModal: React.FC<ProviderLoginModalProps> = ({
                   <button
                     type="button"
                     onClick={() => {
-                      const pairUrl = `${getBackendUrl()}/?pair=${pairingCode}`;
+                      const pairUrl = `${window.location.origin}/?pair=${pairingCode}`;
                       window.open(pairUrl, "_system"); // Forces wrappers to launch outer web-browser
                       window.open(pairUrl, "_blank");
                     }}
