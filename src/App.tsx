@@ -125,6 +125,7 @@ export default function App() {
   // Local Alerts indicators
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
+  const [isOfflineMode, setIsOfflineMode] = useState(false);
 
   // Live Timer states
   const [liveClock, setLiveClock] = useState("--:--:--");
@@ -837,6 +838,7 @@ export default function App() {
           const userDocRef = doc(db, "users", fbUser.uid);
           const userDoc = await getDoc(userDocRef);
           if (active) {
+            setIsOfflineMode(false);
             if (userDoc.exists()) {
               const data = userDoc.data();
               setDebts(data.debts || []);
@@ -859,12 +861,28 @@ export default function App() {
               loadFromLocalStorage();
             }
           }
-        } catch (err) {
+        } catch (err: any) {
           console.error("Firestore loading error:", err);
-          handleFirestoreError(err, OperationType.GET, `users/${fbUser.uid}`);
+          if (active) {
+            loadFromLocalStorage();
+            setIsOfflineMode(true);
+            
+            const isPermissionError = err && (
+              err.code === "permission-denied" || 
+              err.message?.toLowerCase().includes("permission") || 
+              err.message?.toLowerCase().includes("denied")
+            );
+            
+            if (isPermissionError) {
+              handleFirestoreError(err, OperationType.GET, `users/${fbUser.uid}`);
+            } else {
+              triggerToast("Bulut senkronizasyonu kurulamadı: Çevrimdışı mod etkinleştirildi.");
+            }
+          }
         }
       } else {
         loadFromLocalStorage();
+        setIsOfflineMode(false);
       }
     };
 
@@ -908,12 +926,23 @@ export default function App() {
           ...dataBag,
           updatedAt: serverTimestamp()
         });
+        setIsOfflineMode(false);
       }
       triggerToast("Değişiklikler Kaydedildi");
-    } catch (err) {
+    } catch (err: any) {
       console.error("Critical error in saveAllToUser storage write:", err);
-      if (auth.currentUser) {
+      setIsOfflineMode(true);
+      
+      const isPermissionError = err && (
+        err.code === "permission-denied" || 
+        err.message?.toLowerCase().includes("permission") || 
+        err.message?.toLowerCase().includes("denied")
+      );
+      
+      if (isPermissionError && auth.currentUser) {
         handleFirestoreError(err, OperationType.WRITE, `users/${auth.currentUser.uid}`);
+      } else {
+        triggerToast("Değişiklikler yerel olarak kaydedildi (Çevrimdışı Mod)");
       }
     }
   };
@@ -1909,12 +1938,18 @@ export default function App() {
                   PRO
                 </span>
               </h1>
-              <p className="text-[8px] sm:text-[10px] font-black tracking-wider text-emerald-400/90 uppercase flex items-center gap-1.5 select-none leading-none">
+              <p className={`text-[8px] sm:text-[10px] font-black tracking-wider uppercase flex items-center gap-1.5 select-none leading-none ${isOfflineMode ? "text-amber-400" : "text-emerald-400/90"}`}>
                 <span className="relative flex h-2 w-2 shrink-0">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                  {isOfflineMode ? (
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500 animate-pulse"></span>
+                  ) : (
+                    <>
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                    </>
+                  )}
                 </span>
-                BÜTÇEM PRO & AKILLI FINANSAL TAKİP
+                {isOfflineMode ? "ÇEVRİMDIŞI MOD (YEREL VERİ GÜVENLİĞİ)" : "BÜTÇEM PRO & AKILLI FINANSAL TAKİP"}
               </p>
             </div>
           </div>
