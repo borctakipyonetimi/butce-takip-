@@ -23,7 +23,7 @@ import {
   createUserWithEmailAndPassword
 } from "firebase/auth";
 import { auth } from "../utils/firebase";
-import { getApiUrl } from "../utils/api";
+import { getApiUrl, getBackendUrl } from "../utils/api";
 
 interface ProviderLoginModalProps {
   isOpen: boolean;
@@ -527,7 +527,7 @@ export const ProviderLoginModal: React.FC<ProviderLoginModalProps> = ({
                   </div>
                   
                   <div className="bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-150 dark:border-slate-850 break-all select-all select-text font-mono text-[10px] text-indigo-600 dark:text-indigo-400 font-extrabold text-center relative group">
-                    {window.location.origin}/?pair={pairingCode}
+                    {getBackendUrl()}/?pair={pairingCode}
                   </div>
 
                   <div className="flex items-start gap-2">
@@ -542,7 +542,7 @@ export const ProviderLoginModal: React.FC<ProviderLoginModalProps> = ({
                   <button
                     type="button"
                     onClick={() => {
-                      const pairUrl = `${window.location.origin}/?pair=${pairingCode}`;
+                      const pairUrl = `${getBackendUrl()}/?pair=${pairingCode}`;
                       window.open(pairUrl, "_system"); // Forces wrappers to launch outer web-browser
                       window.open(pairUrl, "_blank");
                     }}
