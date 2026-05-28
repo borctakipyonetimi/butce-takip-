@@ -44,7 +44,6 @@ export const ProviderLoginModal: React.FC<ProviderLoginModalProps> = ({
   const [error, setError] = useState("");
   const [syncStatus, setSyncStatus] = useState("");
   const [syncLogs, setSyncLogs] = useState<string[]>([]);
-  const [showAuthTroubleshoot, setShowAuthTroubleshoot] = useState(false);
 
   // Detect Android WebView / APK wrapper environment
   const isWebView = typeof navigator !== "undefined" && (
@@ -57,7 +56,6 @@ export const ProviderLoginModal: React.FC<ProviderLoginModalProps> = ({
 
   const handleGoogleLogin = async () => {
     setError("");
-    setShowAuthTroubleshoot(false);
     setStep("connecting");
     setSyncLogs(["Google/Microsoft OAuth Sağlayıcısı Başlatılıyor...", "Giriş Penceresi Açılıyor..."]);
     try {
@@ -112,7 +110,6 @@ export const ProviderLoginModal: React.FC<ProviderLoginModalProps> = ({
       }
       
       setError(errorMsg);
-      setShowAuthTroubleshoot(true);
       setStep("email");
     }
   };
@@ -237,7 +234,7 @@ export const ProviderLoginModal: React.FC<ProviderLoginModalProps> = ({
           initial={{ opacity: 0, scale: 0.95, y: 15 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 15 }}
-          className="w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden relative"
+          className="w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl overflow-y-auto max-h-[90vh] relative scrollbar-none"
         >
           {/* Header styling depending on provider */}
           <div
@@ -294,17 +291,8 @@ export const ProviderLoginModal: React.FC<ProviderLoginModalProps> = ({
                 {/* Direct Google/Microsoft OAuth Button */}
                 <div className="pb-1">
                   {isWebView ? (
-                    <div className="mb-3 p-3.5 bg-amber-550/10 dark:bg-amber-500/10 border border-amber-500/20 rounded-xl text-[11px] text-amber-600 dark:text-amber-400 font-semibold space-y-1 text-left">
-                      <div className="flex items-center gap-1.5 font-extrabold uppercase tracking-wider text-[10px]">
-                        <AlertCircle className="w-3.5 h-3.5 text-amber-500 shrink-0 animate-pulse" />
-                        <span>Mobil APK / WebView Uyarısı 📱</span>
-                      </div>
-                      <p className="leading-relaxed font-medium">
-                        Google ve Microsoft güvenlik politikaları gereği, paketlenmiş <strong>APK</strong> uygulamaları içinden doğrudan tarayıcı pencereli (OAuth) pop-up girişi engellenmektedir.
-                      </p>
-                      <p className="leading-relaxed font-bold">
-                        Lütfen sorunsuz giriş veya kayıt yapmak için aşağıdaki <strong>veya Manuel E-posta ile Devam Et</strong> yöntemini kullanarak Gmail adresinizi ve dilediğiniz bir şifreyi girin. Sistem sizi otomatik bağlayacaktır!
-                      </p>
+                    <div className="mb-2.5 p-2 bg-amber-500/5 dark:bg-amber-500/10 border border-amber-500/10 rounded-xl text-[10px] text-amber-600 dark:text-amber-400 font-bold leading-relaxed text-left">
+                      ⚠️ <strong>APK Giriş Yardımı:</strong> Google/Microsoft popup penceresi doğrudan APK içinde engellenmektedir. Giriş yapmak için lütfen aşağıdaki <strong>Manuel E-posta</strong> yöntemini kullanın.
                     </div>
                   ) : null}
                   <button
@@ -350,51 +338,12 @@ export const ProviderLoginModal: React.FC<ProviderLoginModalProps> = ({
                 </div>
 
                 {error && (
-                  <div className="space-y-3">
-                    <div className="p-3 bg-rose-50 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-900/30 rounded-xl flex items-start gap-2 text-rose-600 dark:text-rose-400 text-xs text-left">
-                      <AlertCircle className="w-4 h-4 mt-0.5 shrink-0 text-rose-500 animate-pulse" />
-                      <div className="space-y-1">
-                        <p className="font-extrabold leading-tight">Oturum Açma Engeli</p>
-                        <p className="font-medium leading-relaxed">{error}</p>
-                      </div>
+                  <div className="p-3 bg-rose-50 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-900/30 rounded-xl flex items-start gap-2 text-rose-600 dark:text-rose-400 text-xs text-left">
+                    <AlertCircle className="w-4 h-4 mt-0.5 shrink-0 text-rose-500 animate-pulse" />
+                    <div className="space-y-1">
+                      <p className="font-extrabold leading-tight">Oturum Açma Engeli</p>
+                      <p className="font-medium leading-relaxed">{error}</p>
                     </div>
-
-                    {showAuthTroubleshoot && (
-                      <div className="p-4 bg-amber-50 dark:bg-amber-950/15 border border-amber-200/50 dark:border-amber-900/20 rounded-2xl text-xs space-y-3 shadow-xs text-left">
-                        <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400 font-black uppercase text-[10px] tracking-wider">
-                          <CheckCircle2 className="w-4 h-4 text-amber-500" />
-                          <span>Hızlı Çözüm Kılavuzu</span>
-                        </div>
-                        
-                        <div className="space-y-2 text-slate-600 dark:text-slate-300 leading-relaxed font-semibold">
-                          <p className="text-[11px] font-medium">
-                            Uygulama iframe güvenceli sandbox ortamında çalıştığından, popup pencere doğrulama istekleri güvenlik engellerine takılabilir. Lütfen aşağıdaki çözüm yollarını takip edin:
-                          </p>
-                          
-                          <div className="p-2.5 bg-white dark:bg-slate-950 rounded-xl border border-slate-150 dark:border-slate-850 space-y-1.5 shadow-2xs">
-                            <span className="font-extrabold text-indigo-600 dark:text-indigo-400 block text-[10px] uppercase tracking-wider">🌟 YÖNTEM 1 (Önerilen - En Hızlı & Kolay):</span>
-                            <span className="font-medium text-[11px] block text-slate-500 dark:text-slate-400">
-                              Aşağıdaki <strong>E-Posta</strong> alanına dilediğiniz bir mail adresini yazın ve <strong>İleri</strong> butonuna basıp bir şifre (en az 6 karakter) girerek devam edin! Sistem, girilen kullanıcıyı otomatik olarak Firebase veritabanına kaydeder/girişini yapar. Sıfır ayar gerektirir!
-                            </span>
-                          </div>
-
-                          <div className="p-2.5 bg-white dark:bg-slate-950 rounded-xl border border-slate-150 dark:border-slate-850 space-y-1.5 shadow-2xs">
-                            <span className="font-extrabold text-amber-600 dark:text-amber-400 block text-[10px] uppercase tracking-wider">🛠️ YÖNTEM 2 (Firebase Authorized Domain Ayarı):</span>
-                            <span className="font-medium text-[11px] block text-slate-500 dark:text-slate-400">
-                              Google popup bağlantısının çalışması için Firebase Console &gt; Authentication &gt; Settings &gt; Authorized Domains listesine aşağıdaki adresleri eklemeniz gerekir:
-                            </span>
-                            <div className="bg-slate-50 dark:bg-slate-900/60 p-2 rounded-lg text-[9px] font-mono leading-normal select-all select-text font-bold text-rose-600 dark:text-rose-400 break-all space-y-1 border border-slate-100 dark:border-slate-800">
-                              <div>{window.location.origin}</div>
-                              <div>ais-dev-jq2fqdbd4ijsq6vv7lfvkr-200839682182.europe-west2.run.app</div>
-                              <div>ais-pre-jq2fqdbd4ijsq6vv7lfvkr-200839682182.europe-west2.run.app</div>
-                            </div>
-                            <span className="block text-[10px] text-slate-400 dark:text-slate-500 font-medium">
-                              Ayrıca Firebase Console panelinizde "Google" sağlayıcısını etkinleştirdiğinizden emin olun.
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    )}
                   </div>
                 )}
 
