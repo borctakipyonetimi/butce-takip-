@@ -46,6 +46,13 @@ export const ProviderLoginModal: React.FC<ProviderLoginModalProps> = ({
   const [syncLogs, setSyncLogs] = useState<string[]>([]);
   const [showAuthTroubleshoot, setShowAuthTroubleshoot] = useState(false);
 
+  // Detect Android WebView / APK wrapper environment
+  const isWebView = typeof navigator !== "undefined" && (
+    /wv|Android.*Version\/[0-9.]+/i.test(navigator.userAgent) ||
+    window.location.protocol === "file:" ||
+    (navigator.userAgent.includes("Android") && navigator.userAgent.includes("Version/"))
+  );
+
   if (!isOpen || !provider) return null;
 
   const handleGoogleLogin = async () => {
@@ -286,6 +293,20 @@ export const ProviderLoginModal: React.FC<ProviderLoginModalProps> = ({
 
                 {/* Direct Google/Microsoft OAuth Button */}
                 <div className="pb-1">
+                  {isWebView ? (
+                    <div className="mb-3 p-3.5 bg-amber-550/10 dark:bg-amber-500/10 border border-amber-500/20 rounded-xl text-[11px] text-amber-600 dark:text-amber-400 font-semibold space-y-1 text-left">
+                      <div className="flex items-center gap-1.5 font-extrabold uppercase tracking-wider text-[10px]">
+                        <AlertCircle className="w-3.5 h-3.5 text-amber-500 shrink-0 animate-pulse" />
+                        <span>Mobil APK / WebView Uyarısı 📱</span>
+                      </div>
+                      <p className="leading-relaxed font-medium">
+                        Google ve Microsoft güvenlik politikaları gereği, paketlenmiş <strong>APK</strong> uygulamaları içinden doğrudan tarayıcı pencereli (OAuth) pop-up girişi engellenmektedir.
+                      </p>
+                      <p className="leading-relaxed font-bold">
+                        Lütfen sorunsuz giriş veya kayıt yapmak için aşağıdaki <strong>veya Manuel E-posta ile Devam Et</strong> yöntemini kullanarak Gmail adresinizi ve dilediğiniz bir şifreyi girin. Sistem sizi otomatik bağlayacaktır!
+                      </p>
+                    </div>
+                  ) : null}
                   <button
                     type="button"
                     onClick={handleGoogleLogin}
