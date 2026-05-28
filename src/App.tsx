@@ -45,7 +45,10 @@ import {
   Link,
   Twitter,
   Volume2,
-  VolumeX
+  VolumeX,
+  CheckCircle2,
+  User,
+  AlertCircle
 } from "lucide-react";
 import {
   Debt,
@@ -144,9 +147,22 @@ export default function App() {
   });
   const [notifFilter, setNotifFilter] = useState<"all" | "alarm" | "system">("all");
 
+  // Google / Microsoft OAuth Device Companion Pairing States (Method B)
+  const [pairingCode, setPairingCode] = useState<string | null>(null);
+  const [pairingStatus, setPairingStatus] = useState<"idle" | "pairing" | "success" | "error">("idle");
+  const [pairingError, setPairingError] = useState("");
+
   // Register Service Worker and inject Android WebView Polyfill for System Tray Push Notifications and Audio Gesture Unlocker
   useEffect(() => {
     if (typeof window !== "undefined") {
+      // 0. Parse OAuth pairing/device connection tokens
+      const urlParams = new URL(window.location.href).searchParams;
+      const pair = urlParams.get("pair") || urlParams.get("pairCode") || urlParams.get("code");
+      if (pair) {
+        setPairingCode(pair.trim().toUpperCase());
+        setPairingStatus("pairing");
+      }
+
       // 1. Register Service Worker to unlock navigator.serviceWorker.ready -> showNotification
       if ("serviceWorker" in navigator) {
         navigator.serviceWorker.register("/sw.js")
@@ -720,6 +736,34 @@ export default function App() {
     setSelectedProvider(null);
     triggerToast(`${selectedProvider === "google" ? "Gmail" : "Hotmail"} ile Giriş Yapıldı!`);
   };
+
+  // Google/Microsoft OAuth Device Automatic Companion Approval handler
+  useEffect(() => {
+    if (pairingCode && currentUser && pairingStatus === "pairing") {
+      const autoApprove = async () => {
+        try {
+          const res = await fetch("/api/auth-bridge/approve", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ code: pairingCode, email: currentUser })
+          });
+          const data = await res.json();
+          if (data.success) {
+            setPairingStatus("success");
+            triggerToast("APK Cihazı Başarıyla Eşleşti!");
+          } else {
+            setPairingError(data.error || "Eşleştirme onaylanamadı.");
+            setPairingStatus("error");
+          }
+        } catch (err: any) {
+          console.error("Auto approve pairing failed:", err);
+          setPairingError(err.message || "Bağlantı hatası oluştu.");
+          setPairingStatus("error");
+        }
+      };
+      autoApprove();
+    }
+  }, [currentUser, pairingCode, pairingStatus]);
 
   // Listen to genuine Firebase Authentication state changes
   useEffect(() => {
@@ -1869,6 +1913,169 @@ export default function App() {
         }}
         onLoginSuccess={handleProviderLoginSuccess}
       />
+
+      {/* Real-time Browser-to-App OAuth Pairing Companion Overlay */}
+      {pairingCode && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-xl z-[9999] flex items-center justify-center p-4 overflow-y-auto">
+          <div className="w-full max-w-sm bg-white dark:bg-slate-900 border border-indigo-500/35 rounded-3xl shadow-2xl p-6 relative overflow-hidden">
+            {/* Ambient subtle highlighting */}
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 animate-pulse" />
+            
+            <div className="flex justify-between items-start mb-4">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 bg-indigo-50 dark:bg-indigo-950/50 rounded-xl text-indigo-500 border border-indigo-100 dark:border-indigo-900/30">
+                  <Shield className="w-5 h-5 animate-pulse" />
+                </div>
+                <div className="text-left">
+                  <h3 className="text-[10px] font-black uppercase tracking-widest text-indigo-500">
+                    Bütçe Takip Sistemi
+                  </h3>
+                  <h1 className="text-sm font-black text-slate-800 dark:text-slate-100">
+                    Uygulama Giriş Eşleştirici
+                  </h1>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setPairingCode(null);
+                  setPairingStatus("idle");
+                }}
+                className="p-1 px-2.5 text-[9px] font-black uppercase tracking-wider rounded-xl bg-slate-100 text-slate-500 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700 transition"
+              >
+                Kapat
+              </button>
+            </div>
+
+            {pairingStatus === "success" ? (
+              <div className="py-4 text-center space-y-4">
+                <div className="w-16 h-16 bg-emerald-50 dark:bg-emerald-950/40 rounded-full flex items-center justify-center border-2 border-emerald-500 mx-auto shadow-[0_0_20px_rgba(16,185,129,0.3)]">
+                  <CheckCircle2 className="w-10 h-10 text-emerald-500" />
+                </div>
+                <div className="space-y-1 text-center">
+                  <h2 className="text-base font-black text-slate-800 dark:text-slate-50">Eşleştirme Onaylandı!</h2>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 max-w-xs mx-auto leading-relaxed">
+                    Kullanıcı profiliniz (<strong>{currentUser}</strong>) başarıyla APK uygulamasıyla eşleşti ve oturum açıldı. Bu tarayıcı sekmesini kapatıp APK uygulamanıza güvenle dönebilirsiniz!
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPairingCode(null);
+                    setPairingStatus("idle");
+                  }}
+                  className="w-full py-2.5 bg-slate-900 dark:bg-slate-800 hover:bg-slate-800 dark:hover:bg-slate-700 text-white font-extrabold text-xs uppercase tracking-wider rounded-xl transition cursor-pointer"
+                >
+                  Tamam, Kapat
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="p-3 bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900/40 rounded-2xl flex flex-col items-center justify-center gap-1 text-center">
+                  <span className="text-[9px] font-extrabold text-indigo-500 uppercase tracking-widest">Eşleşecek Bağlantı Kodu</span>
+                  <span className="font-mono text-xl font-black text-indigo-700 dark:text-indigo-400 tracking-widest bg-white dark:bg-slate-950 px-4 py-1 rounded-xl border border-indigo-100 dark:border-indigo-900/40">
+                    {pairingCode}
+                  </span>
+                </div>
+
+                {currentUser ? (
+                  <div className="space-y-3.5">
+                    <div className="p-3 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-150 dark:border-slate-850 flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center shrink-0">
+                        <User className="w-4.5 h-4.5 text-indigo-600 dark:text-indigo-400" />
+                      </div>
+                      <div className="overflow-hidden text-left">
+                        <span className="text-[8px] font-black uppercase tracking-wider text-slate-400 block">Sizin Aktif Profiliniz</span>
+                        <span className="text-xs font-bold text-slate-800 dark:text-slate-100 font-mono truncate block">{currentUser}</span>
+                      </div>
+                    </div>
+
+                    <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed text-left flex-wrap">
+                      Bu bütçe hesabını APK içindeki cihazınızla eşleştirmek istiyor musunuz? Onay verdiğinizde APK uygulamanız otomatik olarak açılacaktır.
+                    </p>
+
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPairingCode(null);
+                          setPairingStatus("idle");
+                        }}
+                        className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-600 dark:text-slate-350 font-extrabold text-xs uppercase tracking-wider rounded-xl transition cursor-pointer"
+                      >
+                        İptal
+                      </button>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          try {
+                            const res = await fetch("/api/auth-bridge/approve", {
+                              method: "POST",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ code: pairingCode, email: currentUser })
+                            });
+                            const data = await res.json();
+                            if (data.success) {
+                              setPairingStatus("success");
+                              triggerToast("APK Cihazı Eşleşti!");
+                            } else {
+                              throw new Error(data.error);
+                            }
+                          } catch (err: any) {
+                            setPairingError(err.message || "Bağlantı hatası oluştu.");
+                            setPairingStatus("error");
+                          }
+                        }}
+                        className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs uppercase tracking-wider rounded-xl transition shadow-lg shadow-indigo-500/20 cursor-pointer"
+                      >
+                        Girişi Onayla
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed text-center">
+                      Eşleştirme işlemini tamamlamak için lütfen bu tarayıcıda <strong>Google</strong> veya <strong>Hotmail</strong> hesabınızla oturum açın:
+                    </p>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleQuickLogin("google")}
+                        className="py-2.5 bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/20 font-black text-[10px] uppercase tracking-wider rounded-xl transition flex items-center justify-center gap-1 cursor-pointer"
+                      >
+                        <Chrome className="w-3.5 h-3.5 text-red-500 animate-pulse" />
+                        <span>Google</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleQuickLogin("hotmail")}
+                        className="py-2.5 bg-sky-500/10 hover:bg-sky-500/20 text-sky-600 dark:text-sky-400 border border-sky-500/20 font-black text-[10px] uppercase tracking-wider rounded-xl transition flex items-center justify-center gap-1 cursor-pointer"
+                      >
+                        <Mail className="w-3.5 h-3.5 text-sky-500 animate-pulse" />
+                        <span>Hotmail</span>
+                      </button>
+                    </div>
+
+                    <div className="p-3 bg-amber-500/5 dark:bg-amber-500/10 border border-amber-500/10 rounded-2xl flex items-start gap-2 text-[10px] text-amber-600 dark:text-amber-400 font-bold leading-normal text-left">
+                      <AlertCircle className="w-4.5 h-3.5 mt-0.5 text-amber-500 shrink-0" />
+                      <p>
+                        Giriş yaptığınızda cihazınız (<strong>KOD: {pairingCode}</strong>) otomatik olarak onaylanacak ve APK yönlendirilecektir.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {pairingError && (
+                  <div className="p-2.5 bg-rose-50 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-900/30 rounded-xl text-rose-600 dark:text-rose-400 text-xs font-semibold leading-normal text-left flex items-start gap-1.5">
+                    <AlertCircle className="w-4 h-4 mt-0.5 text-rose-500 shrink-0" />
+                    <span>{pairingError}</span>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Header Container - Premium Glossy Mesh Header */}
       <header className="sticky top-0 z-30 bg-gradient-to-r from-slate-950 via-[#0b132b] to-[#1c2541] dark:from-slate-950 dark:via-black dark:to-slate-950 border-b border-indigo-500/20 text-white shadow-2xl px-4 sm:px-8 py-5 md:py-6 flex flex-col md:flex-row gap-4 items-stretch md:items-center justify-between backdrop-blur-lg transition-all duration-300 relative overflow-hidden group">

@@ -37,13 +37,15 @@ export const ProviderLoginModal: React.FC<ProviderLoginModalProps> = ({
   onClose,
   onLoginSuccess
 }) => {
-  const [step, setStep] = useState<"email" | "password" | "connecting" | "success">("email");
+  const [step, setStep] = useState<"email" | "password" | "connecting" | "success" | "pairing">("email");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [syncStatus, setSyncStatus] = useState("");
   const [syncLogs, setSyncLogs] = useState<string[]>([]);
+  const [pairingCode, setPairingCode] = useState("");
+  const [activeInterval, setActiveInterval] = useState<any>(null);
 
   // Detect Android WebView / APK wrapper environment
   const isWebView = typeof navigator !== "undefined" && (
@@ -52,10 +54,136 @@ export const ProviderLoginModal: React.FC<ProviderLoginModalProps> = ({
     (navigator.userAgent.includes("Android") && navigator.userAgent.includes("Version/"))
   );
 
+  const resetForm = () => {
+    setStep("email");
+    setEmail("");
+    setPassword("");
+    setError("");
+    setSyncLogs([]);
+    setPairingCode("");
+    if (activeInterval) {
+      clearInterval(activeInterval);
+      setActiveInterval(null);
+    }
+  };
+
+  const handleClose = () => {
+    if (activeInterval) {
+      clearInterval(activeInterval);
+      setActiveInterval(null);
+    }
+    onClose();
+  };
+
+  const startPairingPolling = (code: string) => {
+    if (activeInterval) clearInterval(activeInterval);
+
+    const inter = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/auth-bridge/status/${code}`);
+        if (!res.ok) {
+          clearInterval(inter);
+          return;
+        }
+        const data = await res.json();
+        if (data.status === "approved" && data.email && data.apkPassword) {
+          clearInterval(inter);
+          setActiveInterval(null);
+
+          setSyncLogs((prev) => [
+            ...prev,
+            `Doğrulama Alındı: ${data.email}`,
+            "Profil senkronizasyonu başlatılıyor...",
+          ]);
+          setStep("connecting");
+
+          try {
+            // Register or sign in silently using secure apk-derived credentials
+            try {
+              const resInit = await signInWithEmailAndPassword(auth, data.email, data.apkPassword);
+              setSyncLogs((prev) => [...prev, "Giriş işlemi tamamlandı!"]);
+              setStep("success");
+              setTimeout(() => {
+                onLoginSuccess(resInit.user.email!);
+                setStep("email");
+                setEmail("");
+                setPassword("");
+                setError("");
+                setSyncLogs([]);
+                setPairingCode("");
+              }, 1200);
+            } catch (signInErr: any) {
+              if (
+                signInErr.code === "auth/user-not-found" ||
+                signInErr.code === "auth/invalid-credential" ||
+                signInErr.message?.includes("invalid-credential") ||
+                signInErr.message?.includes("user-not-found")
+              ) {
+                const resReg = await createUserWithEmailAndPassword(auth, data.email, data.apkPassword);
+                setSyncLogs((prev) => [...prev, "Yeni APK hesabı kaydedildi!"]);
+                setStep("success");
+                setTimeout(() => {
+                  onLoginSuccess(resReg.user.email!);
+                  setStep("email");
+                  setEmail("");
+                  setPassword("");
+                  setError("");
+                  setSyncLogs([]);
+                  setPairingCode("");
+                }, 1200);
+              } else {
+                throw signInErr;
+              }
+            }
+          } catch (authErr: any) {
+            console.error("Silent APK Auth Error:", authErr);
+            setError("Giriş senkronize edilemedi: " + (authErr.message || "Bilinmeyen hata"));
+            setStep("email");
+          }
+        }
+      } catch (err) {
+        console.warn("Polling error:", err);
+      }
+    }, 2000);
+
+    setActiveInterval(inter);
+  };
+
   if (!isOpen || !provider) return null;
 
   const handleGoogleLogin = async () => {
     setError("");
+
+    // If running in APK WebView / file protocol, trigger the browser-to-app companion pairing session
+    if (isWebView) {
+      setStep("connecting");
+      setSyncLogs([
+        "APK için güvenli bağlantı oturumu oluşturuluyor...",
+        "Sunucu ile anahtar değişimi yapılıyor...",
+      ]);
+      try {
+        const response = await fetch("/api/auth-bridge/create", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ provider })
+        });
+        const data = await response.json();
+        if (data.success && data.code) {
+          setPairingCode(data.code);
+          setSyncLogs((prev) => [...prev, "Bağlantı oturumu başarıyla oluşturuldu!", `Cihaz Eşleştirme Kodu: ${data.code}`]);
+          setStep("pairing");
+          startPairingPolling(data.code);
+        } else {
+          throw new Error(data.error || "Eşleşme sunucusu geçersiz yanıt döndü.");
+        }
+      } catch (err: any) {
+        console.error("Auth Bridge creation failed:", err);
+        setError("APK için güvenli bağlantı başlatılamadı: " + (err.message || err.toString()));
+        setStep("email");
+      }
+      return;
+    }
+
     setStep("connecting");
     setSyncLogs(["Google/Microsoft OAuth Sağlayıcısı Başlatılıyor...", "Giriş Penceresi Açılıyor..."]);
     try {
@@ -265,7 +393,7 @@ export const ProviderLoginModal: React.FC<ProviderLoginModalProps> = ({
             </div>
 
             <button
-              onClick={onClose}
+              onClick={handleClose}
               className="p-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-400 dark:text-slate-500 transition active:scale-90"
             >
               <X className="w-4 h-4" />
@@ -291,8 +419,8 @@ export const ProviderLoginModal: React.FC<ProviderLoginModalProps> = ({
                 {/* Direct Google/Microsoft OAuth Button */}
                 <div className="pb-1">
                   {isWebView ? (
-                    <div className="mb-2.5 p-2 bg-amber-500/5 dark:bg-amber-500/10 border border-amber-500/10 rounded-xl text-[10px] text-amber-600 dark:text-amber-400 font-bold leading-relaxed text-left">
-                      ⚠️ <strong>APK Giriş Yardımı:</strong> Google/Microsoft popup penceresi doğrudan APK içinde engellenmektedir. Giriş yapmak için lütfen aşağıdaki <strong>Manuel E-posta</strong> yöntemini kullanın.
+                    <div className="mb-2.5 p-2 bg-indigo-500/5 dark:bg-indigo-500/10 border border-indigo-500/10 rounded-xl text-[10px] text-indigo-600 dark:text-indigo-400 font-bold leading-relaxed text-left">
+                      ⚡ <strong>APK Akıllı Giriş Sistemi:</strong> Google/Microsoft popup penceresi doğrudan APK içinde engellenmektedir. Standart tarayıcınız üzerinden 10 saniyede otomatik eşleşmek için aşağıdaki butona basın.
                     </div>
                   ) : null}
                   <button
@@ -301,7 +429,7 @@ export const ProviderLoginModal: React.FC<ProviderLoginModalProps> = ({
                     className="w-full py-3 bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 font-extrabold text-xs uppercase tracking-wider rounded-xl transition-all duration-300 flex items-center justify-center gap-2 cursor-pointer active:scale-98"
                   >
                     {provider === "google" ? <Chrome className="w-4 h-4 text-rose-500 animate-pulse" /> : <Mail className="w-4 h-4 text-sky-450 animate-pulse" />}
-                    <span>{providerName} ile Doğrudan Bağlan</span>
+                    <span>{isWebView ? "Güvenli Tarayıcıda Doğrula & Bağlan" : `${providerName} ile Doğrudan Bağlan`}</span>
                   </button>
                   <div className="flex items-center my-3 text-[10px] text-slate-400 uppercase font-black before:content-[''] before:flex-1 before:border-b before:border-slate-200 dark:before:border-slate-800 before:mr-2 after:content-[''] after:flex-1 after:border-b after:border-slate-200 dark:after:border-slate-800 after:ml-2">
                     veya Manuel E-posta ile Devam Et
@@ -357,6 +485,85 @@ export const ProviderLoginModal: React.FC<ProviderLoginModalProps> = ({
                   </button>
                 </div>
               </form>
+            )}
+
+            {/* Step: PAIRING INSTRUCTIONS FOR APK WEBVIEW */}
+            {step === "pairing" && (
+              <div className="space-y-4 text-left">
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-2">
+                    <Shield className="w-4 h-4 text-indigo-500" />
+                    <span className="text-[11px] font-black uppercase tracking-wide text-indigo-600 dark:text-indigo-400">
+                      🔒 Mobil Cihaz Eşleştirme Sistemi
+                    </span>
+                  </div>
+                  <h4 className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                    Google / Microsoft güvenlik engellerini aşmak için lütfen bu adımları uygulayın:
+                  </h4>
+                </div>
+
+                {/* Big Pairing PIN display */}
+                <div className="py-4 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-100 dark:border-slate-850 flex flex-col items-center justify-center space-y-2.5">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Eşleştirme Bağlantı Kodu</span>
+                  <div className="flex gap-2">
+                    {pairingCode.split("").map((char, index) => (
+                      <span
+                        key={index}
+                        className="w-8 h-10 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-lg font-black text-slate-800 dark:text-indigo-400 flex items-center justify-center shadow-xs"
+                      >
+                        {char}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-2 text-xs leading-relaxed text-slate-600 dark:text-slate-300 font-medium">
+                  <div className="flex items-start gap-2">
+                    <span className="w-5 h-5 rounded-full bg-slate-100 dark:bg-slate-850 text-[10px] font-bold flex items-center justify-center shrink-0">1</span>
+                    <p className="pt-0.5">
+                      Telefonunuzun veya bilgisayarınızın normal tarayıcısından (örn. <strong>Google Chrome</strong> / <strong>Safari</strong>) bu adrese veya aşağıdaki butona gidin:
+                    </p>
+                  </div>
+                  
+                  <div className="bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-150 dark:border-slate-850 break-all select-all select-text font-mono text-[10px] text-indigo-600 dark:text-indigo-400 font-extrabold text-center relative group">
+                    {window.location.origin}/?pair={pairingCode}
+                  </div>
+
+                  <div className="flex items-start gap-2">
+                    <span className="w-5 h-5 rounded-full bg-slate-100 dark:bg-slate-850 text-[10px] font-bold flex items-center justify-center shrink-0">2</span>
+                    <p className="pt-0.5">
+                      Açılan web sayfasında Google veya Hotmail hesabınızla <strong>Giriş Yapın</strong>. Giriş yaptığınız an, bu ekran otomatik olarak kapanacak ve APK uygulamanız otomatik senkronize olacaktır!
+                    </p>
+                  </div>
+                </div>
+
+                <div className="pt-2.5 space-y-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const pairUrl = `${window.location.origin}/?pair=${pairingCode}`;
+                      window.open(pairUrl, "_system"); // Forces wrappers to launch outer web-browser
+                      window.open(pairUrl, "_blank");
+                    }}
+                    className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs uppercase tracking-wider rounded-xl transition duration-300 flex items-center justify-center gap-2 shadow-md shadow-indigo-500/20 active:scale-98 cursor-pointer"
+                  >
+                    <span>🌐 Tarayıcıyı Aç ve Giriş Yap</span>
+                  </button>
+                  
+                  <button
+                    type="button"
+                    onClick={resetForm}
+                    className="w-full py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-500 dark:text-slate-400 font-black text-[10px] uppercase tracking-wider rounded-xl transition cursor-pointer"
+                  >
+                    Vazgeç ve Başa Dön
+                  </button>
+                </div>
+
+                <div className="flex items-center justify-center gap-1.5 py-1 text-[9px] text-slate-400 font-bold uppercase tracking-wider animate-pulse">
+                  <span className="w-1.5 h-1.5 bg-indigo-500 rounded-full inline-block" />
+                  <span>Onay bekleniyor, her an otomatik açılabilir...</span>
+                </div>
+              </div>
             )}
 
             {/* Step 2: PASSWORD INPUT */}
