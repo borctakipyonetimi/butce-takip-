@@ -305,6 +305,7 @@ export default function App() {
     }
   };
 
+
   // Timezone-and-platform robust local datetime parser
   const parseLocalOrUTCString = (dateStr: string): Date => {
     try {
@@ -2412,7 +2413,7 @@ export default function App() {
                 <div className="flex flex-wrap gap-2.5 pt-2">
                   <button
                     onClick={requestNotificationPermission}
-                    className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-xs font-black rounded-xl flex items-center gap-2 cursor-pointer transition active:scale-95 text-white"
+                    className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-xs font-black rounded-xl flex items-center gap-2 cursor-pointer transition active:scale-95 text-white shadow-md shadow-indigo-600/20"
                   >
                     <span>🔔 Telefon Bildirim İznini Etkinleştir</span>
                   </button>
@@ -2423,8 +2424,9 @@ export default function App() {
                     )}
                     className="px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/10 text-xs font-black rounded-xl flex items-center gap-2 cursor-pointer transition active:scale-95 text-slate-100"
                   >
-                    <span>🎯 Test Bildirimi Gönder</span>
+                    <span>🎯 Anlık Yerel Test</span>
                   </button>
+
                 </div>
               </div>
             </div>
