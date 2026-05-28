@@ -23,6 +23,7 @@ import {
   createUserWithEmailAndPassword
 } from "firebase/auth";
 import { auth } from "../utils/firebase";
+import { getApiUrl } from "../utils/api";
 
 interface ProviderLoginModalProps {
   isOpen: boolean;
@@ -80,7 +81,7 @@ export const ProviderLoginModal: React.FC<ProviderLoginModalProps> = ({
 
     const inter = setInterval(async () => {
       try {
-        const res = await fetch(`/api/auth-bridge/status/${code}`);
+        const res = await fetch(getApiUrl(`/api/auth-bridge/status/${code}`));
         if (!res.ok) {
           clearInterval(inter);
           return;
@@ -162,7 +163,7 @@ export const ProviderLoginModal: React.FC<ProviderLoginModalProps> = ({
         "Sunucu ile anahtar değişimi yapılıyor...",
       ]);
       try {
-        const response = await fetch("/api/auth-bridge/create", {
+        const response = await fetch(getApiUrl("/api/auth-bridge/create"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ provider })

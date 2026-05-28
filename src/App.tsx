@@ -7,6 +7,7 @@ import { useState, useEffect, useRef } from "react";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { auth, db, handleFirestoreError, OperationType } from "./utils/firebase";
+import { getApiUrl } from "./utils/api";
 import { motion, AnimatePresence } from "motion/react";
 import {
   Menu,
@@ -742,7 +743,7 @@ export default function App() {
     if (pairingCode && currentUser && pairingStatus === "pairing") {
       const autoApprove = async () => {
         try {
-          const res = await fetch("/api/auth-bridge/approve", {
+          const res = await fetch(getApiUrl("/api/auth-bridge/approve"), {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ code: pairingCode, email: currentUser })
@@ -2008,7 +2009,7 @@ export default function App() {
                         type="button"
                         onClick={async () => {
                           try {
-                            const res = await fetch("/api/auth-bridge/approve", {
+                            const res = await fetch(getApiUrl("/api/auth-bridge/approve"), {
                               method: "POST",
                               headers: { "Content-Type": "application/json" },
                               body: JSON.stringify({ code: pairingCode, email: currentUser })

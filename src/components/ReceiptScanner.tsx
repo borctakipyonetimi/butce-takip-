@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Camera, Upload, AlertCircle, Loader2, RefreshCw, Sparkles, Check, CheckCircle } from "lucide-react";
+import { getApiUrl } from "../utils/api";
 
 export interface ScannedReceiptResult {
   title: string;
@@ -158,7 +159,7 @@ export default function ReceiptScanner({ onScanCompleted, onClose, defaultType =
     setSuccessResult(null);
 
     try {
-      const response = await fetch("/api/scan-receipt", {
+      const response = await fetch(getApiUrl("/api/scan-receipt"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ image: base64Image, defaultType })

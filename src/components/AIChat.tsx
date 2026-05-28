@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { Bot, Send, User, Sparkles, Brain, Flame, Target, MessageSquareCode } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { Debt, Income, Expense, InstallmentDebt, FinancialStats } from "../types";
+import { getApiUrl } from "../utils/api";
 
 interface ChatMessage {
   sender: "user" | "bot";
@@ -222,7 +223,7 @@ Görevlerin:
     }
 
     try {
-      const response = await fetch("/api/chat", {
+      const response = await fetch(getApiUrl("/api/chat"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
