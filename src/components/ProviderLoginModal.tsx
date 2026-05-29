@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import {
   Chrome,
@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import {
   signInWithPopup,
+  signInWithRedirect,
   GoogleAuthProvider,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword
@@ -42,13 +43,6 @@ export const ProviderLoginModal: React.FC<ProviderLoginModalProps> = ({
   const [error, setError] = useState("");
   const [syncLogs, setSyncLogs] = useState<string[]>([]);
 
-  // Detect Android WebView / APK wrapper environment to display helpful native guide
-  const isWebView = typeof navigator !== "undefined" && (
-    /wv|Android.*Version\/[0-9.]+/i.test(navigator.userAgent) ||
-    window.location.protocol === "file:" ||
-    (navigator.userAgent.includes("Android") && navigator.userAgent.includes("Version/"))
-  );
-
   const resetForm = () => {
     setStep("email");
     setEmail("");
@@ -67,29 +61,51 @@ export const ProviderLoginModal: React.FC<ProviderLoginModalProps> = ({
   const handleGoogleLogin = async () => {
     setError("");
     setStep("connecting");
-    setSyncLogs(["Google OAuth Doğrulaması Başlatılıyor...", "Giriş Pop-up Penceresi Açılıyor..."]);
+
+    const isWebView = typeof navigator !== "undefined" && (
+      /wv|Android.*Version\/[0-9.]+/i.test(navigator.userAgent) ||
+      window.location.protocol === "file:" ||
+      (navigator.userAgent.includes("Android") && navigator.userAgent.includes("Version/"))
+    );
+
+    if (isWebView) {
+      setSyncLogs([
+        "Mobil APK / WebView ortamı algılandı 📱",
+        "Uygulama içi güvenli tarayıcı yönlendirmesi başlatılıyor..."
+      ]);
+    } else {
+      setSyncLogs([
+        "Tarayıcı ortamı algılandı 🌐",
+        "Google Giriş Pop-up penceresi açılıyor..."
+      ]);
+    }
 
     try {
       const gProvider = new GoogleAuthProvider();
-      const result = await signInWithPopup(auth, gProvider);
-      const user = result.user;
-      if (user && user.email) {
-        setSyncLogs((prev) => [...prev, `Google ile Doğrulandı: ${user.email}`, "Veri Eşleme Tamamlandı."]);
-        setEmail(user.email);
-        setStep("success");
-        setTimeout(() => {
-          onLoginSuccess(user.email!);
-          resetForm();
-        }, 1200);
+      
+      if (isWebView) {
+        // standalone webview / APK context: use redirect so it stays in-app
+        await signInWithRedirect(auth, gProvider);
+      } else {
+        // Standard browser: use popup for smooth headless login in preview/tab without page reload
+        const result = await signInWithPopup(auth, gProvider);
+        const user = result.user;
+        if (user && user.email) {
+          setSyncLogs((prev) => [...prev, `Google ile Doğrulandı: ${user.email}`, "Veriler eşitleniyor..."]);
+          setEmail(user.email);
+          setStep("success");
+          setTimeout(() => {
+            onLoginSuccess(user.email!);
+            resetForm();
+          }, 1200);
+        }
       }
     } catch (err: any) {
-      console.error("Popup Auth Error:", err);
-      let errorMsg = "Bağlantı iptal edildi veya tarayıcı pop-up engelleyicisi tarafından durduruldu.";
+      console.error("Google Auth Error:", err);
+      let errorMsg = "Giriş işlemi iptal edildi veya tarayıcı tarafından engellendi.";
       
-      if (err?.code === "auth/popup-closed-by-user") {
-        errorMsg = "Giriş penceresi kullanıcı tarafından kapatıldı.";
-      } else if (err?.code === "auth/unauthorized-domain" || err?.message?.includes("unauthorized") || err?.message?.includes("invalid-action-code")) {
-        errorMsg = "Bu etki alanı Firebase projenizde 'Yetkilendirilmiş Etki Alanları' listesinde ekli olmadığından Google Girişi engellendi.";
+      if (err?.code === "auth/unauthorized-domain" || err?.message?.includes("unauthorized-domain") || err?.message?.includes("unauthorized")) {
+        errorMsg = "Bu site alan adı (domain) Firebase projenizde 'Yetkilendirilmiş Etki Alanları' (Authorized domains) listesinde ekli değil. Lütfen Firebase Console -> Authentication -> Settings kısmından bu site adresini yetkilendirin.";
       } else if (err?.message) {
         errorMsg = err.message;
       }
@@ -112,11 +128,6 @@ export const ProviderLoginModal: React.FC<ProviderLoginModalProps> = ({
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       setError("Geçerli bir e-posta adresi giriniz.");
-      return;
-    }
-
-    if (!email.toLowerCase().endsWith("@gmail.com")) {
-      setError("Google girişi için lütfen '@gmail.com' uzantılı bir adres girin.");
       return;
     }
 
@@ -204,50 +215,44 @@ export const ProviderLoginModal: React.FC<ProviderLoginModalProps> = ({
           <div className="p-6 flex items-center justify-between border-b bg-red-500/5 border-red-500/10">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-white dark:bg-slate-800 rounded-full flex items-center justify-center border border-red-200/50 shadow-sm">
-                <Chrome className="w-6 h-6 text-red-500" />
+                <Chrome className="w-6 h-6 text-red-500 animate-pulse" />
               </div>
               <div>
                 <h3 className="text-xs font-black uppercase tracking-widest text-slate-400">
                   Güvenli Giriş Paneli
                 </h3>
                 <h2 className="text-sm font-black text-slate-800 dark:text-slate-100">
-                  Google Account ile Bağlan
+                  Bulut Veritabanı ve Hesap Girişi
                 </h2>
               </div>
             </div>
 
             <button
               onClick={handleClose}
-              className="p-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-400 dark:text-slate-500 transition active:scale-90"
+              className="p-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-400 dark:text-slate-500 transition active:scale-90 cursor-pointer"
             >
               <X className="w-4 h-4" />
             </button>
           </div>
 
           <div className="p-6">
-            {/* Step 1: EMAIL INPUT */}
+            {/* Step 1: EMAIL & OAUTH HUB */}
             {step === "email" && (
               <form onSubmit={handleNextStep} className="space-y-4">
                 <div className="space-y-1.5">
                   <div className="flex items-center gap-2">
                     <Shield className="w-4 h-4 text-emerald-500" />
                     <span className="text-[11px] font-black uppercase tracking-wide text-emerald-600 dark:text-emerald-400">
-                      Uçtan Uca Şifreli Bağlantı
+                      Uçtan Uca Güvenceli Bağlantı
                     </span>
                   </div>
                   <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                    Kişisel bütçe verilerinizi kendi Gmail profiliniz üzerinde izole etmek ve veritabanı aygıtınızı eşlemek için e-posta adresinizi giriniz:
+                    Mali kayıtlarınızı güvenle bulutta saklamak ve diğer cihazlarınızla anlık eşitlemek için bütçe hesabınızı açın:
                   </p>
                 </div>
 
-                {/* Direct Google OAuth Button */}
-                <div className="pb-1">
-                  {isWebView && (
-                    <div className="mb-2.5 p-2.5 bg-amber-500/10 border border-amber-500/20 rounded-xl text-[10px] text-amber-700 dark:text-amber-400 font-bold leading-relaxed text-left">
-                      ⚠️ <strong>Mobil APK Uygulaması Tespit Edildi:</strong> Google pop-up giriş yöntemi Android APK içi güvenlik kısıtlamaları nedeniyle çalışmayabilir. Bu durumda lütfen aşağıdaki <strong>Manuel E-posta</strong> yöntemini (Şifre Belirleyerek) kullanın.
-                    </div>
-                  )}
-
+                <div className="space-y-2 pb-1 bg-slate-50 dark:bg-slate-950/40 p-3 rounded-2xl border border-slate-105 dark:border-slate-850">
+                  {/* Google OAuth */}
                   <button
                     type="button"
                     onClick={handleGoogleLogin}
@@ -256,15 +261,15 @@ export const ProviderLoginModal: React.FC<ProviderLoginModalProps> = ({
                     <Chrome className="w-4 h-4 text-rose-500" />
                     <span>Google ile Doğrudan Bağlan</span>
                   </button>
+                </div>
 
-                  <div className="flex items-center my-3 text-[10px] text-slate-400 uppercase font-black before:content-[''] before:flex-1 before:border-b before:border-slate-200 dark:before:border-slate-800 before:mr-2 after:content-[''] after:flex-1 after:border-b after:border-slate-200 dark:after:border-slate-800 after:ml-2">
-                    veya Manuel E-posta ile Devam Et
-                  </div>
+                <div className="flex items-center my-3 text-[10px] text-slate-400 uppercase font-black before:content-[''] before:flex-1 before:border-b before:border-slate-200 dark:before:border-slate-850 before:mr-2 after:content-[''] after:flex-1 after:border-b after:border-slate-200 dark:after:border-slate-850 after:ml-2">
+                  veya Manuel Hesap ile Giriş / Kayıt
                 </div>
 
                 <div className="space-y-1 relative">
                   <label className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">
-                    Gmail Adresi
+                    E-Posta Adresi
                   </label>
                   <div className="relative">
                     <input
@@ -273,29 +278,19 @@ export const ProviderLoginModal: React.FC<ProviderLoginModalProps> = ({
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="kullanici@gmail.com"
-                      className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-600 border border-slate-200 dark:border-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm font-medium pr-16"
+                      className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-600 border border-slate-200 dark:border-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm font-medium"
                     />
                     <div className="absolute left-3 top-3.5 text-slate-400">
                       <User className="w-4 h-4" />
                     </div>
-                    {/* Quick helper suffix */}
-                    {email.length > 1 && !email.includes("@") && (
-                      <button
-                        type="button"
-                        onClick={() => setEmail(email + "@gmail.com")}
-                        className="absolute right-2 top-2 px-2 py-1 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-[9px] font-black rounded-lg text-slate-600 dark:text-slate-300 transition-all uppercase"
-                      >
-                        @gmail.com Ekle
-                      </button>
-                    )}
                   </div>
                 </div>
 
                 {error && (
-                  <div className="p-3 bg-rose-50 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-900/30 rounded-xl flex items-start gap-2 text-rose-600 dark:text-rose-400 text-xs text-left">
+                  <div className="p-3 bg-rose-50 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-900/30 rounded-xl flex items-start gap-2 text-rose-600 dark:text-rose-400 text-xs text-left animate-shake">
                     <AlertCircle className="w-4 h-4 mt-0.5 shrink-0 text-rose-500" />
                     <div className="space-y-1">
-                      <p className="font-extrabold leading-tight">Oturum Açma Engeli</p>
+                      <p className="font-extrabold leading-tight">Giriş Engeli</p>
                       <p className="font-medium leading-relaxed">{error}</p>
                     </div>
                   </div>
@@ -350,7 +345,7 @@ export const ProviderLoginModal: React.FC<ProviderLoginModalProps> = ({
                     </button>
                   </div>
                   <span className="text-[9px] text-slate-400 block mt-0.5 font-bold tracking-wide">
-                    ⚠️ Şifreleriniz asla uzak sunuculara döküman olarak gönderilmez ve güvenle yerel olarak hashlenir.
+                    ⚠️ Şifrenizi belirleyin. Yeni bir profil ise bu şifreyle kaydolmuş olursunuz.
                   </span>
                 </div>
 
@@ -398,7 +393,7 @@ export const ProviderLoginModal: React.FC<ProviderLoginModalProps> = ({
 
                 <div className="p-4 bg-slate-950 text-slate-300 rounded-2xl border border-slate-800 font-mono text-[9px] space-y-1.5 max-h-36 overflow-y-auto shadow-inner select-none leading-relaxed">
                   {syncLogs.map((log, idx) => (
-                    <div key={idx} className="flex gap-1.5">
+                    <div key={idx} className="flex gap-1.5 animate-fadeIn">
                       <span className="text-slate-500 font-bold shrink-0">➜</span>
                       <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-indigo-300">
                         {log}
@@ -411,7 +406,7 @@ export const ProviderLoginModal: React.FC<ProviderLoginModalProps> = ({
 
             {/* Step 4: SUCCESS SUMMARY */}
             {step === "success" && (
-              <div className="py-6 flex flex-col items-center justify-center space-y-4 text-center">
+              <div className="py-6 flex flex-col items-center justify-center space-y-4 text-center animate-bounce">
                 <motion.div
                   initial={{ scale: 0.6, rotate: -45 }}
                   animate={{ scale: 1, rotate: 0 }}
@@ -424,7 +419,7 @@ export const ProviderLoginModal: React.FC<ProviderLoginModalProps> = ({
                     Giriş Onaylandı!
                   </h3>
                   <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                    Aktif profil başarıyla senkronize edildi. Hoş geldiniz!
+                    Mali kayıt defteri hesabınızla senkronize edildi.
                   </p>
                 </div>
                 <div className="px-4 py-1.5 bg-emerald-50/50 dark:bg-emerald-900/10 border border-emerald-100 dark:border-emerald-900/20 rounded-xl font-mono text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">

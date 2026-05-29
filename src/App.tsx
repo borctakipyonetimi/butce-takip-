@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect, useRef } from "react";
-import { onAuthStateChanged, signOut } from "firebase/auth";
+import { onAuthStateChanged, signOut, createUserWithEmailAndPassword, getRedirectResult } from "firebase/auth";
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { auth, db, handleFirestoreError, OperationType } from "./utils/firebase";
 import { motion, AnimatePresence } from "motion/react";
@@ -48,7 +48,8 @@ import {
   VolumeX,
   CheckCircle2,
   User,
-  AlertCircle
+  AlertCircle,
+  Smartphone
 } from "lucide-react";
 import {
   Debt,
@@ -774,6 +775,21 @@ export default function App() {
 
   // Listen to genuine Firebase Authentication state changes
   useEffect(() => {
+    // Process redirect results (Crucial for APK WebViews running signInWithRedirect)
+    getRedirectResult(auth)
+      .then((result) => {
+        if (result && result.user) {
+          const emailOrUid = result.user.email || result.user.uid;
+          setCurrentUser(emailOrUid);
+          localStorage.setItem("currentUser", emailOrUid);
+          triggerToast("Google ile Giriş Başarılı! 🎉");
+        }
+      })
+      .catch((error) => {
+        console.error("Redirect auth retrieval failed:", error);
+        triggerToast("Google yetkilendirmesi başarısız oldu: " + (error.message || "Bilinmeyen Hata"));
+      });
+
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
         const emailOrUid = user.email || user.uid;
@@ -909,7 +925,17 @@ export default function App() {
             }
           }
         } catch (err: any) {
-          console.error("Firestore loading error:", err);
+          const isOfflineErr = err?.message?.toLowerCase().includes("offline") || 
+                             err?.message?.toLowerCase().includes("network") ||
+                             err?.code?.toLowerCase().includes("offline") ||
+                             !navigator.onLine;
+
+          if (isOfflineErr) {
+            console.warn("Firestore loading connection warning (client is offline):", err);
+          } else {
+            console.error("Firestore loading error:", err);
+          }
+
           if (active) {
             loadFromLocalStorage();
             setIsOfflineMode(true);
@@ -2308,6 +2334,8 @@ export default function App() {
           >
             <Trash2 className="w-3.5 h-3.5" /> TÜM VERİLERİ SIFIRLA
           </button>
+
+
         </div>
       </aside>
 

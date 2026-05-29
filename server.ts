@@ -422,6 +422,89 @@ app.get("/api/rates", async (req, res) => {
   });
 });
 
+// In-memory Auth Bridge Pairing Engine for Android APK Companion Login
+interface PairingSession {
+  code: string;
+  email?: string;
+  password?: string;
+  status: "pending" | "approved";
+  createdAt: number;
+}
+const pairingSessions = new Map<string, PairingSession>();
+
+// Periodically clean up expired pairing sessions (valid for 5 minutes)
+setInterval(() => {
+  const now = Date.now();
+  for (const [code, sess] of pairingSessions.entries()) {
+    if (now - sess.createdAt > 5 * 60 * 1000) {
+      pairingSessions.delete(code);
+    }
+  }
+}, 60000);
+
+// Create a new pairing code session
+app.post("/api/pair/create", (req, res) => {
+  let attempt = 0;
+  let code = "";
+  // Ensure we get a unique active 6-digit code
+  do {
+    code = Math.floor(100000 + Math.random() * 900000).toString();
+    attempt++;
+  } while (pairingSessions.has(code) && attempt < 10);
+
+  pairingSessions.set(code, {
+    code,
+    status: "pending",
+    createdAt: Date.now()
+  });
+
+  console.log(`[Pairing Engine] New companion code created: ${code}`);
+  res.json({ success: true, code });
+});
+
+// Check the approval status of a pairing code (polled by APK)
+app.get("/api/pair/status/:code", (req, res) => {
+  const { code } = req.params;
+  const session = pairingSessions.get(code);
+
+  if (!session) {
+    return res.json({ status: "expired", message: "Bağlantı kodu süresi doldu veya geçersiz." });
+  }
+
+  // Check if session has timed out (5 minutes)
+  if (Date.now() - session.createdAt > 5 * 60 * 1000) {
+    pairingSessions.delete(code);
+    return res.json({ status: "expired", message: "Bağlantı kodu zaman aşımına uğradı." });
+  }
+
+  res.json({
+    status: session.status,
+    email: session.email,
+    password: session.password
+  });
+});
+
+// Approve pairing code from browser with active session credentials
+app.post("/api/pair/approve", (req, res) => {
+  const { code, email, password } = req.body;
+  
+  if (!code || !email || !password) {
+    return res.status(400).json({ error: "Eksik parametre grubu. Kodu ve yetki bilgilerini gönderin." });
+  }
+
+  const session = pairingSessions.get(String(code).trim());
+  if (!session) {
+    return res.status(404).json({ error: "Eşleştirme kodu bulunamadı veya süresi doldu." });
+  }
+
+  session.email = email;
+  session.password = password;
+  session.status = "approved";
+
+  console.log(`[Pairing Engine] Code ${code} approved for user: ${email}`);
+  res.json({ success: true, message: "Cihaz başarıyla yetkilendirildi. Giriş bilgileri APK cihazına aktarıldı." });
+});
+
 // Vite middleware flow
 async function startServer() {
   if (process.env.NODE_ENV !== "production") {
