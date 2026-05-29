@@ -148,6 +148,53 @@ export default function App() {
   });
   const [notifFilter, setNotifFilter] = useState<"all" | "alarm" | "system">("all");
 
+  // OneSignal Environment & Active States
+  const [oneSignalAppId, setOneSignalAppId] = useState<string>(() => {
+    return localStorage.getItem("oneSignalAppId") || (import.meta as any).env?.VITE_ONESIGNAL_APP_ID || "";
+  });
+  const [oneSignalInput, setOneSignalInput] = useState(oneSignalAppId);
+  const [oneSignalSubscribed, setOneSignalSubscribed] = useState(false);
+
+  // Initialize and register OneSignal dynamically
+  useEffect(() => {
+    if (typeof window !== "undefined" && oneSignalAppId) {
+      try {
+        const win = window as any;
+        win.OneSignal = win.OneSignal || [];
+        
+        win.OneSignal.push(() => {
+          win.OneSignal.init({
+            appId: oneSignalAppId,
+            allowLocalhostAsSecureOrigin: true,
+            notifyButton: {
+              enable: false, // Custom styled trigger inside UI is much more premium
+            },
+          }).then(() => {
+            console.log("OneSignal verified & initialized with client App ID.");
+            
+            // Check subscription status
+            if (win.OneSignal.User && win.OneSignal.User.PushSubscription) {
+              setOneSignalSubscribed(!!win.OneSignal.User.PushSubscription.optedIn);
+              
+              // Event listener to monitor dynamic subscribe state changes
+              win.OneSignal.User.PushSubscription.addEventListener("change", (e: any) => {
+                setOneSignalSubscribed(!!e.current.optedIn);
+              });
+            } else if (win.OneSignal.isPushNotificationsSupported && win.OneSignal.isPushNotificationsSupported()) {
+              win.OneSignal.isPushNotificationsEnabled().then((isEnabled: boolean) => {
+                setOneSignalSubscribed(isEnabled);
+              });
+            }
+          }).catch((err: any) => {
+            console.warn("OneSignal Web client setup bypass/error:", err);
+          });
+        });
+      } catch (err) {
+        console.error("OneSignal load exception ignored safely:", err);
+      }
+    }
+  }, [oneSignalAppId]);
+
   // Register Service Worker and inject Android WebView Polyfill for System Tray Push Notifications and Audio Gesture Unlocker
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -2429,9 +2476,9 @@ export default function App() {
                   </span>
                 </div>
                 
-                <h3 className="text-sm sm:text-base font-black">Borç Hatırlatıcılarını Doğrudan Telefonunuzda Alın</h3>
+                <h3 className="text-sm sm:text-base font-black">Borç Hatırlatıcılarını Doğrudan Cihazınızda Alın</h3>
                 <p className="text-slate-300 text-xs leading-relaxed font-semibold">
-                  Alarmları kurduğunuzda, ödeme günü yaklaştığında ve bütçe analizleri tamamlandığında, uygulamanın arka planda veya ön planda olduğuna bakılmaksızın cihazınıza sistem bildirimi gönderilir.
+                  Alarmları kurduğunuzda, ödeme günü yaklaştığında ve bütçe analizleri tamamlandığında, uygulamanın arka planda veya ön planda olduğuna bakılmaksızın cihazınıza anlık sistem bildirimi ulaştırılır.
                 </p>
 
                 <div className="flex flex-wrap gap-2.5 pt-2">
@@ -2450,7 +2497,6 @@ export default function App() {
                   >
                     <span>🎯 Anlık Yerel Test</span>
                   </button>
-
                 </div>
               </div>
             </div>
