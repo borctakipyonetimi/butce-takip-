@@ -1,4 +1,9 @@
-import React, { useState, useEffect } from "react";
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+import React, { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import {
   Chrome,
@@ -12,7 +17,8 @@ import {
   ArrowRight,
   Server,
   User,
-  Fingerprint
+  Fingerprint,
+  Info
 } from "lucide-react";
 import {
   signInWithPopup,
@@ -36,7 +42,7 @@ export const ProviderLoginModal: React.FC<ProviderLoginModalProps> = ({
   onClose,
   onLoginSuccess
 }) => {
-  const [step, setStep] = useState<"email" | "password" | "connecting" | "success" | "apk_help">("email");
+  const [step, setStep] = useState<"email" | "password" | "connecting" | "success">("email");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -58,52 +64,62 @@ export const ProviderLoginModal: React.FC<ProviderLoginModalProps> = ({
 
   if (!isOpen || !provider) return null;
 
-  const handleGoogleLogin = async () => {
+  const handleGoogleLogin = async (method: "popup" | "redirect") => {
     setError("");
-
-    const isWebView = typeof navigator !== "undefined" && (
-      /wv|Android.*Version\/[0-9.]+/i.test(navigator.userAgent) ||
-      window.location.protocol === "file:" ||
-      (navigator.userAgent.includes("Android") && navigator.userAgent.includes("Version/"))
-    );
-
-    if (isWebView) {
-      setStep("apk_help");
-      return;
-    }
-
     setStep("connecting");
-    setSyncLogs([
-      "Tarayıcı ortamı algılandı 🌐",
-      "Google Giriş Pop-up penceresi açılıyor..."
-    ]);
 
-    try {
-      const gProvider = new GoogleAuthProvider();
-      // Standard browser: use popup for smooth headless login in preview/tab without page reload
-      const result = await signInWithPopup(auth, gProvider);
-      const user = result.user;
-      if (user && user.email) {
-        setSyncLogs((prev) => [...prev, `Google ile Doğrulandı: ${user.email}`, "Veriler eşitleniyor..."]);
-        setEmail(user.email);
-        setStep("success");
-        setTimeout(() => {
-          onLoginSuccess(user.email!);
-          resetForm();
-        }, 1200);
+    const gProvider = new GoogleAuthProvider();
+    // Prompt the user to select accounts during login attempt
+    gProvider.setCustomParameters({
+      prompt: "select_account"
+    });
+
+    if (method === "popup") {
+      setSyncLogs([
+        "Tarayıcı modu algılandı 🌐",
+        "Google Giriş Pop-up penceresi açılıyor...",
+        "Lütfen açılan pencerede Gmail hesabınızı seçin."
+      ]);
+
+      try {
+        const result = await signInWithPopup(auth, gProvider);
+        const user = result.user;
+        if (user && user.email) {
+          setSyncLogs((prev) => [...prev, `Google ile Doğrulandı: ${user.email}`, "Mali kayıt defteri buluttan yükleniyor..."]);
+          setEmail(user.email);
+          setStep("success");
+          setTimeout(() => {
+            onLoginSuccess(user.email!);
+            resetForm();
+          }, 1200);
+        }
+      } catch (err: any) {
+        console.error("Google Auth Pop-up Error:", err);
+        let errorMsg = "Giriş işlemi iptal edildi veya tarayıcı tarafından engellendi.";
+        if (err?.code === "auth/unauthorized-domain" || err?.message?.includes("unauthorized-domain")) {
+          errorMsg = "Bu site adresi (domain) Firebase projenizde 'Yetkilendirilmiş Etki Alanları' listesinde ekli değil. Lütfen Firebase Console -> Authentication -> Settings sayfasından bu adresi ekleyin.";
+        } else if (err?.message) {
+          errorMsg = err.message;
+        }
+        setError(errorMsg);
+        setStep("email");
       }
-    } catch (err: any) {
-      console.error("Google Auth Error:", err);
-      let errorMsg = "Giriş işlemi iptal edildi veya tarayıcı tarafından engellendi.";
-      
-      if (err?.code === "auth/unauthorized-domain" || err?.message?.includes("unauthorized-domain") || err?.message?.includes("unauthorized")) {
-        errorMsg = "Bu site alan adı (domain) Firebase projenizde 'Yetkilendirilmiş Etki Alanları' (Authorized domains) listesinde ekli değil. Lütfen Firebase Console -> Authentication -> Settings kısmından bu site adresini yetkilendirin.";
-      } else if (err?.message) {
-        errorMsg = err.message;
+    } else {
+      setSyncLogs([
+        "Mobil WebView / APK modu aktif edildi 📱",
+        "Doğrudan Google Giriş sayfasına yönlendiriliyorsunuz...",
+        "Giriş yaptıktan sonra uygulamanıza otomatik döneceksiniz."
+      ]);
+
+      try {
+        await signInWithRedirect(auth, gProvider);
+      } catch (err: any) {
+        console.error("Google Auth Redirect Error:", err);
+        let errorMsg = "Yönlendirme başlatılamadı.";
+        if (err?.message) errorMsg = err.message;
+        setError(errorMsg);
+        setStep("email");
       }
-      
-      setError(errorMsg);
-      setStep("email");
     }
   };
 
@@ -116,7 +132,6 @@ export const ProviderLoginModal: React.FC<ProviderLoginModalProps> = ({
       return;
     }
 
-    // Dynamic email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       setError("Geçerli bir e-posta adresi giriniz.");
@@ -138,11 +153,11 @@ export const ProviderLoginModal: React.FC<ProviderLoginModalProps> = ({
     setStep("connecting");
     setSyncLogs([
       "SSL/TLS Güvenceli Bağlantı Kuruluyor...",
-      "Kullanıcı veritabanı sorgulanıyor...",
+      "Hesap veritabanı sorgulanıyor...",
     ]);
 
     try {
-      // 1. Try to sign in the user
+      // 1. Try signing in
       const result = await signInWithEmailAndPassword(auth, email, password);
       const user = result.user;
       setSyncLogs((prev) => [
@@ -156,7 +171,7 @@ export const ProviderLoginModal: React.FC<ProviderLoginModalProps> = ({
         resetForm();
       }, 1200);
     } catch (signInErr: any) {
-      // 2. If user not found or password doesn't exist, automatically register them!
+      // 2. Fallback to registration if user not found
       if (
         signInErr.code === "auth/user-not-found" ||
         signInErr.code === "auth/invalid-credential" ||
@@ -167,14 +182,14 @@ export const ProviderLoginModal: React.FC<ProviderLoginModalProps> = ({
         try {
           setSyncLogs((prev) => [
             ...prev,
-            "Hesap bulunamadı. Yeni profil oluşturuluyor...",
+            "Hesap bulunamadı. Yeni bir Gmail/Kullanıcı profili oluşturuluyor...",
           ]);
           const result = await createUserWithEmailAndPassword(auth, email, password);
           const user = result.user;
           setSyncLogs((prev) => [
             ...prev,
-            `Yeni Profil Kaydedildi: ${user.email}`,
-            "Veritabanı alanı tahsis edildi!"
+            `Yeni Profil Başarıyla Kaydedildi: ${user.email}`,
+            "Veritabanı alanı başarıyla tahsis edildi!"
           ]);
           setStep("success");
           setTimeout(() => {
@@ -183,7 +198,7 @@ export const ProviderLoginModal: React.FC<ProviderLoginModalProps> = ({
           }, 1200);
         } catch (signUpErr: any) {
           console.error("Firebase Sign Up Error:", signUpErr);
-          setError(signUpErr.message || "Kaydolma işlemi başarısız oldu.");
+          setError(signUpErr.message || "Eşleşen yeni hesap oluşturulamadı.");
           setStep("password");
         }
       } else {
@@ -203,18 +218,21 @@ export const ProviderLoginModal: React.FC<ProviderLoginModalProps> = ({
           exit={{ opacity: 0, scale: 0.95, y: 15 }}
           className="w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl overflow-y-auto max-h-[90vh] relative scrollbar-none"
         >
+          {/* Top colored aesthetic streak */}
+          <div className="h-1.5 w-full bg-gradient-to-r from-red-500 via-amber-500 to-indigo-500" />
+
           {/* Header styling */}
-          <div className="p-6 flex items-center justify-between border-b bg-red-500/5 border-red-500/10">
+          <div className="p-6 flex items-center justify-between border-b border-slate-100 dark:border-slate-800 bg-red-500/5">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-white dark:bg-slate-800 rounded-full flex items-center justify-center border border-red-200/50 shadow-sm">
-                <Chrome className="w-6 h-6 text-red-500 animate-pulse" />
+              <div className="w-10 h-10 bg-white dark:bg-slate-850 rounded-full flex items-center justify-center border border-red-200/50 shadow-sm">
+                <Chrome className="w-6 h-6 text-red-500" />
               </div>
               <div>
                 <h3 className="text-xs font-black uppercase tracking-widest text-slate-400">
-                  Güvenli Giriş Paneli
+                  GÜVENLİ GİRİŞ PANELİ
                 </h3>
                 <h2 className="text-sm font-black text-slate-800 dark:text-slate-100">
-                  Bulut Veritabanı ve Hesap Girişi
+                  Google Hesabıyla Oturum Açın
                 </h2>
               </div>
             </div>
@@ -230,74 +248,99 @@ export const ProviderLoginModal: React.FC<ProviderLoginModalProps> = ({
           <div className="p-6">
             {/* Step 1: EMAIL & OAUTH HUB */}
             {step === "email" && (
-              <form onSubmit={handleNextStep} className="space-y-4">
+              <div className="space-y-4">
                 <div className="space-y-1.5">
                   <div className="flex items-center gap-2">
                     <Shield className="w-4 h-4 text-emerald-500" />
                     <span className="text-[11px] font-black uppercase tracking-wide text-emerald-600 dark:text-emerald-400">
-                      Uçtan Uca Güvenceli Bağlantı
+                      Uçtan Uca Güvenceli Bulut Bağlantısı
                     </span>
                   </div>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                    Mali kayıtlarınızı güvenle bulutta saklamak ve diğer cihazlarınızla anlık eşitlemek için bütçe hesabınızı açın:
+                  <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed font-semibold">
+                    Kayıtlarınızı güvenle bulutta saklamak ve tüm cihazlarınızla anlık eşitlemek için dilediğiniz Gmail veya e-posta ile giriş yapın:
                   </p>
                 </div>
 
-                <div className="space-y-2 pb-1 bg-slate-50 dark:bg-slate-950/40 p-3 rounded-2xl border border-slate-105 dark:border-slate-850">
-                  {/* Google OAuth */}
-                  <button
-                    type="button"
-                    onClick={handleGoogleLogin}
-                    className="w-full py-3 bg-red-600/10 hover:bg-red-600/20 text-red-600 dark:text-red-400 border border-red-500/20 font-extrabold text-xs uppercase tracking-wider rounded-xl transition-all duration-300 flex items-center justify-center gap-2 cursor-pointer active:scale-98"
-                  >
-                    <Chrome className="w-4 h-4 text-rose-500" />
-                    <span>Google ile Doğrudan Bağlan</span>
-                  </button>
+                {/* Google OAuth Options specially built for browser vs. APK */}
+                <div className="space-y-2.5 pb-2 bg-slate-50 dark:bg-slate-950/40 p-4 rounded-2xl border border-slate-100 dark:border-slate-850">
+                  <div className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-1">
+                    <Chrome className="w-3.5 h-3.5 text-red-500" />
+                    <span>Google / Gmail Giriş Yöntemleri</span>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-2">
+                    {/* Method 1: Popup */}
+                    <button
+                      type="button"
+                      onClick={() => handleGoogleLogin("popup")}
+                      className="w-full py-3 bg-red-600/10 hover:bg-red-600/20 text-red-600 dark:text-red-400 border border-red-500/20 font-extrabold text-xs uppercase tracking-wider rounded-xl transition duration-200 flex items-center justify-center gap-2 cursor-pointer active:scale-98"
+                    >
+                      <span>1. Google Pop-Up (Tarayıcı İçin)</span>
+                    </button>
+
+                    {/* Method 2: Redirect */}
+                    <button
+                      type="button"
+                      onClick={() => handleGoogleLogin("redirect")}
+                      className="w-full py-3 bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 font-extrabold text-xs uppercase tracking-wider rounded-xl transition duration-200 flex items-center justify-center gap-2 cursor-pointer active:scale-98"
+                    >
+                      <span>2. Google Yönlendirme (Mobil APK / WebView)</span>
+                    </button>
+                  </div>
+
+                  <div className="p-3 bg-amber-500/5 border border-amber-500/10 rounded-xl flex items-start gap-2 text-amber-600 dark:text-amber-400 text-[10px] leading-relaxed">
+                    <Info className="w-4 h-4 mt-0.5 shrink-0" />
+                    <p className="font-semibold">
+                      💡 <strong>Mobil APK kullanıyorsanız:</strong> 2. seçeneğe basarak doğrudan ekran içinde Google giriş panelini yükletip sorunsuzca bağlanabilirsiniz!
+                    </p>
+                  </div>
                 </div>
 
                 <div className="flex items-center my-3 text-[10px] text-slate-400 uppercase font-black before:content-[''] before:flex-1 before:border-b before:border-slate-200 dark:before:border-slate-850 before:mr-2 after:content-[''] after:flex-1 after:border-b after:border-slate-200 dark:after:border-slate-850 after:ml-2">
-                  veya Manuel Hesap ile Giriş / Kayıt
+                  veya Manuel E-Posta ile Giriş
                 </div>
 
-                <div className="space-y-1 relative">
-                  <label className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">
-                    E-Posta Adresi
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      dir="ltr"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="kullanici@gmail.com"
-                      className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-600 border border-slate-200 dark:border-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm font-medium"
-                    />
-                    <div className="absolute left-3 top-3.5 text-slate-400">
-                      <User className="w-4 h-4" />
+                <form onSubmit={handleNextStep} className="space-y-4">
+                  <div className="space-y-1 relative">
+                    <label className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">
+                      E-Posta Adresi
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        dir="ltr"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="kullanici@gmail.com"
+                        className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-600 border border-slate-200 dark:border-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm font-medium"
+                      />
+                      <div className="absolute left-3 top-3.5 text-slate-400">
+                        <User className="w-4 h-4" />
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                {error && (
-                  <div className="p-3 bg-rose-50 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-900/30 rounded-xl flex items-start gap-2 text-rose-600 dark:text-rose-400 text-xs text-left animate-shake">
-                    <AlertCircle className="w-4 h-4 mt-0.5 shrink-0 text-rose-500" />
-                    <div className="space-y-1">
-                      <p className="font-extrabold leading-tight">Giriş Engeli</p>
-                      <p className="font-medium leading-relaxed">{error}</p>
+                  {error && (
+                    <div className="p-3 bg-rose-50 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-900/30 rounded-xl flex items-start gap-2 text-rose-600 dark:text-rose-400 text-xs text-left">
+                      <AlertCircle className="w-4 h-4 mt-0.5 shrink-0 text-rose-500" />
+                      <div className="space-y-1">
+                        <p className="font-extrabold leading-tight">Hata Oluştu</p>
+                        <p className="font-medium leading-relaxed">{error}</p>
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
-                <div className="pt-2">
-                  <button
-                    type="submit"
-                    className="w-full py-3 bg-slate-900 hover:bg-slate-850 dark:bg-indigo-600 dark:hover:bg-indigo-700 text-white font-extrabold text-xs uppercase tracking-wider rounded-xl transition-all duration-300 flex items-center justify-center gap-2 shadow-lg cursor-pointer active:scale-98"
-                  >
-                    <span>İleri</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </button>
-                </div>
-              </form>
+                  <div className="pt-2">
+                    <button
+                      type="submit"
+                      className="w-full py-3 bg-slate-900 hover:bg-slate-850 dark:bg-indigo-600 dark:hover:bg-indigo-700 text-white font-extrabold text-xs uppercase tracking-wider rounded-xl transition-all duration-300 flex items-center justify-center gap-2 shadow-lg cursor-pointer active:scale-98"
+                    >
+                      <span>İleri</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                </form>
+              </div>
             )}
 
             {/* Step 2: PASSWORD INPUT */}
@@ -337,7 +380,7 @@ export const ProviderLoginModal: React.FC<ProviderLoginModalProps> = ({
                     </button>
                   </div>
                   <span className="text-[9px] text-slate-400 block mt-0.5 font-bold tracking-wide">
-                    ⚠️ Şifrenizi belirleyin. Yeni bir profil ise bu şifreyle kaydolmuş olursunuz.
+                    ⚠️ Şifrenizi ilk kez giriyorsanız bu şifre ile hesabınız otomatik oluşturulur.
                   </span>
                 </div>
 
@@ -355,13 +398,13 @@ export const ProviderLoginModal: React.FC<ProviderLoginModalProps> = ({
                       setStep("email");
                       setError("");
                     }}
-                    className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-extrabold text-[11px] uppercase tracking-wider rounded-xl transition"
+                    className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-extrabold text-[11px] uppercase tracking-wider rounded-xl transition cursor-pointer"
                   >
                     Geri
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 py-3 bg-slate-900 hover:bg-slate-850 dark:bg-indigo-600 dark:hover:bg-indigo-700 text-white font-extrabold text-[11px] uppercase tracking-wider rounded-xl transition flex items-center justify-center gap-1 shadow-lg cursor-pointer active:scale-98"
+                    className="flex-1 py-3 bg-slate-950 hover:bg-slate-900 dark:bg-indigo-600 dark:hover:bg-indigo-700 text-white font-extrabold text-[11px] uppercase tracking-wider rounded-xl transition flex items-center justify-center gap-1 shadow-lg cursor-pointer active:scale-98"
                   >
                     <Fingerprint className="w-4 h-4" />
                     <span>Bağlantıyı Aç</span>
@@ -416,80 +459,6 @@ export const ProviderLoginModal: React.FC<ProviderLoginModalProps> = ({
                 </div>
                 <div className="px-4 py-1.5 bg-emerald-50/50 dark:bg-emerald-900/10 border border-emerald-100 dark:border-emerald-900/20 rounded-xl font-mono text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">
                   {email}
-                </div>
-              </div>
-            )}
-
-            {/* Step 5: APK / WEBVIEW HELP & WORKAROUND DRAWER */}
-            {step === "apk_help" && (
-              <div className="space-y-4 text-left">
-                <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-2xl flex gap-3 text-amber-700 dark:text-amber-400">
-                  <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
-                  <div className="space-y-1">
-                    <h4 className="text-xs font-black uppercase tracking-wider">APK GÜVENLİK SINIRI VE KISITLAMASI</h4>
-                    <p className="text-[11px] leading-relaxed font-bold">
-                      Google, güvenlik politikaları nedeniyle gömülü WebView/APK pencerelerinde şifresiz doğrulama yönlendirmesini engeller. Harici tarayıcı açıldığında ise telefonunuz uygulamaya geri dönüşü sağlayamaz.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400">🔥 APK İÇİN 2 KOLAY GİRİŞ YÖNTEMİ</h3>
-
-                  {/* Option 1: Instant registration with password */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setStep("email");
-                      setError("");
-                    }}
-                    className="w-full text-left p-4 bg-slate-50 hover:bg-slate-100 dark:bg-slate-950/60 dark:hover:bg-slate-950/90 rounded-2xl border border-slate-200 dark:border-slate-800 hover:border-indigo-500/30 transition-all flex gap-3 group cursor-pointer"
-                  >
-                    <span className="w-9 h-9 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 text-sm font-black flex items-center justify-center shrink-0 shadow-sm group-hover:scale-105 transition-all">
-                      🔑
-                    </span>
-                    <div className="space-y-0.5">
-                      <h4 className="text-xs font-black text-slate-850 dark:text-slate-100 group-hover:text-indigo-500 transition-colors">
-                        Yöntem 1: E-Posta & Şifre ile Hızlı Giriş (Önerilen!)
-                      </h4>
-                      <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-relaxed font-semibold">
-                        Google e-posta hesabınızı yazıp bir şifre belirleyin. Şifrenizi ilk kez girdiğinizde hesabınız otomatik olarak saniyeler içinde oluşturulacaktır.
-                      </p>
-                    </div>
-                  </button>
-
-                  {/* Option 2: Browser redirect link */}
-                  <a
-                    href={typeof window !== "undefined" ? window.location.href : "https://borc-takip-pro-f6936.firebaseapp.com/"}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="block w-full text-left p-4 bg-slate-50 hover:bg-slate-100 dark:bg-slate-950/60 dark:hover:bg-slate-950/90 rounded-2xl border border-slate-200 dark:border-slate-800 hover:border-amber-500/30 transition-all flex gap-3 group cursor-pointer"
-                  >
-                    <span className="w-9 h-9 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 text-sm font-black flex items-center justify-center shrink-0 shadow-sm group-hover:scale-105 transition-all">
-                      🌐
-                    </span>
-                    <div className="space-y-0.5">
-                      <h4 className="text-xs font-black text-slate-850 dark:text-slate-100 group-hover:text-amber-500 transition-colors">
-                        Yöntem 2: Telefonun Tarayıcısında Aç ve Google ile Giriş yap
-                      </h4>
-                      <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-relaxed font-semibold">
-                        Uygulamayı Chrome/Safari mobil tarayıcısında açarak Google hesabınızla şifresiz, tek tıkla doğrudan senkronize olabilirsiniz.
-                      </p>
-                    </div>
-                  </a>
-                </div>
-
-                <div className="pt-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setStep("email");
-                      setError("");
-                    }}
-                    className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-250 font-extrabold text-[11px] uppercase tracking-wider rounded-xl transition cursor-pointer"
-                  >
-                    Vazgeç ve Geri Dön
-                  </button>
                 </div>
               </div>
             )}

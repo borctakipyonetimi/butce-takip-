@@ -27,6 +27,7 @@ import {
   Sparkles,
   HelpingHand,
   Clock,
+  Settings,
   RotateCw,
   LayoutDashboard,
   HelpCircle,
@@ -74,6 +75,8 @@ import { FollowUpMonthlyYearly } from "./components/FollowUpMonthlyYearly";
 import { AIChat } from "./components/AIChat";
 import { HelpAndGuides } from "./components/HelpAndGuides";
 import { ProviderLoginModal } from "./components/ProviderLoginModal";
+import { SecurityLockOverlay } from "./components/SecurityLockOverlay";
+import { SecuritySettingsPanel } from "./components/SecuritySettingsPanel";
 
 export default function App() {
   const { activeCurrency, setActiveCurrency, rates, setRates, format, convert, currencySymbol } = useCurrency();
@@ -111,7 +114,25 @@ export default function App() {
   const [currentUser, setCurrentUser] = useState<string | null>(() => {
     return localStorage.getItem("currentUser") || null;
   });
+
+  // App-lock state for PIN / Pattern security
+  const [isUnlocked, setIsUnlocked] = useState(() => {
+    try {
+      const saved = localStorage.getItem("security_settings");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.isEnabled) {
+          return false; // Lock immediately on boot
+        }
+      }
+    } catch (e) {
+      console.error(e);
+    }
+    return true; // No security setup, bypass instantly
+  });
+
   const [loginUsername, setLoginUsername] = useState("");
+  const [isSecurityModalOpen, setIsSecurityModalOpen] = useState(false);
 
   // Core Financial tables states
   const [debts, setDebts] = useState<Debt[]>([]);
@@ -1698,7 +1719,7 @@ export default function App() {
     { id: "income", label: "GELİRLER", icon: Wallet },
     { id: "expenses", label: "GİDERLER", icon: ShoppingCart },
     { id: "installments", label: "TAKSİTLİ BORÇLAR", icon: Calendar },
-    { id: "notifications", label: "ALARM VE BİLDİRİMLER", icon: Bell },
+    { id: "notifications", label: "BİLDİRİM & GÜVENLİK", icon: Shield },
     { id: "aiStrategy", label: "YAPAY ZEKA ASİSTAN", icon: Sparkles },
     { id: "help", label: "KULLANIM REHBERİ", icon: HelpCircle },
     { id: "blog", label: "FİNANS KILAVUZLARI", icon: BookOpen },
@@ -2055,6 +2076,15 @@ export default function App() {
               }`}
             >
               <Clock className={`w-4 h-4 ${isClockVisible ? "animate-spin [animation-duration:25s]" : ""}`} />
+            </button>
+
+            <button
+              onClick={() => setIsSecurityModalOpen(true)}
+              title="Güvenlik ve Kilit Ayarları"
+              className="p-2 lg:p-2.5 bg-indigo-550/15 hover:bg-indigo-550/25 border border-indigo-550/30 text-indigo-300 active:scale-95 rounded-xl transition-all flex items-center justify-center space-x-1 duration-300 cursor-pointer shrink-0"
+            >
+              <Settings className="w-4 h-4 text-indigo-400 animate-spin [animation-duration:30s]" />
+              <span className="hidden sm:inline text-[10px] font-black tracking-wide uppercase text-indigo-300">Güvenlik</span>
             </button>
             
             <button
@@ -2938,6 +2968,56 @@ export default function App() {
           </footer>
         );
       })()}
+
+      {/* Security Settings Modal Overlay */}
+      <AnimatePresence>
+        {isSecurityModalOpen && (
+          <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-md z-[100] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              className="w-full max-w-2xl bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden relative max-h-[90vh] flex flex-col"
+            >
+              <div className="h-1.5 w-full bg-gradient-to-r from-indigo-500 via-rose-500 to-amber-500" />
+              
+              <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-indigo-500/10 dark:bg-indigo-500/20 rounded-full flex items-center justify-center border border-indigo-200/50 dark:border-indigo-500/30">
+                    <Shield className="w-5 h-5 text-indigo-500" />
+                  </div>
+                  <div>
+                    <h3 className="text-xs font-black uppercase tracking-widest text-indigo-500">
+                      GÜVENLİK AYARLARI
+                    </h3>
+                    <h2 className="text-sm font-black text-slate-850 dark:text-slate-100">
+                      Uygulama Giriş Kilidi ve Biyometrik Koruma
+                    </h2>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsSecurityModalOpen(false)}
+                  className="p-2 px-3 text-xs font-black rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-650 dark:text-slate-200 transition cursor-pointer"
+                >
+                  Kapat ✕
+                </button>
+              </div>
+
+              <div className="p-6 overflow-y-auto flex-1 scrollbar-none">
+                <SecuritySettingsPanel onSuccessToast={(msg) => {
+                  triggerToast(msg);
+                }} />
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Dynamic Security Screen Lock Barrier */}
+      {!isUnlocked && (
+        <SecurityLockOverlay onUnlockSuccess={() => setIsUnlocked(true)} />
+      )}
     </div>
   );
 }
