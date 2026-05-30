@@ -9,6 +9,7 @@ import { Debt, InstallmentDebt } from "../types";
 import { useCurrency } from "../utils/CurrencyContext";
 import { DoughnutChart } from "./BudgetCharts";
 import ReceiptScanner from "./ReceiptScanner";
+import { DebtTimelineChart } from "./DebtTimelineChart";
 
 interface DebtListProps {
   debts: Debt[];
@@ -685,6 +686,14 @@ export const DebtList: React.FC<DebtListProps> = ({
             </div>
           )}
         </div>
+
+        {/* Dynamic Debt Decreasing Timeline representation built via D3 */}
+        <DebtTimelineChart
+          debts={debts}
+          installmentDebts={installmentDebts}
+          strategy={currentStrategyView}
+          totalIncome={totalIncome}
+        />
       </div>
 
       {/* Stats Summary Panel with Doughnut Visualizer at the absolute bottom */}

@@ -36,7 +36,7 @@ export const ProviderLoginModal: React.FC<ProviderLoginModalProps> = ({
   onClose,
   onLoginSuccess
 }) => {
-  const [step, setStep] = useState<"email" | "password" | "connecting" | "success">("email");
+  const [step, setStep] = useState<"email" | "password" | "connecting" | "success" | "apk_help">("email");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -60,7 +60,6 @@ export const ProviderLoginModal: React.FC<ProviderLoginModalProps> = ({
 
   const handleGoogleLogin = async () => {
     setError("");
-    setStep("connecting");
 
     const isWebView = typeof navigator !== "undefined" && (
       /wv|Android.*Version\/[0-9.]+/i.test(navigator.userAgent) ||
@@ -69,36 +68,29 @@ export const ProviderLoginModal: React.FC<ProviderLoginModalProps> = ({
     );
 
     if (isWebView) {
-      setSyncLogs([
-        "Mobil APK / WebView ortamı algılandı 📱",
-        "Uygulama içi güvenli tarayıcı yönlendirmesi başlatılıyor..."
-      ]);
-    } else {
-      setSyncLogs([
-        "Tarayıcı ortamı algılandı 🌐",
-        "Google Giriş Pop-up penceresi açılıyor..."
-      ]);
+      setStep("apk_help");
+      return;
     }
+
+    setStep("connecting");
+    setSyncLogs([
+      "Tarayıcı ortamı algılandı 🌐",
+      "Google Giriş Pop-up penceresi açılıyor..."
+    ]);
 
     try {
       const gProvider = new GoogleAuthProvider();
-      
-      if (isWebView) {
-        // standalone webview / APK context: use redirect so it stays in-app
-        await signInWithRedirect(auth, gProvider);
-      } else {
-        // Standard browser: use popup for smooth headless login in preview/tab without page reload
-        const result = await signInWithPopup(auth, gProvider);
-        const user = result.user;
-        if (user && user.email) {
-          setSyncLogs((prev) => [...prev, `Google ile Doğrulandı: ${user.email}`, "Veriler eşitleniyor..."]);
-          setEmail(user.email);
-          setStep("success");
-          setTimeout(() => {
-            onLoginSuccess(user.email!);
-            resetForm();
-          }, 1200);
-        }
+      // Standard browser: use popup for smooth headless login in preview/tab without page reload
+      const result = await signInWithPopup(auth, gProvider);
+      const user = result.user;
+      if (user && user.email) {
+        setSyncLogs((prev) => [...prev, `Google ile Doğrulandı: ${user.email}`, "Veriler eşitleniyor..."]);
+        setEmail(user.email);
+        setStep("success");
+        setTimeout(() => {
+          onLoginSuccess(user.email!);
+          resetForm();
+        }, 1200);
       }
     } catch (err: any) {
       console.error("Google Auth Error:", err);
@@ -424,6 +416,80 @@ export const ProviderLoginModal: React.FC<ProviderLoginModalProps> = ({
                 </div>
                 <div className="px-4 py-1.5 bg-emerald-50/50 dark:bg-emerald-900/10 border border-emerald-100 dark:border-emerald-900/20 rounded-xl font-mono text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">
                   {email}
+                </div>
+              </div>
+            )}
+
+            {/* Step 5: APK / WEBVIEW HELP & WORKAROUND DRAWER */}
+            {step === "apk_help" && (
+              <div className="space-y-4 text-left">
+                <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-2xl flex gap-3 text-amber-700 dark:text-amber-400">
+                  <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
+                  <div className="space-y-1">
+                    <h4 className="text-xs font-black uppercase tracking-wider">APK GÜVENLİK SINIRI VE KISITLAMASI</h4>
+                    <p className="text-[11px] leading-relaxed font-bold">
+                      Google, güvenlik politikaları nedeniyle gömülü WebView/APK pencerelerinde şifresiz doğrulama yönlendirmesini engeller. Harici tarayıcı açıldığında ise telefonunuz uygulamaya geri dönüşü sağlayamaz.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400">🔥 APK İÇİN 2 KOLAY GİRİŞ YÖNTEMİ</h3>
+
+                  {/* Option 1: Instant registration with password */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setStep("email");
+                      setError("");
+                    }}
+                    className="w-full text-left p-4 bg-slate-50 hover:bg-slate-100 dark:bg-slate-950/60 dark:hover:bg-slate-950/90 rounded-2xl border border-slate-200 dark:border-slate-800 hover:border-indigo-500/30 transition-all flex gap-3 group cursor-pointer"
+                  >
+                    <span className="w-9 h-9 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 text-sm font-black flex items-center justify-center shrink-0 shadow-sm group-hover:scale-105 transition-all">
+                      🔑
+                    </span>
+                    <div className="space-y-0.5">
+                      <h4 className="text-xs font-black text-slate-850 dark:text-slate-100 group-hover:text-indigo-500 transition-colors">
+                        Yöntem 1: E-Posta & Şifre ile Hızlı Giriş (Önerilen!)
+                      </h4>
+                      <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-relaxed font-semibold">
+                        Google e-posta hesabınızı yazıp bir şifre belirleyin. Şifrenizi ilk kez girdiğinizde hesabınız otomatik olarak saniyeler içinde oluşturulacaktır.
+                      </p>
+                    </div>
+                  </button>
+
+                  {/* Option 2: Browser redirect link */}
+                  <a
+                    href={typeof window !== "undefined" ? window.location.href : "https://borc-takip-pro-f6936.firebaseapp.com/"}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block w-full text-left p-4 bg-slate-50 hover:bg-slate-100 dark:bg-slate-950/60 dark:hover:bg-slate-950/90 rounded-2xl border border-slate-200 dark:border-slate-800 hover:border-amber-500/30 transition-all flex gap-3 group cursor-pointer"
+                  >
+                    <span className="w-9 h-9 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 text-sm font-black flex items-center justify-center shrink-0 shadow-sm group-hover:scale-105 transition-all">
+                      🌐
+                    </span>
+                    <div className="space-y-0.5">
+                      <h4 className="text-xs font-black text-slate-850 dark:text-slate-100 group-hover:text-amber-500 transition-colors">
+                        Yöntem 2: Telefonun Tarayıcısında Aç ve Google ile Giriş yap
+                      </h4>
+                      <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-relaxed font-semibold">
+                        Uygulamayı Chrome/Safari mobil tarayıcısında açarak Google hesabınızla şifresiz, tek tıkla doğrudan senkronize olabilirsiniz.
+                      </p>
+                    </div>
+                  </a>
+                </div>
+
+                <div className="pt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setStep("email");
+                      setError("");
+                    }}
+                    className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-250 font-extrabold text-[11px] uppercase tracking-wider rounded-xl transition cursor-pointer"
+                  >
+                    Vazgeç ve Geri Dön
+                  </button>
                 </div>
               </div>
             )}
