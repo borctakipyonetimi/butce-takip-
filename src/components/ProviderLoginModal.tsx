@@ -106,7 +106,6 @@ export const ProviderLoginModal: React.FC<ProviderLoginModalProps> = ({
         }
         setError(errorMsg);
         setStep("email");
-      }
     } else if (method === "redirect") {
       setSyncLogs([
         "Mobil WebView / Yönlendirme modu başlatılıyor 📱",
@@ -114,43 +113,37 @@ export const ProviderLoginModal: React.FC<ProviderLoginModalProps> = ({
         "Giriş yaptıktan sonra uygulamanıza otomatik döneceksiniz."
       ]);
 
-              try {
-        // Firebase Auth için Google sağlayıcısını hazırlıyoruz
+                  try {
         const provider = gProvider;
-        
-        // Median/WebView ortamlarında yönlendirme hatasını aşmak için Custom Parameters ekliyoruz
         provider.setCustomParameters({
             prompt: 'select_account',
             auth_type: 'reauthenticate'
         });
 
-        // Giriş işlemini popup olarak tetikliyoruz
-        const result = await signInWithPopup(auth, provider);
-        const user = result.user;
-        
-        if (user && user.email) {
-            setSyncLogs((prev) => [...prev, `Google ile Giriş Başarılı: ${user.email}`]);
-            setEmail(user.email);
-            setStep("success");
-            setTimeout(() => {
-                onLoginSuccess(user.email!);
-                resetForm();
-            }, 1200);
-        }
+        signInWithPopup(auth, provider)
+            .then((result) => {
+                const user = result.user;
+                if (user && user.email) {
+                    setSyncLogs((prev) => [...prev, "Google ile Giriş Başarılı"]);
+                    setEmail(user.email);
+                    setStep("success");
+                    setTimeout(() => {
+                        onLoginSuccess(user.email!);
+                        resetForm();
+                    }, 1200);
+                }
+            })
+            .catch((err) => {
+                console.error("Popup Error:", err);
+                setError(err?.message || "Giriş başarısız.");
+                setStep("email");
+            });
     } catch (err: any) {
-        console.error("Google Auth Error:", err);
-        
-        // Eğer cihaz popup engelliyorsa (Median kısıtlaması), yedek senaryo olarak kimlik doğrulama akışını sıfırlıyoruz
-        let errorMsg = "Giriş işlemi tamamlanamadı. Lütfen tarayıcı izinlerinizi kontrol edin.";
-        if (err?.code === "auth/web-storage-unsupported") {
-            errorMsg = "Uygulama tarayıcı depolama alanına erişemiyor. Lütfen normal tarayıcıdan deneyin.";
-        } else if (err?.message) {
-            errorMsg = err.message;
-        }
-        
-        setError(errorMsg);
+        console.error("General Auth Error:", err);
+        setError("Sistem hatası oluştu.");
         setStep("email");
     }
+
 
 
     } else if (method === "apkSync") {
@@ -608,4 +601,11 @@ export const ProviderLoginModal: React.FC<ProviderLoginModalProps> = ({
             {step === "success" && (
               <div className="py-6 flex flex-col items-center justify-center space-y-4 text-center animate-bounce">
                 <motion.div
-                
+                  initial={{ scale: 0.6, rotate: -45 }}
+                  animate={{ scale: 1, rotate: 0 }}
+                  className="w-16 h-16 bg-emerald-50 dark:bg-emerald-950/30 rounded-full flex items-center justify-center border-2 border-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.3)]"
+                >
+                  <CheckCircle2 className="w-10 h-10 text-emerald-500" />
+                </motion.div>
+                <div>
+                  <h3 className
