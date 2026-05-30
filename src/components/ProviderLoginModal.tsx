@@ -95,25 +95,25 @@ export const ProviderLoginModal: React.FC<ProviderLoginModalProps> = ({
             onLoginSuccess(user.email!);
             resetForm();
           }, 1200);
-        }
-      } catch (err: any) {
+    } catch (err: any) {
         console.error("Google Auth Pop-up Error:", err);
         let errorMsg = "Giriş işlemi iptal edildi veya tarayıcı tarafından engellendi.";
         if (err?.code === "auth/unauthorized-domain" || err?.message?.includes("unauthorized-domain")) {
-          errorMsg = "Bu site adresi (domain) Firebase projenizde 'Yetkilendirilmiş Etki Alanları' listesinde ekli değil. Lütfen Firebase Console -> Authentication -> Settings sayfasından bu adresi ekleyin.";
+            errorMsg = "Bu site adresi (domain) Firebase projenizde 'Yetkilendirilmiş Etki Alanları' listesinde ekli değil. Lütfen Firebase Console -> Authentication -> Settings sayfasından bu adresi ekleyin.";
         } else if (err?.message) {
-          errorMsg = err.message;
+            errorMsg = err.message;
         }
         setError(errorMsg);
         setStep("email");
-    } else if (method === "redirect") {
-      setSyncLogs([
+    }
+} else if (method === "redirect") {
+    setSyncLogs([
         "Mobil WebView / Yönlendirme modu başlatılıyor 📱",
         "Doğrudan Google Giriş sayfasına yönlendiriliyorsunuz...",
         "Giriş yaptıktan sonra uygulamanıza otomatik döneceksiniz."
-      ]);
+    ]);
 
-                  try {
+    try {
         const provider = gProvider;
         provider.setCustomParameters({
             prompt: 'select_account',
@@ -133,9 +133,9 @@ export const ProviderLoginModal: React.FC<ProviderLoginModalProps> = ({
                     }, 1200);
                 }
             })
-            .catch((err) => {
-                console.error("Popup Error:", err);
-                setError(err?.message || "Giriş başarısız.");
+            .catch((popupErr) => {
+                console.error("Popup Error:", popupErr);
+                setError(popupErr?.message || "Giriş başarısız.");
                 setStep("email");
             });
     } catch (err: any) {
@@ -143,16 +143,8 @@ export const ProviderLoginModal: React.FC<ProviderLoginModalProps> = ({
         setError("Sistem hatası oluştu.");
         setStep("email");
     }
-
-
-
-    } else if (method === "apkSync") {
-      setSyncLogs([
-        "Güvenli senkronizasyon anahtarı oluşturuluyor...",
-        "Bulut bağlantı köprüsü hazırlanıyor..."
-      ]);
-
-      const code = Math.floor(100000 + Math.random() * 900000).toString();
+} else if (method === "apkSync") {
+const code = Math.floor(100000 + Math.random() * 900000).toString();
       setSyncCode(code);
 
       try {
@@ -608,4 +600,7 @@ export const ProviderLoginModal: React.FC<ProviderLoginModalProps> = ({
                   <CheckCircle2 className="w-10 h-10 text-emerald-500" />
                 </motion.div>
                 <div>
-                  <h3 className
+                  <h3 className="text-sm font-black text-slate-800 dark:text-slate-50 uppercase tracking-wider">
+                    Giriş Onaylandı!
+                  </h3>
+                  <p classN
