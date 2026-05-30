@@ -303,7 +303,7 @@ export const ProviderLoginModal: React.FC<ProviderLoginModalProps> = ({
           {/* Header styling */}
           <div className="p-6 flex items-center justify-between border-b border-slate-100 dark:border-slate-800 bg-red-500/5">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-white dark:bg-slate-850 rounded-full flex items-center justify-center border border-red-200/50 shadow-sm">
+              <div className="w-10 h-10 bg-white dark:bg-slate-800 rounded-full flex items-center justify-center border border-red-200/50 shadow-sm">
                 <Chrome className="w-6 h-6 text-red-500" />
               </div>
               <div>
@@ -341,7 +341,7 @@ export const ProviderLoginModal: React.FC<ProviderLoginModalProps> = ({
                 </div>
 
                 {/* Google OAuth Options specially built for browser vs. APK */}
-                <div className="space-y-2.5 pb-2 bg-slate-50 dark:bg-slate-950/40 p-4 rounded-2xl border border-slate-100 dark:border-slate-850">
+                <div className="space-y-2.5 pb-2 bg-slate-50 dark:bg-slate-950/40 p-4 rounded-2xl border border-slate-100 dark:border-slate-800">
                   <div className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-1">
                     <Chrome className="w-3.5 h-3.5 text-red-500" />
                     <span>Google / Gmail Giriş Yöntemleri</span>
@@ -375,7 +375,7 @@ export const ProviderLoginModal: React.FC<ProviderLoginModalProps> = ({
                   </div>
                 </div>
 
-                <div className="flex items-center my-3 text-[10px] text-slate-400 uppercase font-black before:content-[''] before:flex-1 before:border-b before:border-slate-200 dark:before:border-slate-850 before:mr-2 after:content-[''] after:flex-1 after:border-b after:border-slate-200 dark:after:border-slate-850 after:ml-2">
+                <div className="flex items-center my-3 text-[10px] text-slate-400 uppercase font-black before:content-[''] before:flex-1 before:border-b before:border-slate-200 dark:before:border-slate-800 before:mr-2 after:content-[''] after:flex-1 after:border-b after:border-slate-200 dark:after:border-slate-800 after:ml-2">
                   veya Manuel E-Posta ile Giriş
                 </div>
 
@@ -528,7 +528,7 @@ export const ProviderLoginModal: React.FC<ProviderLoginModalProps> = ({
                     <span>🌐 Girişi Tarayıcıda (Chrome) Aç</span>
                   </a>
 
-                  <p className="text-[9.5px] text-slate-500 dark:text-slate-400 font-bold leading-relaxed text-center px-3.5 bg-slate-50 dark:bg-slate-950/50 py-2.5 rounded-xl border border-slate-100 dark:border-slate-850 font-sans">
+                  <p className="text-[9.5px] text-slate-500 dark:text-slate-400 font-bold leading-relaxed text-center px-3.5 bg-slate-50 dark:bg-slate-950/50 py-2.5 rounded-xl border border-slate-100 dark:border-slate-800 font-sans">
                     💡 Tarayıcı sayfası açıldığında "APK Giriş Talebi: {syncCode}" şeklinde bir ekran göreceksiniz. Oradaki yeşil butona tıklayarak girişinizi bitirip bu sayfaya kesintisiz dönebilirsiniz!
                   </p>
                 </div>
@@ -540,7 +540,7 @@ export const ProviderLoginModal: React.FC<ProviderLoginModalProps> = ({
                       setStep("email");
                       setError("");
                     }}
-                    className="w-full py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-850 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 font-black text-[10px] uppercase tracking-wider rounded-xl transition cursor-pointer active:scale-98"
+                    className="w-full py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-400 font-black text-[10px] uppercase tracking-wider rounded-xl transition cursor-pointer active:scale-98"
                   >
                     Vazgeç ve Başa Dön
                   </button>

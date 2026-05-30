@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect } from "react";
+import { motion } from "motion/react";
 import { PlusCircle, Printer, FileText, CheckCircle2, Circle, AlertCircle, Edit, Trash2, Calendar, ClipboardList, ArrowUpDown, Sparkles, Camera } from "lucide-react";
 import { Debt, InstallmentDebt } from "../types";
 import { useCurrency } from "../utils/CurrencyContext";
@@ -21,6 +22,8 @@ interface DebtListProps {
   themeColor: string;
   onSaveInstallment?: (installment: Partial<InstallmentDebt>) => void;
   installmentDebts?: InstallmentDebt[];
+  isPremium?: boolean;
+  onUpgradeClick?: () => void;
 }
 
 export const DebtList: React.FC<DebtListProps> = ({
@@ -33,6 +36,8 @@ export const DebtList: React.FC<DebtListProps> = ({
   themeColor,
   onSaveInstallment,
   installmentDebts = [],
+  isPremium = false,
+  onUpgradeClick,
 }) => {
   const { format, currencySymbol } = useCurrency();
   const [activeTab, setActiveTab] = useState<"unpaid" | "paid" | "all">("unpaid");
@@ -257,6 +262,11 @@ export const DebtList: React.FC<DebtListProps> = ({
 
   // Plain HTML Print & PDF trigger functions
   const handlePrint = (isPdf = false) => {
+    if (!isPremium) {
+      if (onUpgradeClick) onUpgradeClick();
+      return;
+    }
+
     const filtered = filteredDebts;
     if (filtered.length === 0) {
       alert("Yazdırılacak borç kaydı bulunamadı.");
@@ -352,7 +362,13 @@ export const DebtList: React.FC<DebtListProps> = ({
             <FileText className="w-3.5 h-3.5" /> PDF Al
           </button>
           <button
-            onClick={() => setIsScannerOpen(true)}
+            onClick={() => {
+              if (!isPremium) {
+                if (onUpgradeClick) onUpgradeClick();
+              } else {
+                setIsScannerOpen(true);
+              }
+            }}
             className="px-3 py-1.5 bg-indigo-600/10 border border-indigo-500/25 text-indigo-600 dark:text-indigo-400 rounded-xl text-xs font-bold flex items-center gap-1 hover:bg-indigo-600/20 transition cursor-pointer"
           >
             <Camera className="w-3.5 h-3.5" /> Fatura Tara (AI)
@@ -519,7 +535,7 @@ export const DebtList: React.FC<DebtListProps> = ({
                     <button
                       onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                       disabled={activePage === totalPages}
-                      className="px-3 py-2 border border-slate-200/60 dark:border-slate-700/60 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-750 disabled:opacity-40 disabled:cursor-not-allowed transition duration-150 cursor-pointer shadow-xs select-none"
+                      className="px-3 py-2 border border-slate-200/60 dark:border-slate-700/60 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed transition duration-150 cursor-pointer shadow-xs select-none"
                     >
                       Sonraki →
                     </button>
@@ -857,6 +873,53 @@ export const DebtList: React.FC<DebtListProps> = ({
             </div>
           </div>
         </div>
+      )}
+
+      {/* Borç Takip Sayfası Sponsorlu Reklamı - Borç Kapatma Kredisi */}
+      {!isPremium && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.98 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="mt-6 p-4 bg-indigo-500/5 dark:bg-slate-900/60 border border-indigo-500/20 rounded-3xl flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xs"
+        >
+          <div className="flex items-center gap-3">
+            <div className="p-3 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 rounded-2xl text-xl shrink-0">
+              🏦
+            </div>
+            <div className="space-y-1">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="px-1.5 py-0.5 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 text-[8px] font-black uppercase tracking-wider rounded-md border border-indigo-500/20">
+                  Borç Yapılandırma
+                </span>
+                <span className="text-[9px] text-slate-400 font-bold">
+                  • Yapı Kredi Borç Kapatma Kredisi
+                </span>
+              </div>
+              <h4 className="text-xs font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight">
+                Tüm Borçlarınızı Tek Bir Çatı Altında Birleştirin, Rahat Nefes Alın! 💨
+              </h4>
+              <p className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold leading-normal">
+                Kredi kartı ve diğer kurumlara olan dağınık borçlarınızı Yapı Kredi Borç Transfer Kredisi ile tek ödemede toplayıp 36 aya varan taksitlerle yapılandırın.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 w-full sm:w-auto shrink-0 justify-end">
+            <a
+              href="https://www.yapikredi.com.tr"
+              target="_blank"
+              rel="noreferrer referrer"
+              className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] font-black rounded-xl transition shadow-xs cursor-pointer uppercase tracking-wider text-center flex-1 sm:flex-none"
+            >
+              Borçları Kapat ⚡
+            </a>
+            <button
+              onClick={onUpgradeClick}
+              className="px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 dark:bg-slate-800 dark:hover:bg-slate-700 text-amber-500 text-[10px] font-black rounded-xl transition shadow-xs cursor-pointer flex items-center justify-center gap-1 uppercase tracking-tight shrink-0 flex-1 sm:flex-none"
+            >
+              Reklamsız
+            </button>
+          </div>
+        </motion.div>
       )}
 
       {isScannerOpen && (

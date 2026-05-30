@@ -145,6 +145,12 @@ export default function App() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [expenseCategories, setExpenseCategories] = useState<ExpenseCategory[]>([]);
 
+  // Premium tier configurations (Free vs Paid Premium, with local persistence)
+  const [isPremium, setIsPremium] = useState<boolean>(() => {
+    return localStorage.getItem("is_premium") === "true";
+  });
+  const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
+
   // Local Alerts indicators
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
@@ -1872,7 +1878,7 @@ export default function App() {
                 <motion.div 
                   whileHover={{ scale: 1.05, rotate: 10 }}
                   transition={{ type: "spring", stiffness: 300 }}
-                  className="relative w-20 h-20 bg-slate-900 border border-indigo-505/30 rounded-full flex items-center justify-center cursor-pointer shadow-inner shadow-indigo-500/50"
+                  className="relative w-20 h-20 bg-slate-900 border border-indigo-500/30 rounded-full flex items-center justify-center cursor-pointer shadow-inner shadow-indigo-500/50"
                 >
                   <Coins className="w-10 h-10 text-indigo-400 rotate-12 drop-shadow-[0_0_12px_rgba(139,92,246,0.5)]" />
                   
@@ -2031,7 +2037,7 @@ export default function App() {
               <button
                 type="button"
                 onClick={() => setConfirmModal((prev) => ({ ...prev, isOpen: false }))}
-                className="flex-1 py-3 text-[11px] font-black tracking-wider uppercase bg-slate-100 hover:bg-slate-200 text-slate-800 dark:bg-slate-800 dark:hover:bg-slate-750 dark:text-slate-200 rounded-2xl transition cursor-pointer select-none"
+                className="flex-1 py-3 text-[11px] font-black tracking-wider uppercase bg-slate-100 hover:bg-slate-200 text-slate-800 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200 rounded-2xl transition cursor-pointer select-none"
               >
                 İptal
               </button>
@@ -2362,16 +2368,35 @@ export default function App() {
               <div className="space-y-2 text-center">
                 <p className="text-[10px] font-bold text-slate-400 uppercase">Aktif Profil</p>
                 <div className="px-3 py-2 bg-indigo-50/50 dark:bg-indigo-950/20 rounded-xl border border-indigo-100/30 dark:border-indigo-900/20">
-                  <span className="text-xs font-extrabold text-indigo-600 dark:text-indigo-400 inline-flex items-center gap-1">
-                    {currentUser.includes("@") ? (
-                      <>
-                        <Chrome className="w-3.5 h-3.5 text-red-400 shrink-0" /> G-Suite
-                      </>
+                  <div className="flex items-center justify-between gap-1 flex-wrap pb-1 border-b border-slate-200/40 dark:border-slate-800/85 mb-1">
+                    <span className="text-[10px] font-extrabold text-indigo-600 dark:text-indigo-400 inline-flex items-center gap-1">
+                      {currentUser.includes("@") ? (
+                        <>
+                          <Chrome className="w-3 h-3 text-red-500 shrink-0" /> G-Suite
+                        </>
+                      ) : (
+                        "Yerel Hesap"
+                      )}
+                    </span>
+                    {isPremium ? (
+                      <span
+                        onClick={() => setIsUpgradeModalOpen(true)}
+                        className="px-1.5 py-0.5 bg-gradient-to-tr from-amber-500 via-yellow-400 to-amber-600 text-white rounded-md text-[8px] font-black tracking-wider animate-pulse cursor-pointer shadow-xs flex items-center gap-0.5"
+                        title="Abonelik Yönetimi"
+                      >
+                        PREMIUM 👑
+                      </span>
                     ) : (
-                      "Yerel Hesap"
+                      <span
+                        onClick={() => setIsUpgradeModalOpen(true)}
+                        className="px-1.5 py-0.5 bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-350 hover:bg-amber-500 hover:text-white dark:hover:bg-amber-600 dark:hover:text-white rounded-md text-[8px] font-black tracking-wider cursor-pointer transition flex items-center gap-0.5"
+                        title="Premium'a Geç"
+                      >
+                        ÜCRETSİZ ⭐
+                      </span>
                     )}
-                  </span>
-                  <p className="text-[10px] font-mono font-bold text-slate-500 dark:text-slate-400 truncate mt-1">{currentUser}</p>
+                  </div>
+                  <p className="text-[9px] font-mono font-bold text-slate-500 dark:text-slate-400 truncate text-left">{currentUser}</p>
                 </div>
                 <button
                   onClick={handleLogout}
@@ -2409,13 +2434,27 @@ export default function App() {
         <div className="p-4 border-t dark:border-slate-700 space-y-3 bg-slate-50/50 dark:bg-slate-900/40 relative z-10">
           <div className="grid grid-cols-2 gap-1.5 text-[9px] font-bold">
             <button
-              onClick={handleExportBackup}
+              onClick={() => {
+                if (!isPremium) {
+                  setIsUpgradeModalOpen(true);
+                  triggerToast("JSON Yedek Alma & Yükleme özelliği sadece Premium üyeler içindir! 🔒");
+                } else {
+                  handleExportBackup();
+                }
+              }}
               className="py-1.5 px-2 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg flex items-center justify-center gap-1 active:scale-95 transition"
             >
               <Download className="w-3 h-3" /> DIŞA AKTAR
             </button>
             <button
-              onClick={handleImportBackup}
+              onClick={() => {
+                if (!isPremium) {
+                  setIsUpgradeModalOpen(true);
+                  triggerToast("JSON Yedek Alma & Yükleme özelliği sadece Premium üyeler içindir! 🔒");
+                } else {
+                  handleImportBackup();
+                }
+              }}
               className="py-1.5 px-2 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg flex items-center justify-center gap-1 active:scale-95 transition"
             >
               <Upload className="w-3 h-3" /> İÇE AKTAR
@@ -2446,6 +2485,8 @@ export default function App() {
             onNavigate={setActiveTab}
             monthlyPaymentsCount={currentMonthTotalPaymentsCount}
             monthlyInstallmentsDue={monthlyInstallmentsDue}
+            isPremium={isPremium}
+            onUpgradeClick={() => setIsUpgradeModalOpen(true)}
           />
         )}
 
@@ -2480,11 +2521,19 @@ export default function App() {
             themeColor={colorTheme}
             onSaveInstallment={handleSaveInstallment}
             installmentDebts={installmentDebts}
+            isPremium={isPremium}
+            onUpgradeClick={() => setIsUpgradeModalOpen(true)}
           />
         )}
 
         {activeTab === "income" && (
-          <IncomesList incomes={incomes} onSaveIncome={handleSaveIncome} onDeleteIncome={handleDeleteIncome} />
+          <IncomesList
+            incomes={incomes}
+            onSaveIncome={handleSaveIncome}
+            onDeleteIncome={handleDeleteIncome}
+            isPremium={isPremium}
+            onUpgradeClick={() => setIsUpgradeModalOpen(true)}
+          />
         )}
 
         {activeTab === "expenses" && (
@@ -2497,6 +2546,8 @@ export default function App() {
             onDeleteCategory={handleDeleteCategory}
             onUpdateAllCategories={handleSaveAllCategories}
             netBalance={statsBag.netIncome}
+            isPremium={isPremium}
+            onUpgradeClick={() => setIsUpgradeModalOpen(true)}
           />
         )}
 
@@ -3059,7 +3110,7 @@ export default function App() {
                     <h3 className="text-xs font-black uppercase tracking-widest text-indigo-500">
                       GÜVENLİK AYARLARI
                     </h3>
-                    <h2 className="text-sm font-black text-slate-850 dark:text-slate-100">
+                    <h2 className="text-sm font-black text-slate-800 dark:text-slate-100">
                       Uygulama Giriş Kilidi ve Biyometrik Koruma
                     </h2>
                   </div>
@@ -3067,7 +3118,7 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => setIsSecurityModalOpen(false)}
-                  className="p-2 px-3 text-xs font-black rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-650 dark:text-slate-200 transition cursor-pointer"
+                  className="p-2 px-3 text-xs font-black rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-200 transition cursor-pointer"
                 >
                   Kapat ✕
                 </button>
@@ -3112,10 +3163,10 @@ export default function App() {
                   </p>
                 </div>
 
-                <div className="p-4 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-150 dark:border-slate-850 flex items-center justify-between font-mono">
+                <div className="p-4 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-200 dark:border-slate-800 flex items-center justify-between font-mono">
                   <div className="text-left">
                     <span className="text-[9px] font-black tracking-wider text-slate-400 block uppercase">TALEP KODU</span>
-                    <span className="text-lg font-bold text-slate-800 dark:text-slate-150 tracking-wider">
+                    <span className="text-lg font-bold text-slate-800 dark:text-slate-200 tracking-wider">
                       {syncCodeToApprove.slice(0, 3)} {syncCodeToApprove.slice(3)}
                     </span>
                   </div>
@@ -3138,7 +3189,7 @@ export default function App() {
                       <button
                         type="button"
                         onClick={() => setSyncCodeToApprove(null)}
-                        className="py-2.5 bg-slate-100 hover:bg-slate-2050 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-650 dark:text-slate-300 font-black text-[10px] uppercase tracking-wider rounded-xl transition cursor-pointer"
+                        className="py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 font-black text-[10px] uppercase tracking-wider rounded-xl transition cursor-pointer"
                       >
                         İptal Et
                       </button>
@@ -3179,6 +3230,145 @@ export default function App() {
                     </button>
                   </div>
                 )}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Premium Plan Upgrade / Subscription Management Modal */}
+      <AnimatePresence>
+        {isUpgradeModalOpen && (
+          <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[2000] flex items-center justify-center p-4 overflow-y-auto">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 30 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 30 }}
+              className="w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden relative my-8"
+            >
+              {/* Decorative golden/amber premium header gradient */}
+              <div className="h-2 w-full bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-600 animate-pulse" />
+              
+              <div className="p-6 space-y-6">
+                <div className="text-center space-y-1">
+                  <div className="inline-flex p-3 bg-amber-500/10 dark:bg-amber-500/20 rounded-full border border-amber-500/20 text-amber-500 animate-bounce">
+                    <Sparkles className="w-8 h-8 text-amber-500" />
+                  </div>
+                  <h3 className="text-xs font-black uppercase tracking-widest text-amber-500">
+                    BÜTÇEM PRO PREMIUM
+                  </h3>
+                  <h2 className="text-xl font-black text-slate-800 dark:text-slate-100 mt-1">
+                    Sınırları Ortadan Kaldırın 👑
+                  </h2>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 font-medium px-4 leading-relaxed">
+                    Finansal bütçe yönetimini profesyonel seviyeye yükselten gelişmiş özellikleri keşfedin.
+                  </p>
+                </div>
+
+                {/* Features list */}
+                <div className="p-4 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3">
+                  <div className="flex items-start gap-3">
+                    <span className="p-1.5 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 rounded-lg text-xs leading-none shrink-0 font-bold">📸</span>
+                    <div className="space-y-0.5">
+                      <p className="text-xs font-extrabold text-slate-800 dark:text-slate-200">Kamera / AI Fiş & Makbuz Taraması</p>
+                      <p className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold leading-normal">
+                        Kameradan veya dosya yükleme ile bütçe girdilerinizi yapay zeka yardımıyla anında otomatik oluşturun.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3 pt-2.5 border-t border-slate-200/40 dark:border-slate-800/60">
+                    <span className="p-1.5 bg-amber-500/10 text-amber-550 dark:text-amber-400 rounded-lg text-xs leading-none shrink-0 font-bold">📄</span>
+                    <div className="space-y-0.5">
+                      <p className="text-xs font-extrabold text-slate-800 dark:text-slate-200">Yazıcı & Sınırsız PDF Dışa Aktarma</p>
+                      <p className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold leading-normal">
+                        Borç raporlarınızı, ödeme geçmişinizi ve bütçenizi tek tıkla resmi, temiz ve paylaşılabilir PDF raporu yapın.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3 pt-2.5 border-t border-slate-200/40 dark:border-slate-800/60">
+                    <span className="p-1.5 bg-teal-500/10 text-teal-550 dark:text-teal-400 rounded-lg text-xs leading-none shrink-0 font-bold">☁️</span>
+                    <div className="space-y-0.5">
+                      <p className="text-xs font-extrabold text-slate-800 dark:text-slate-200">JSON Veri Yedekleme ve Geri Yükleme</p>
+                      <p className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold leading-normal">
+                        Bütün finansal kayıtlarınızı tek tıkla bilgisayarınıza indirin veya başka bir cihazda anında geri yükleyin.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3 pt-2.5 border-t border-slate-200/40 dark:border-slate-800/60">
+                    <span className="p-1.5 bg-rose-500/10 text-rose-550 dark:text-rose-400 rounded-lg text-xs leading-none shrink-0 font-bold">🚫</span>
+                    <div className="space-y-0.5">
+                      <p className="text-xs font-extrabold text-slate-800 dark:text-slate-200">%100 Reklamsız Kullanım</p>
+                      <p className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold leading-normal">
+                        Uygulama genelindeki sponsorlu banka reklam panolarını ve yönlendirmeleri tamamen gizleyin.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Simulated Plans Select / Activation block */}
+                <div className="space-y-2">
+                  <p className="text-[10px] font-black uppercase text-slate-400 tracking-wider text-center">Fiyatlandırma Paketleri</p>
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="p-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl text-center">
+                      <p className="text-[9px] font-extrabold text-slate-400 uppercase">AYLIK</p>
+                      <p className="text-xs font-black text-slate-800 dark:text-slate-250 mt-0.5">₺29,99</p>
+                    </div>
+                    <div className="p-2 bg-amber-500/5 dark:bg-amber-500/10 border-2 border-amber-500/60 rounded-2xl text-center relative overflow-hidden">
+                      <span className="absolute top-0 right-0 left-0 bg-amber-500 text-white text-[6px] font-black py-0.5">BEST</span>
+                      <p className="text-[9px] font-extrabold text-amber-600 dark:text-amber-400 uppercase pt-1.5">YILLIK</p>
+                      <p className="text-xs font-black text-slate-800 dark:text-slate-250 mt-0.5">₺199,99</p>
+                    </div>
+                    <div className="p-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl text-center">
+                      <p className="text-[9px] font-extrabold text-slate-400 uppercase">ÖMÜR BOYU</p>
+                      <p className="text-xs font-black text-slate-800 dark:text-slate-250 mt-0.5">₺299,99</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-2 pt-1">
+                  {isPremium ? (
+                    <div className="space-y-2.5">
+                      <div className="p-3 bg-emerald-500/5 dark:bg-emerald-500/10 border border-emerald-505/20 text-emerald-650 dark:text-emerald-400 rounded-2xl text-center font-bold text-xs uppercase tracking-tight flex items-center justify-center gap-1.5">
+                        <span>👑 PREMIUM LİSANSINIZ ETKİN COŞKUSU</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsPremium(false);
+                          localStorage.setItem("is_premium", "false");
+                          triggerToast("Ücretsiz plana başarıyla geçiş yapıldı (Test modülü) ⭐");
+                        }}
+                        className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-350 font-black text-xs uppercase tracking-wider rounded-xl transition cursor-pointer active:scale-97 border border-dashed border-slate-300 dark:border-slate-700"
+                      >
+                        Ücretsiz Sürümü Test Et (Dev-Downgrade)
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsPremium(true);
+                        localStorage.setItem("is_premium", "true");
+                        setIsUpgradeModalOpen(false);
+                        triggerToast("👑 Premium Sürüm Başarıyla Aktif Edildi! Tüm Sınırlar Kaldırıldı!");
+                      }}
+                      className="w-full py-3 bg-gradient-to-r from-amber-550 to-amber-600 hover:from-amber-600 hover:to-amber-650 text-white font-black text-xs uppercase tracking-wider rounded-xl transition flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20 cursor-pointer active:scale-97"
+                    >
+                      <span>PREMİUM SÜRÜMÜ BAŞLAT (SİMÜLE ET) ⚡</span>
+                    </button>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={() => setIsUpgradeModalOpen(false)}
+                    className="w-full py-2 text-center text-slate-400 hover:text-slate-600 dark:text-slate-500 text-xs font-bold transition block cursor-pointer"
+                  >
+                    Kapat, Vazgeç
+                  </button>
+                </div>
               </div>
             </motion.div>
           </div>

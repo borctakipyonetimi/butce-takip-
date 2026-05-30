@@ -144,7 +144,7 @@ export const SecuritySettingsPanel: React.FC<SecuritySettingsPanelProps> = ({ on
             className={`px-4 py-2 text-xs font-black rounded-xl transition-all cursor-pointer shadow-sm shrink-0 ${
               settings.isEnabled
                 ? "bg-gradient-to-r from-emerald-500 to-teal-500 text-white"
-                : "bg-slate-150 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-650 text-slate-700 dark:text-slate-200"
+                : "bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200"
             }`}
           >
             {settings.isEnabled ? "KİLİDİ KAPAT 🔓" : "KİLİDİ ETKİNLEŞTİR 🔒"}
@@ -154,10 +154,10 @@ export const SecuritySettingsPanel: React.FC<SecuritySettingsPanelProps> = ({ on
         {/* Configurations status and credentials select */}
         <div className="grid gap-4 sm:grid-cols-3 pt-2">
           {/* Status Indicator Card */}
-          <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-850 flex flex-col justify-between">
+          <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 flex flex-col justify-between">
             <div>
               <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">GÜVENLİK MODELİ</span>
-              <span className="text-xs font-bold text-slate-850 dark:text-slate-100 block mt-1.5 flex items-center gap-1.5">
+              <span className="text-xs font-bold text-slate-800 dark:text-slate-100 block mt-1.5 flex items-center gap-1.5">
                 {settings.isEnabled ? (
                   <>
                     <CheckCircle className="w-4 h-4 text-emerald-500 shrink-0" />
@@ -179,10 +179,10 @@ export const SecuritySettingsPanel: React.FC<SecuritySettingsPanelProps> = ({ on
           </div>
 
           {/* Secure lock Info Card */}
-          <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-850 flex flex-col justify-between">
+          <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 flex flex-col justify-between">
             <div>
               <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">KİLİT KORUMA TÜRÜ</span>
-              <span className="text-xs font-bold text-slate-850 dark:text-slate-100 block mt-2 flex items-center gap-1.5">
+              <span className="text-xs font-bold text-slate-800 dark:text-slate-100 block mt-2 flex items-center gap-1.5">
                 <Key className="w-4 h-4 text-indigo-500" />
                 4 Haneli PIN Kodu
               </span>
@@ -199,7 +199,7 @@ export const SecuritySettingsPanel: React.FC<SecuritySettingsPanelProps> = ({ on
           </div>
 
           {/* Biometrics Opt-in Card */}
-          <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-850 flex items-center justify-between">
+          <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 flex items-center justify-between">
             <div className="space-y-0.5">
               <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block flex items-center gap-1">
                 <Fingerprint className="w-3.5 h-3.5 text-indigo-400" />
@@ -407,7 +407,7 @@ export const SecuritySettingsPanel: React.FC<SecuritySettingsPanelProps> = ({ on
               {step === 3 && (
                 <form onSubmit={handleRecoverySave} className="space-y-3">
                   <div className="p-3 bg-indigo-500/10 rounded-xl border border-indigo-500/20 text-xs text-indigo-700 dark:text-indigo-300 font-bold mb-1 flex items-start gap-2">
-                    <AlertTriangle className="w-4.5 h-4.5 text-indigo-505 dark:text-indigo-400 shrink-0 mt-0.5" />
+                    <AlertTriangle className="w-4.5 h-4.5 text-indigo-600 dark:text-indigo-400 shrink-0 mt-0.5" />
                     <span>Şifrenizi unutmanız durumunda kilidi açmak için kullanılacak güvenlik sorusunu seçin ve kalıcı bir yanıt belirleyin.</span>
                   </div>
 
@@ -467,10 +467,10 @@ export const SecuritySettingsPanel: React.FC<SecuritySettingsPanelProps> = ({ on
         </AnimatePresence>
 
         {/* Informative guidelines */}
-        <div className="p-4 bg-slate-50 dark:bg-slate-900/80 rounded-2xl border border-slate-100 dark:border-slate-850 flex gap-2 text-[10px] text-slate-500 dark:text-slate-400 leading-normal font-semibold">
+        <div className="p-4 bg-slate-50 dark:bg-slate-900/80 rounded-2xl border border-slate-100 dark:border-slate-800 flex gap-2 text-[10px] text-slate-500 dark:text-slate-400 leading-normal font-semibold">
           <HelpCircle className="w-5 h-5 mt-0.5 shrink-0 text-slate-400" />
           <div className="space-y-1">
-            <p className="font-extrabold text-slate-750 dark:text-slate-300">💡 Güvenli Kilit Nasıl Çalışır?</p>
+            <p className="font-extrabold text-slate-700 dark:text-slate-200">💡 Güvenli Kilit Nasıl Çalışır?</p>
             <p>
               Uygulamayı kapatıp tekrar açtığınızda otomatik kalkan devreye girer. Şifreyi 5 kez üst üste yanlış girmeniz durumunda sistem geçici olarak 30 saniye boyunca kendini askıya alır. Şifrenizi unuttuysanız, belirlediğiniz Güvenlik Sorusu ve Gizli Yanıt ile şifrenizi sıfırlayabilir veya Cihaz Parmak İzi / Yüz ID'niz ile kalkanı anında açabilirsiniz.
             </p>

@@ -15,6 +15,8 @@ interface DashboardOverviewProps {
   onNavigate: (tab: string) => void;
   monthlyPaymentsCount: number;
   monthlyInstallmentsDue: number;
+  isPremium?: boolean;
+  onUpgradeClick?: () => void;
 }
 
 export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
@@ -22,6 +24,8 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
   onNavigate,
   monthlyPaymentsCount,
   monthlyInstallmentsDue,
+  isPremium = false,
+  onUpgradeClick,
 }) => {
   const { format, currencySymbol, rates, setRates, activeCurrency, isFetching, lastUpdated, updateRatesFromAPI } = useCurrency();
   const [budgetGoal, setBudgetGoal] = useState<number>(() => {
@@ -183,6 +187,48 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
           </p>
         </motion.div>
       </div>
+
+      {/* Sponsor / Advertisement Banner simulation for free tier */}
+      {!isPremium && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="p-4 bg-amber-50/70 dark:bg-amber-950/15 border border-amber-500/20 dark:border-amber-500/10 rounded-3xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs"
+        >
+          <div className="space-y-1">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="px-1.5 py-0.5 bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[8px] font-black uppercase tracking-wider rounded-md border border-amber-500/20">
+                Sponsorlu Reklam
+              </span>
+              <span className="text-[9px] text-slate-400 font-bold">
+                • Bütçem Pro Ücretsiz Plan Sponsoru
+              </span>
+            </div>
+            <h4 className="text-xs font-black text-slate-800 dark:text-amber-100 uppercase tracking-tight">
+              Banka Faiz Canavarına Son! Borç Transfer Kredisi Fırsatı %1.99
+            </h4>
+            <p className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold leading-normal">
+              Borçlarınızı tek çatı altında toplayıp Garanti BBVA Mobil üzerinden hemen yapılandırın.
+            </p>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <a
+              href="https://www.garantibbva.com.tr"
+              target="_blank"
+              rel="noreferrer referrer"
+              className="px-3 py-1.5 bg-emerald-650 hover:bg-emerald-700 text-white text-[10px] font-black rounded-xl transition shadow-xs cursor-pointer uppercase tracking-wider"
+            >
+              Hemen Başvur 🚀
+            </a>
+            <button
+              onClick={onUpgradeClick}
+              className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 dark:bg-slate-800 dark:hover:bg-slate-700 text-amber-500 dark:text-amber-400 text-[10px] font-black rounded-xl transition shadow-xs cursor-pointer flex items-center gap-1 uppercase tracking-tight"
+            >
+              Reklamları Kaldır 💎
+            </button>
+          </div>
+        </motion.div>
+      )}
 
       {/* 4x Grid Stats */}
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
@@ -658,8 +704,8 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
         className="p-6 bg-white dark:bg-slate-800 rounded-3xl border border-slate-200/50 dark:border-slate-700/50 shadow-sm space-y-4"
       >
         <div className="flex items-center gap-2.5 pb-2 border-b border-slate-100 dark:border-slate-700/40">
-          <div className="p-2.5 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-100 dark:text-indigo-400 rounded-2xl">
-            <StickyNote className="w-5 h-5 text-indigo-505 dark:text-indigo-405" />
+          <div className="p-2.5 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 rounded-2xl">
+            <StickyNote className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
           </div>
           <div>
             <h4 className="text-sm font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight">
@@ -762,6 +808,53 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
           <LineChart labels={trendLabels} values={trendValues} lineColor="#3b82f6" />
         </div>
       </div>
+
+      {/* İkinci Sponsor Reklamı - Alt Kısmı İçin (Yatırım/Fonlar) */}
+      {!isPremium && (
+        <motion.div
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mt-6 p-4 bg-indigo-50/50 dark:bg-slate-900/60 border border-indigo-100 dark:border-slate-800 rounded-3xl flex flex-col md:flex-row items-center justify-between gap-4 shadow-xs"
+        >
+          <div className="flex items-center gap-3">
+            <div className="p-3 bg-indigo-500/10 dark:bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 rounded-2xl text-xl shrink-0">
+              ⚡
+            </div>
+            <div className="space-y-1">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="px-1.5 py-0.5 bg-indigo-105/10 text-indigo-600 dark:text-indigo-400 text-[8px] font-black uppercase tracking-wider rounded-md border border-indigo-500/10">
+                  Öne Çıkan Sponsor
+                </span>
+                <span className="text-[9px] text-slate-400 font-bold">
+                  • Yapı Yatırım Fonları & Portföy Yönetimi
+                </span>
+              </div>
+              <h4 className="text-xs font-black text-slate-800 dark:text-slate-200 uppercase tracking-tight">
+                Param Değer Kaybetmesin Diyenlere Özel Altın & Hisse Fonu %42.5 Getiri 💰
+              </h4>
+              <p className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold leading-normal">
+                Faizsiz katılım fonları ve hisse senedi sepetleri ile birikimlerinizi enflasyona karşı kolayca koruyun.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 w-full md:w-auto shrink-0 justify-end">
+            <a
+              href="https://www.yapikredi.com.tr"
+              target="_blank"
+              rel="noreferrer referrer"
+              className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] font-black rounded-xl transition shadow-xs cursor-pointer uppercase tracking-wider text-center flex-1 md:flex-none"
+            >
+              Fonları Keşfet
+            </a>
+            <button
+              onClick={onUpgradeClick}
+              className="px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 dark:bg-slate-800 dark:hover:bg-slate-700 text-amber-500 text-[10px] font-black rounded-xl transition shadow-xs cursor-pointer flex items-center justify-center gap-1 uppercase tracking-tight shrink-0 flex-1 md:flex-none"
+            >
+              Reklamsız Pro
+            </button>
+          </div>
+        </motion.div>
+      )}
     </div>
   );
 };

@@ -318,7 +318,7 @@ export const HelpAndGuides: React.FC<HelpAndGuidesProps> = ({ activeTab, onNavig
       </div>
 
       {/* Developer and License Badge Block */}
-      <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-850 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-slate-500 dark:text-slate-400 font-semibold leading-relaxed">
+      <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-slate-500 dark:text-slate-400 font-semibold leading-relaxed">
         <div className="flex items-center gap-2">
           <div className="p-1.5 bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-lg shrink-0">
             <User className="w-4 h-4" />

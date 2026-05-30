@@ -267,7 +267,7 @@ export const SecurityLockOverlay: React.FC<SecurityLockOverlayProps> = ({ onUnlo
           {/* Lock Icon and Header */}
           <div className="mx-auto w-14 h-14 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 relative">
             <Lock className="w-6 h-6 animate-pulse text-indigo-400" />
-            <div className="absolute -top-1 -right-1 w-3 h-3 bg-indigo-505 rounded-full animate-ping" />
+            <div className="absolute -top-1 -right-1 w-3 h-3 bg-indigo-500 rounded-full animate-ping" />
           </div>
 
           <h2 className="text-base font-black text-white tracking-widest uppercase mt-4">Güvenlik Kilidi</h2>
@@ -408,13 +408,13 @@ export const SecurityLockOverlay: React.FC<SecurityLockOverlayProps> = ({ onUnlo
                 value={recoveryAnswerInput}
                 onChange={(e) => setRecoveryAnswerInput(e.target.value)}
                 placeholder="Cevabınızı buraya yazınız..."
-                className="w-full bg-slate-900 border border-slate-850 rounded-xl py-2 px-3 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/60 text-white placeholder:text-slate-500"
+                className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2 px-3 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/60 text-white placeholder:text-slate-500"
                 autoFocus
               />
             </div>
 
             {recoveryError && (
-              <p className="text-[10px] text-rose-450 font-bold bg-rose-500/5 p-2 rounded-lg border border-rose-500/10 flex items-center gap-1">
+              <p className="text-[10px] text-rose-500 font-bold bg-rose-500/5 p-2 rounded-lg border border-rose-500/10 flex items-center gap-1">
                 <AlertCircle className="w-3.5 h-3.5" />
                 <span>{recoveryError}</span>
               </p>
@@ -434,7 +434,7 @@ export const SecurityLockOverlay: React.FC<SecurityLockOverlayProps> = ({ onUnlo
                   setIsRecovering(false);
                   setRecoveryError("");
                 }}
-                className="flex-1 py-2 bg-slate-800 hover:bg-slate-750 text-white text-[11px] font-extrabold uppercase tracking-wider rounded-xl cursor-pointer"
+                className="flex-1 py-2 bg-slate-800 hover:bg-slate-700 text-white text-[11px] font-extrabold uppercase tracking-wider rounded-xl cursor-pointer"
               >
                 Şifre Denemeye Dön
               </button>
@@ -479,7 +479,7 @@ export const SecurityLockOverlay: React.FC<SecurityLockOverlayProps> = ({ onUnlo
                 <div className="absolute inset-0 border-2 border-indigo-500/20 rounded-full animate-ping" style={{ animationDuration: "3s" }} />
                 <div className="absolute inset-2 border border-indigo-500/40 rounded-full animate-pulse" />
                 
-                <div className={`w-20 h-20 rounded-full border border-indigo-50s/30 flex items-center justify-center relative transition-all ${
+                <div className={`w-20 h-20 rounded-full border border-indigo-500/30 flex items-center justify-center relative transition-all ${
                   biometricSuccess ? "bg-emerald-500/10 border-emerald-500" : "bg-slate-950"
                 }`}>
                   {biometricSuccess ? (
@@ -487,7 +487,7 @@ export const SecurityLockOverlay: React.FC<SecurityLockOverlayProps> = ({ onUnlo
                   ) : (
                     <>
                       {/* Scan Radar Line slider */}
-                      <div className="absolute top-0 left-0 w-full h-[2px] bg-indigo-505 shadow-[0_0_10px_#6366f1] animate-[scan_2.2s_infinite_linear]" />
+                      <div className="absolute top-0 left-0 w-full h-[2px] bg-indigo-500 shadow-[0_0_10px_#6366f1] animate-[scan_2.2s_infinite_linear]" />
                       <Fingerprint className="w-10 h-10 text-indigo-400 shrink-0" />
                     </>
                   )}
@@ -512,7 +512,7 @@ export const SecurityLockOverlay: React.FC<SecurityLockOverlayProps> = ({ onUnlo
                   <button
                     type="button"
                     onClick={() => setBiometricScanning(false)}
-                    className="px-4 py-1.5 bg-slate-800 hover:bg-slate-750 text-white rounded-xl text-[10px] font-extrabold uppercase tracking-wider transition mx-auto cursor-pointer block"
+                    className="px-4 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-[10px] font-extrabold uppercase tracking-wider transition mx-auto cursor-pointer block"
                   >
                     Vazgeç ve Şifre Dene
                   </button>
