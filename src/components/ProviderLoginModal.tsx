@@ -114,15 +114,26 @@ export const ProviderLoginModal: React.FC<ProviderLoginModalProps> = ({
         "Giriş yaptıktan sonra uygulamanıza otomatik döneceksiniz."
       ]);
 
-      try {
-        await signInWithRedirect(auth, gProvider);
-      } catch (err: any) {
-        console.error("Google Auth Redirect Error:", err);
-        let errorMsg = "Yönlendirme başlatılamadı.";
+          try {
+        const result = await signInWithPopup(auth, gProvider);
+        const user = result.user;
+        if (user && user.email) {
+            setSyncLogs((prev) => [...prev, `Google ile Giriş Başarılı: ${user.email}`]);
+            setEmail(user.email);
+            setStep("success");
+            setTimeout(() => {
+                onLoginSuccess(user.email!);
+                resetForm();
+            }, 1200);
+        }
+    } catch (err: any) {
+        console.error("Google Auth Pop-up Error:", err);
+        let errorMsg = "Giriş işlemi iptal edildi veya başarısız oldu.";
         if (err?.message) errorMsg = err.message;
         setError(errorMsg);
         setStep("email");
-      }
+    }
+
     } else if (method === "apkSync") {
       setSyncLogs([
         "Güvenli senkronizasyon anahtarı oluşturuluyor...",
