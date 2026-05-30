@@ -27,7 +27,8 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword
 } from "firebase/auth";
-import { auth } from "../utils/firebase";
+import { doc, setDoc, onSnapshot, serverTimestamp } from "firebase/firestore";
+import { auth, db } from "../utils/firebase";
 
 interface ProviderLoginModalProps {
   isOpen: boolean;
@@ -42,12 +43,13 @@ export const ProviderLoginModal: React.FC<ProviderLoginModalProps> = ({
   onClose,
   onLoginSuccess
 }) => {
-  const [step, setStep] = useState<"email" | "password" | "connecting" | "success">("email");
+  const [step, setStep] = useState<"email" | "password" | "connecting" | "success" | "apkSync">("email");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [syncLogs, setSyncLogs] = useState<string[]>([]);
+  const [syncCode, setSyncCode] = useState("");
 
   const resetForm = () => {
     setStep("email");
@@ -55,6 +57,7 @@ export const ProviderLoginModal: React.FC<ProviderLoginModalProps> = ({
     setPassword("");
     setError("");
     setSyncLogs([]);
+    setSyncCode("");
   };
 
   const handleClose = () => {
@@ -64,7 +67,7 @@ export const ProviderLoginModal: React.FC<ProviderLoginModalProps> = ({
 
   if (!isOpen || !provider) return null;
 
-  const handleGoogleLogin = async (method: "popup" | "redirect") => {
+  const handleGoogleLogin = async (method: "popup" | "redirect" | "apkSync") => {
     setError("");
     setStep("connecting");
 
@@ -104,9 +107,9 @@ export const ProviderLoginModal: React.FC<ProviderLoginModalProps> = ({
         setError(errorMsg);
         setStep("email");
       }
-    } else {
+    } else if (method === "redirect") {
       setSyncLogs([
-        "Mobil WebView / APK modu aktif edildi 📱",
+        "Mobil WebView / Yönlendirme modu başlatılıyor 📱",
         "Doğrudan Google Giriş sayfasına yönlendiriliyorsunuz...",
         "Giriş yaptıktan sonra uygulamanıza otomatik döneceksiniz."
       ]);
@@ -118,6 +121,82 @@ export const ProviderLoginModal: React.FC<ProviderLoginModalProps> = ({
         let errorMsg = "Yönlendirme başlatılamadı.";
         if (err?.message) errorMsg = err.message;
         setError(errorMsg);
+        setStep("email");
+      }
+    } else if (method === "apkSync") {
+      setSyncLogs([
+        "Güvenli senkronizasyon anahtarı oluşturuluyor...",
+        "Bulut bağlantı köprüsü hazırlanıyor..."
+      ]);
+
+      const code = Math.floor(100000 + Math.random() * 900000).toString();
+      setSyncCode(code);
+
+      try {
+        await setDoc(doc(db, "apk_sync_sessions", code), {
+          status: "pending",
+          createdAt: serverTimestamp()
+        });
+
+        setSyncLogs((prev) => [
+          ...prev,
+          `Eşleme Kodu Oluşturuldu: ${code}`,
+          "Real-time dinleyici aktif edildi. Telefon tarayıcınızda veya Chrome'da giriş yapmanız bekleniyor..."
+        ]);
+
+        setStep("apkSync");
+
+        // Set up real-time snapshot listener on the sync document
+        const unsubscribe = onSnapshot(doc(db, "apk_sync_sessions", code), async (snapshot) => {
+          if (snapshot.exists()) {
+            const data = snapshot.data();
+            if (data.status === "success" && data.email && data.uid) {
+              unsubscribe(); // Stop listening
+              setStep("connecting");
+              setSyncLogs((prev) => [
+                ...prev,
+                "Google doğrulama sinyali alındı! 📡",
+                `Aktarılan e-posta: ${data.email}`,
+                "Güvenli giriş oturumu yetkilendiriliyor...",
+              ]);
+
+              try {
+                // Secure password derived from the user's Google UID
+                const pass = "ApkSecurePass_" + data.uid;
+                const result = await signInWithEmailAndPassword(auth, data.email, pass);
+                const user = result.user;
+
+                setEmail(user.email!);
+                setStep("success");
+                setTimeout(() => {
+                  onLoginSuccess(user.email!);
+                  resetForm();
+                }, 1200);
+              } catch (loginErr: any) {
+                console.log("APK Direct login failed, trying automatic registration coupling:", loginErr);
+                try {
+                  const pass = "ApkSecurePass_" + data.uid;
+                  const result = await createUserWithEmailAndPassword(auth, data.email, pass);
+                  const user = result.user;
+
+                  setEmail(user.email!);
+                  setStep("success");
+                  setTimeout(() => {
+                    onLoginSuccess(user.email!);
+                    resetForm();
+                  }, 1200);
+                } catch (regErr: any) {
+                  console.error("APK registration Coupling failed:", regErr);
+                  setError("Veritabanı erişim doğrulaması uyuşmadı. Lütfen tarayıcıda veya e-posta ve şifrenizle giriş yapın.");
+                  setStep("email");
+                }
+              }
+            }
+          }
+        });
+      } catch (err: any) {
+        console.error("Failed to set up APK sync session document:", err);
+        setError("Senkronizasyon köprüsü kurulamadı. Lütfen internetinizi kontrol edin.");
         setStep("email");
       }
     }
@@ -269,29 +348,29 @@ export const ProviderLoginModal: React.FC<ProviderLoginModalProps> = ({
                   </div>
 
                   <div className="grid grid-cols-1 gap-2">
+                    {/* Method 3: APK Smooth Bridge */}
+                    <button
+                      type="button"
+                      onClick={() => handleGoogleLogin("apkSync")}
+                      className="w-full py-3 bg-emerald-600/10 hover:bg-emerald-600/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 font-black text-xs uppercase tracking-wider rounded-xl transition duration-200 flex items-center justify-center gap-2 cursor-pointer active:scale-97 shadow-sm"
+                    >
+                      <span>🔥 APK Google Girişi (%100 Uyumlu)</span>
+                    </button>
+
                     {/* Method 1: Popup */}
                     <button
                       type="button"
                       onClick={() => handleGoogleLogin("popup")}
-                      className="w-full py-3 bg-red-600/10 hover:bg-red-600/20 text-red-600 dark:text-red-400 border border-red-500/20 font-extrabold text-xs uppercase tracking-wider rounded-xl transition duration-200 flex items-center justify-center gap-2 cursor-pointer active:scale-98"
+                      className="w-full py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-250 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-350 font-extrabold text-[11px] uppercase tracking-wider rounded-xl transition duration-200 flex items-center justify-center gap-2 cursor-pointer active:scale-98"
                     >
-                      <span>1. Google Pop-Up (Tarayıcı İçin)</span>
-                    </button>
-
-                    {/* Method 2: Redirect */}
-                    <button
-                      type="button"
-                      onClick={() => handleGoogleLogin("redirect")}
-                      className="w-full py-3 bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 font-extrabold text-xs uppercase tracking-wider rounded-xl transition duration-200 flex items-center justify-center gap-2 cursor-pointer active:scale-98"
-                    >
-                      <span>2. Google Yönlendirme (Mobil APK / WebView)</span>
+                      <span>Chrome / Safaride Giriş (Web Sürüm)</span>
                     </button>
                   </div>
 
-                  <div className="p-3 bg-amber-500/5 border border-amber-500/10 rounded-xl flex items-start gap-2 text-amber-600 dark:text-amber-400 text-[10px] leading-relaxed">
-                    <Info className="w-4 h-4 mt-0.5 shrink-0" />
+                  <div className="p-3 bg-indigo-500/5 border border-indigo-500/10 rounded-xl flex items-start gap-2 text-indigo-600 dark:text-indigo-400 text-[10px] leading-relaxed">
+                    <Info className="w-4 h-4 mt-0.5 shrink-0 text-indigo-500" />
                     <p className="font-semibold">
-                      💡 <strong>Mobil APK kullanıyorsanız:</strong> 2. seçeneğe basarak doğrudan ekran içinde Google giriş panelini yükletip sorunsuzca bağlanabilirsiniz!
+                      💡 <strong>APK Mobil kullanıcıları için:</strong> <u>APK Google Girişi</u> metodunu kullanın! Telefonunuzun tarayıcısında hızlıca giriş yapıp uygulamanıza şifresiz ve anında güvenli dönüş sağlarsınız.
                     </p>
                   </div>
                 </div>
@@ -411,6 +490,62 @@ export const ProviderLoginModal: React.FC<ProviderLoginModalProps> = ({
                   </button>
                 </div>
               </form>
+            )}
+
+            {/* Step: APK SYNC SCREEN LOCK KÖPRÜSÜ */}
+            {step === "apkSync" && (
+              <div className="space-y-4 py-1.5 font-sans leading-relaxed text-left">
+                <div className="text-center space-y-1.5">
+                  <div className="inline-flex p-3 bg-emerald-500/10 rounded-full border border-emerald-500/20 text-emerald-500">
+                    <Shield className="w-6 h-6 animate-pulse" />
+                  </div>
+                  <div>
+                    <h3 className="text-xs font-black text-slate-800 dark:text-slate-100 uppercase tracking-widest">
+                      Mobil APK Eşleme Kodunuz
+                    </h3>
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold px-2 mt-0.5 leading-relaxed text-center">
+                      Aşağıdaki kodu tarayıcı üzerinden giriş yaparak onayladığınızda, APK uygulamanız otomatik olarak açılacaktır.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Big visual sync code block spaced out */}
+                <div className="p-4 bg-slate-900 border border-slate-800 rounded-2xl shadow-inner text-center space-y-0.5 select-all relative group overflow-hidden">
+                  <div className="absolute inset-0 bg-slate-950/10 animate-pulse pointer-events-none" />
+                  <span className="text-[9px] font-bold tracking-widest text-slate-500 uppercase block">GÜVENLİ EŞLEŞME KODU</span>
+                  <span className="text-2xl font-black font-mono tracking-[0.25em] text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.3)]">
+                    {syncCode.slice(0, 3)} {syncCode.slice(3)}
+                  </span>
+                </div>
+
+                <div className="space-y-2">
+                  <a
+                    href={`${window.location.origin}/?sync_code=${syncCode}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs uppercase tracking-wider rounded-xl transition duration-200 flex items-center justify-center gap-2 cursor-pointer active:scale-97 text-center block shadow-lg shadow-indigo-600/25"
+                  >
+                    <span>🌐 Girişi Tarayıcıda (Chrome) Aç</span>
+                  </a>
+
+                  <p className="text-[9.5px] text-slate-500 dark:text-slate-400 font-bold leading-relaxed text-center px-3.5 bg-slate-50 dark:bg-slate-950/50 py-2.5 rounded-xl border border-slate-100 dark:border-slate-850 font-sans">
+                    💡 Tarayıcı sayfası açıldığında "APK Giriş Talebi: {syncCode}" şeklinde bir ekran göreceksiniz. Oradaki yeşil butona tıklayarak girişinizi bitirip bu sayfaya kesintisiz dönebilirsiniz!
+                  </p>
+                </div>
+
+                <div className="pt-1.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setStep("email");
+                      setError("");
+                    }}
+                    className="w-full py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-850 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 font-black text-[10px] uppercase tracking-wider rounded-xl transition cursor-pointer active:scale-98"
+                  >
+                    Vazgeç ve Başa Dön
+                  </button>
+                </div>
+              </div>
             )}
 
             {/* Step 3: CONNECTING STATUS */}

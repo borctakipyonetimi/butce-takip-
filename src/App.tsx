@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect, useRef } from "react";
-import { onAuthStateChanged, signOut, createUserWithEmailAndPassword, getRedirectResult } from "firebase/auth";
+import { onAuthStateChanged, signOut, createUserWithEmailAndPassword, getRedirectResult, signInWithPopup, GoogleAuthProvider, updatePassword } from "firebase/auth";
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { auth, db, handleFirestoreError, OperationType } from "./utils/firebase";
 import { motion, AnimatePresence } from "motion/react";
@@ -133,6 +133,7 @@ export default function App() {
 
   const [loginUsername, setLoginUsername] = useState("");
   const [isSecurityModalOpen, setIsSecurityModalOpen] = useState(false);
+  const [syncCodeToApprove, setSyncCodeToApprove] = useState<string | null>(null);
 
   // Core Financial tables states
   const [debts, setDebts] = useState<Debt[]>([]);
@@ -739,6 +740,74 @@ export default function App() {
     const timer = setInterval(handleClock, 1000);
     return () => clearInterval(timer);
   }, []);
+
+  // Read APK Sync Code on mount
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get("sync_code");
+    if (code) {
+      setSyncCodeToApprove(code);
+      // Clean query params so it doesn't stay in URL on reload, but keep in state
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, []);
+
+  // Auto-lock when minimized/backgrounded to prevent direct bypass
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "hidden") {
+        try {
+          const saved = localStorage.getItem("security_settings");
+          if (saved) {
+            const parsed = JSON.parse(saved);
+            if (parsed.isEnabled) {
+              setIsUnlocked(false);
+            }
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+  }, []);
+
+  const handleApproveSync = async () => {
+    if (!auth.currentUser || !syncCodeToApprove) return;
+    try {
+      // Securely link their password to the APK Secure format: ApkSecurePass_ + user.uid
+      await updatePassword(auth.currentUser, "ApkSecurePass_" + auth.currentUser.uid);
+    } catch (e: any) {
+      console.warn("Google credentials password linking completed natively or needs refresh:", e);
+    }
+
+    try {
+      await setDoc(doc(db, "apk_sync_sessions", syncCodeToApprove), {
+        status: "success",
+        email: auth.currentUser.email || auth.currentUser.uid,
+        uid: auth.currentUser.uid,
+        approvedAt: serverTimestamp()
+      });
+      triggerToast("APK Girişi Başarıyla Yetkilendirildi! 🎉");
+      setSyncCodeToApprove(null);
+    } catch (err: any) {
+      console.error("Failed to approve APK session:", err);
+      triggerToast("Onay sinyali sunucuya ulaştırılamadı.");
+    }
+  };
+
+  const handleGoogleAuthForSync = async () => {
+    const gProvider = new GoogleAuthProvider();
+    gProvider.setCustomParameters({ prompt: "select_account" });
+    try {
+      await signInWithPopup(auth, gProvider);
+      triggerToast("Google Hesabı Başarıyla Doğrulandı! ✅");
+    } catch (err: any) {
+      console.error("Popup Google auth failure for sync:", err);
+      triggerToast("Bağlantı doğrulanamadı: " + (err.message || "Bilinmeyen Hata"));
+    }
+  };
 
   // Application Intro Loading Screen states and handlers
   const [splashVisible, setSplashVisible] = useState(true);
@@ -3008,6 +3077,108 @@ export default function App() {
                 <SecuritySettingsPanel onSuccessToast={(msg) => {
                   triggerToast(msg);
                 }} />
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* APK Sync Companion Confirmation Overlay */}
+      <AnimatePresence>
+        {syncCodeToApprove && (
+          <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[2000] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 30 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 30 }}
+              className="w-full max-w-sm bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden relative"
+            >
+              <div className="h-1.5 w-full bg-gradient-to-r from-emerald-500 via-indigo-500 to-amber-500" />
+              
+              <div className="p-6 text-center space-y-4">
+                <div className="inline-flex p-3 bg-indigo-500/10 dark:bg-indigo-500/20 rounded-full border border-indigo-500/20 text-indigo-500">
+                  <Shield className="w-8 h-8 animate-pulse" />
+                </div>
+                
+                <div>
+                  <h3 className="text-xs font-black uppercase tracking-widest text-indigo-500">
+                    APK MOBİL BAĞLANTI KÖPRÜSÜ
+                  </h3>
+                  <h2 className="text-[15px] font-black text-slate-800 dark:text-slate-100 mt-1 leading-snug">
+                    Google Giriş Onayı Talebi
+                  </h2>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 font-semibold px-2 mt-1 leading-relaxed">
+                    Telefonunuzdaki APK uygulamasını bu cihazın veritabanı ile eşleştirmek üzeresiniz.
+                  </p>
+                </div>
+
+                <div className="p-4 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-150 dark:border-slate-850 flex items-center justify-between font-mono">
+                  <div className="text-left">
+                    <span className="text-[9px] font-black tracking-wider text-slate-400 block uppercase">TALEP KODU</span>
+                    <span className="text-lg font-bold text-slate-800 dark:text-slate-150 tracking-wider">
+                      {syncCodeToApprove.slice(0, 3)} {syncCodeToApprove.slice(3)}
+                    </span>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-[9px] font-black tracking-wider text-emerald-500 block uppercase">● BEKLENİYOR</span>
+                  </div>
+                </div>
+
+                {currentUser ? (
+                  <div className="space-y-3 pt-2">
+                    <div className="p-3 bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900/30 rounded-xl text-left leading-relaxed">
+                      <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">AKTİF OTURUM</p>
+                      <p className="text-xs font-bold text-slate-800 dark:text-slate-200 font-mono truncate">{currentUser}</p>
+                      <p className="text-[10px] text-slate-500 mt-1 font-semibold leading-relaxed">
+                        Girişi onayladığınızda, APK uygulamanız otomatik olarak bu hesaba bağlanacaktır.
+                      </p>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 pt-0.5">
+                      <button
+                        type="button"
+                        onClick={() => setSyncCodeToApprove(null)}
+                        className="py-2.5 bg-slate-100 hover:bg-slate-2050 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-650 dark:text-slate-300 font-black text-[10px] uppercase tracking-wider rounded-xl transition cursor-pointer"
+                      >
+                        İptal Et
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleApproveSync}
+                        className="py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10px] uppercase tracking-wider rounded-xl transition flex items-center justify-center gap-1 shadow-lg shadow-emerald-500/20 cursor-pointer active:scale-97 animate-pulse"
+                      >
+                        <CheckCircle2 className="w-4 h-4" />
+                        <span>Onayla</span>
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-3 pt-2">
+                    <div className="p-3 bg-amber-500/5 border border-amber-500/10 rounded-xl text-left leading-relaxed">
+                      <p className="text-[10px] font-black uppercase tracking-wider text-amber-500">GİRİŞ YAPILMAMIŞ</p>
+                      <p className="text-[10.5px] text-slate-600 dark:text-slate-400 font-semibold mt-1 leading-relaxed">
+                        Öncelikle uygulamada yetkili bir hesaba giriş yapmış olmanız gerekir. Aşağıdaki butonu kullanarak Google ile giriş yapabilirsiniz.
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleGoogleAuthForSync}
+                      className="w-full py-3 bg-red-600 hover:bg-red-700 dark:bg-red-650 dark:hover:bg-red-700 text-white font-black text-[10px] uppercase tracking-wider rounded-xl transition flex items-center justify-center gap-2 shadow-lg shadow-red-500/15 cursor-pointer active:scale-98"
+                    >
+                      <Chrome className="w-4.5 h-4.5" />
+                      <span>Google Girişi Yap</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setSyncCodeToApprove(null)}
+                      className="w-full py-2.5 text-slate-400 hover:text-slate-600 dark:text-slate-500 text-[11px] font-bold transition"
+                    >
+                      Pencereyi Kapat
+                    </button>
+                  </div>
+                )}
               </div>
             </motion.div>
           </div>

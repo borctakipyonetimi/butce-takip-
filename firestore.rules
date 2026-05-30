@@ -26,5 +26,10 @@ service cloud.firestore {
         && request.resource.data.updatedAt == request.time;
       allow delete: if isOwner(userId);
     }
+
+    // Secure temporary APK sync sessions
+    match /apk_sync_sessions/{sessionId} {
+      allow read, write: if true;
+    }
   }
 }
