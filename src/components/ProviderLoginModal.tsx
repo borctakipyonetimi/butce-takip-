@@ -95,7 +95,8 @@ export const ProviderLoginModal: React.FC<ProviderLoginModalProps> = ({
             onLoginSuccess(user.email!);
             resetForm();
           }, 1200);
-    } catch (err: any) {
+        }
+      } catch (err: any) {
         console.error("Google Auth Pop-up Error:", err);
         let errorMsg = "Giriş işlemi iptal edildi veya tarayıcı tarafından engellendi.";
         if (err?.code === "auth/unauthorized-domain" || err?.message?.includes("unauthorized-domain")) {
@@ -603,4 +604,18 @@ const code = Math.floor(100000 + Math.random() * 900000).toString();
                   <h3 className="text-sm font-black text-slate-800 dark:text-slate-50 uppercase tracking-wider">
                     Giriş Onaylandı!
                   </h3>
-                  <p classN
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                    Mali kayıt defteri hesabınızla senkronize edildi.
+                  </p>
+                </div>
+                <div className="px-4 py-1.5 bg-emerald-50/50 dark:bg-emerald-900/10 border border-emerald-100 dark:border-emerald-900/20 rounded-xl font-mono text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">
+                  {email}
+                </div>
+              </div>
+            )}
+          </div>
+        </motion.div>
+      </div>
+    </AnimatePresence>
+  );
+};

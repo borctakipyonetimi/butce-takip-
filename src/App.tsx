@@ -2156,7 +2156,7 @@ export default function App() {
             <button
               onClick={() => setIsSecurityModalOpen(true)}
               title="Güvenlik ve Kilit Ayarları"
-              className="p-2 lg:p-2.5 bg-indigo-550/15 hover:bg-indigo-550/25 border border-indigo-550/30 text-indigo-300 active:scale-95 rounded-xl transition-all flex items-center justify-center space-x-1 duration-300 cursor-pointer shrink-0"
+              className="p-2 lg:p-2.5 bg-indigo-600/15 hover:bg-indigo-600/25 border border-indigo-600/30 text-indigo-400 dark:text-indigo-300 active:scale-95 rounded-xl transition-all flex items-center justify-center space-x-1 duration-300 cursor-pointer shrink-0"
             >
               <Settings className="w-4 h-4 text-indigo-400 animate-spin [animation-duration:30s]" />
               <span className="hidden sm:inline text-[10px] font-black tracking-wide uppercase text-indigo-300">Güvenlik</span>
@@ -3278,7 +3278,7 @@ export default function App() {
                   </div>
 
                   <div className="flex items-start gap-3 pt-2.5 border-t border-slate-200/40 dark:border-slate-800/60">
-                    <span className="p-1.5 bg-amber-500/10 text-amber-550 dark:text-amber-400 rounded-lg text-xs leading-none shrink-0 font-bold">📄</span>
+                    <span className="p-1.5 bg-amber-500/10 text-amber-600 dark:text-amber-400 rounded-lg text-xs leading-none shrink-0 font-bold">📄</span>
                     <div className="space-y-0.5">
                       <p className="text-xs font-extrabold text-slate-800 dark:text-slate-200">Yazıcı & Sınırsız PDF Dışa Aktarma</p>
                       <p className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold leading-normal">
@@ -3288,7 +3288,7 @@ export default function App() {
                   </div>
 
                   <div className="flex items-start gap-3 pt-2.5 border-t border-slate-200/40 dark:border-slate-800/60">
-                    <span className="p-1.5 bg-teal-500/10 text-teal-550 dark:text-teal-400 rounded-lg text-xs leading-none shrink-0 font-bold">☁️</span>
+                    <span className="p-1.5 bg-teal-500/10 text-teal-600 dark:text-teal-400 rounded-lg text-xs leading-none shrink-0 font-bold">☁️</span>
                     <div className="space-y-0.5">
                       <p className="text-xs font-extrabold text-slate-800 dark:text-slate-200">JSON Veri Yedekleme ve Geri Yükleme</p>
                       <p className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold leading-normal">
@@ -3298,7 +3298,7 @@ export default function App() {
                   </div>
 
                   <div className="flex items-start gap-3 pt-2.5 border-t border-slate-200/40 dark:border-slate-800/60">
-                    <span className="p-1.5 bg-rose-500/10 text-rose-550 dark:text-rose-400 rounded-lg text-xs leading-none shrink-0 font-bold">🚫</span>
+                    <span className="p-1.5 bg-rose-500/10 text-rose-600 dark:text-rose-400 rounded-lg text-xs leading-none shrink-0 font-bold">🚫</span>
                     <div className="space-y-0.5">
                       <p className="text-xs font-extrabold text-slate-800 dark:text-slate-200">%100 Reklamsız Kullanım</p>
                       <p className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold leading-normal">
@@ -3314,16 +3314,16 @@ export default function App() {
                   <div className="grid grid-cols-3 gap-2">
                     <div className="p-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl text-center">
                       <p className="text-[9px] font-extrabold text-slate-400 uppercase">AYLIK</p>
-                      <p className="text-xs font-black text-slate-800 dark:text-slate-250 mt-0.5">₺29,99</p>
+                      <p className="text-xs font-black text-slate-800 dark:text-slate-200 mt-0.5">₺29,99</p>
                     </div>
                     <div className="p-2 bg-amber-500/5 dark:bg-amber-500/10 border-2 border-amber-500/60 rounded-2xl text-center relative overflow-hidden">
                       <span className="absolute top-0 right-0 left-0 bg-amber-500 text-white text-[6px] font-black py-0.5">BEST</span>
                       <p className="text-[9px] font-extrabold text-amber-600 dark:text-amber-400 uppercase pt-1.5">YILLIK</p>
-                      <p className="text-xs font-black text-slate-800 dark:text-slate-250 mt-0.5">₺199,99</p>
+                      <p className="text-xs font-black text-slate-800 dark:text-slate-200 mt-0.5">₺199,99</p>
                     </div>
                     <div className="p-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl text-center">
                       <p className="text-[9px] font-extrabold text-slate-400 uppercase">ÖMÜR BOYU</p>
-                      <p className="text-xs font-black text-slate-800 dark:text-slate-250 mt-0.5">₺299,99</p>
+                      <p className="text-xs font-black text-slate-800 dark:text-slate-200 mt-0.5">₺299,99</p>
                     </div>
                   </div>
                 </div>
@@ -3331,7 +3331,7 @@ export default function App() {
                 <div className="space-y-2 pt-1">
                   {isPremium ? (
                     <div className="space-y-2.5">
-                      <div className="p-3 bg-emerald-500/5 dark:bg-emerald-500/10 border border-emerald-505/20 text-emerald-650 dark:text-emerald-400 rounded-2xl text-center font-bold text-xs uppercase tracking-tight flex items-center justify-center gap-1.5">
+                      <div className="p-3 bg-emerald-500/5 dark:bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-2xl text-center font-bold text-xs uppercase tracking-tight flex items-center justify-center gap-1.5">
                         <span>👑 PREMIUM LİSANSINIZ ETKİN COŞKUSU</span>
                       </div>
                       <button
@@ -3355,7 +3355,7 @@ export default function App() {
                         setIsUpgradeModalOpen(false);
                         triggerToast("👑 Premium Sürüm Başarıyla Aktif Edildi! Tüm Sınırlar Kaldırıldı!");
                       }}
-                      className="w-full py-3 bg-gradient-to-r from-amber-550 to-amber-600 hover:from-amber-600 hover:to-amber-650 text-white font-black text-xs uppercase tracking-wider rounded-xl transition flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20 cursor-pointer active:scale-97"
+                      className="w-full py-3 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-650 text-white font-black text-xs uppercase tracking-wider rounded-xl transition flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20 cursor-pointer active:scale-97"
                     >
                       <span>PREMİUM SÜRÜMÜ BAŞLAT (SİMÜLE ET) ⚡</span>
                     </button>

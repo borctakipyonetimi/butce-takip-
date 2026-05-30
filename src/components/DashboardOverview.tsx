@@ -216,7 +216,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
               href="https://www.garantibbva.com.tr"
               target="_blank"
               rel="noreferrer referrer"
-              className="px-3 py-1.5 bg-emerald-650 hover:bg-emerald-700 text-white text-[10px] font-black rounded-xl transition shadow-xs cursor-pointer uppercase tracking-wider"
+              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-black rounded-xl transition shadow-xs cursor-pointer uppercase tracking-wider"
             >
               Hemen Başvur 🚀
             </a>

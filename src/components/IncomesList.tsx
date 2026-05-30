@@ -203,7 +203,7 @@ export const IncomesList: React.FC<IncomesListProps> = ({
               href="https://www.garantibbva.com.tr"
               target="_blank"
               rel="noreferrer referrer"
-              className="px-3.5 py-1.5 bg-emerald-650 hover:bg-emerald-700 text-white text-[10px] font-black rounded-xl transition shadow-xs cursor-pointer uppercase tracking-wider text-center flex-1 sm:flex-none"
+              className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-black rounded-xl transition shadow-xs cursor-pointer uppercase tracking-wider text-center flex-1 sm:flex-none"
             >
               Yüksek Faiz Al
             </a>
