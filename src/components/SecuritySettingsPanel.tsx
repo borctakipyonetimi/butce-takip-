@@ -10,7 +10,6 @@ import {
   Key,
   CheckCircle,
   AlertCircle,
-  Fingerprint,
   HelpCircle,
   AlertTriangle
 } from "lucide-react";
@@ -127,13 +126,15 @@ export const SecuritySettingsPanel: React.FC<SecuritySettingsPanelProps> = ({ on
     <div className="space-y-6">
       <div className="p-5 bg-white dark:bg-slate-800 border border-slate-200/50 dark:border-slate-800 rounded-3xl shadow-xs space-y-4">
         {/* Panel Header */}
-        <div className="flex items-start justify-between gap-4">
-          <div className="space-y-1">
-            <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
-              <Shield className="w-4.5 h-4.5 text-indigo-500 animate-pulse" />
+        <div className="flex flex-col items-center text-center gap-4 py-2 w-full border-b border-slate-100 dark:border-slate-800 pb-4">
+          <div className="space-y-2 flex flex-col items-center max-w-xl">
+            <div className="inline-flex p-3 bg-indigo-500/10 rounded-full text-indigo-500">
+              <Shield className="w-6 h-6 animate-pulse" />
+            </div>
+            <h3 className="text-base font-black text-slate-800 dark:text-slate-100 flex items-center justify-center gap-2">
               Uygulama Giriş Güvenliği & Kilit Sistemi
             </h3>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400 font-semibold leading-relaxed max-w-lg">
+            <p className="text-xs text-slate-600 dark:text-slate-300 font-medium leading-relaxed">
               Kişisel bütçenizi, alacak/borç verilerinizi ve hesap detaylarınızı üçüncü şahıslardan saklayın. Uygulama her açıldığında veya kilit aktifken bir kod sorulmasını sağlayabilirsiniz.
             </p>
           </div>
@@ -141,10 +142,10 @@ export const SecuritySettingsPanel: React.FC<SecuritySettingsPanelProps> = ({ on
           <button
             type="button"
             onClick={handleToggleSecurity}
-            className={`px-4 py-2 text-xs font-black rounded-xl transition-all cursor-pointer shadow-sm shrink-0 ${
+            className={`px-5 py-2.5 text-xs font-black rounded-xl transition-all cursor-pointer shadow-md shrink-0 active:scale-95 ${
               settings.isEnabled
                 ? "bg-gradient-to-r from-emerald-500 to-teal-500 text-white"
-                : "bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200"
+                : "bg-indigo-600 hover:bg-indigo-700 text-white dark:bg-indigo-600 dark:hover:bg-indigo-700"
             }`}
           >
             {settings.isEnabled ? "KİLİDİ KAPAT 🔓" : "KİLİDİ ETKİNLEŞTİR 🔒"}
@@ -152,11 +153,11 @@ export const SecuritySettingsPanel: React.FC<SecuritySettingsPanelProps> = ({ on
         </div>
 
         {/* Configurations status and credentials select */}
-        <div className="grid gap-4 sm:grid-cols-3 pt-2">
+        <div className="grid gap-4 sm:grid-cols-2 pt-2">
           {/* Status Indicator Card */}
           <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 flex flex-col justify-between">
             <div>
-              <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">GÜVENLİK MODELİ</span>
+              <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">GÜVENLİK MODELİ</span>
               <span className="text-xs font-bold text-slate-800 dark:text-slate-100 block mt-1.5 flex items-center gap-1.5">
                 {settings.isEnabled ? (
                   <>
@@ -171,7 +172,7 @@ export const SecuritySettingsPanel: React.FC<SecuritySettingsPanelProps> = ({ on
                 )}
               </span>
             </div>
-            <span className="text-[9px] text-slate-400 font-bold block mt-2">
+            <span className="text-[10px] text-slate-600 dark:text-slate-300 font-semibold block mt-2">
               {settings.isEnabled
                 ? "4 Haneli PIN Kodu ve Kurtarma Sorusu korunuyor."
                 : "Herhangi bir şifre talep edilmiyor."}
@@ -181,7 +182,7 @@ export const SecuritySettingsPanel: React.FC<SecuritySettingsPanelProps> = ({ on
           {/* Secure lock Info Card */}
           <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 flex flex-col justify-between">
             <div>
-              <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">KİLİT KORUMA TÜRÜ</span>
+              <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 block">KİLİT KORUMA TÜRÜ</span>
               <span className="text-xs font-bold text-slate-800 dark:text-slate-100 block mt-2 flex items-center gap-1.5">
                 <Key className="w-4 h-4 text-indigo-500" />
                 4 Haneli PIN Kodu
@@ -191,116 +192,11 @@ export const SecuritySettingsPanel: React.FC<SecuritySettingsPanelProps> = ({ on
               <button
                 type="button"
                 onClick={() => startSetupFlow()}
-                className="text-[10px] text-indigo-500 hover:text-indigo-600 font-extrabold text-left block mt-1.5 cursor-pointer"
+                className="text-[10px] text-indigo-600 dark:text-indigo-400 hover:underline font-extrabold text-left block mt-1.5 cursor-pointer"
               >
                 Şifreyi ve Kurtarmayı Değiştir ⚙️
               </button>
             )}
-          </div>
-
-          {/* Biometrics Opt-in Card */}
-          <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 flex items-center justify-between">
-            <div className="space-y-0.5">
-              <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block flex items-center gap-1">
-                <Fingerprint className="w-3.5 h-3.5 text-indigo-400" />
-                BİYOMETRİK YEDEK
-              </span>
-              <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                Parmak İzi / Yüz ID
-              </span>
-            </div>
-            <button
-              type="button"
-              onClick={async () => {
-                const registerBiometricsObj = async () => {
-                  if (!window.PublicKeyCredential) {
-                    throw new Error("Tarayıcınız veya cihazınız WebAuthn biyometrik doğrulamayı desteklemiyor.");
-                  }
-                  
-                  let isSupported = false;
-                  try {
-                    isSupported = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
-                  } catch (e) {
-                    throw new Error("Cihazınızda aktif edilmiş bir Touch ID / Face ID / Windows Hello biyometrik doğrulayıcısı algılanamadı veya izin verilmedi.");
-                  }
-
-                  if (!isSupported) {
-                    throw new Error("Biyometrik doğrulayıcı bu cihazda kullanılamıyor.");
-                  }
-
-                  const challenge = new Uint8Array(32);
-                  window.crypto.getRandomValues(challenge);
-                  const userId = new Uint8Array(16);
-                  window.crypto.getRandomValues(userId);
-
-                  const createOptions: any = {
-                    challenge,
-                    rp: {
-                      name: "Butcem Pro",
-                      id: window.location.hostname || "localhost"
-                    },
-                    user: {
-                      id: userId,
-                      name: "ButcemProUser",
-                      displayName: "Butcem Pro Biyometrik Giriş"
-                    },
-                    pubKeyCredParams: [
-                      { type: "public-key", alg: -7 },
-                      { type: "public-key", alg: -257 }
-                    ],
-                    authenticatorSelection: {
-                      authenticatorAttachment: "platform",
-                      userVerification: "required"
-                    },
-                    timeout: 60000
-                  };
-
-                  const credential = await navigator.credentials.create({ publicKey: createOptions });
-                  if (credential) {
-                    const rawId = new Uint8Array((credential as any).rawId);
-                    let binary = "";
-                    for (let i = 0; i < rawId.byteLength; i++) {
-                      binary += String.fromCharCode(rawId[i]);
-                    }
-                    const credentialIdB64 = btoa(binary);
-                    localStorage.setItem("biometric_credential_id", credentialIdB64);
-                    return true;
-                  }
-                  return false;
-                };
-
-                const isTurningOn = !settings.biometricsEnabled;
-                if (isTurningOn) {
-                  try {
-                    onSuccessToast("Parmak izinizi kaydetmek için cihazınız hazırlanıyor... 📱🔑");
-                    const success = await registerBiometricsObj();
-                    if (success) {
-                      const next = { ...settings, biometricsEnabled: true };
-                      saveSettings(next);
-                      onSuccessToast("Gerçek parmak iziniz / Yüz ID cihazınızla başarıyla eşleştirildi! 🧬✅");
-                    }
-                  } catch (err: any) {
-                    console.warn("Biyometrik cihaz kaydı başarısız oldu veya kısıtlandı:", err);
-                    // Automatic fallback to high fidelity simulation mode
-                    const next = { ...settings, biometricsEnabled: true };
-                    saveSettings(next);
-                    onSuccessToast("Simüle edilmiş parmak izi / Yüz ID yedek giriş modu aktif edildi! 🧬🛡️");
-                  }
-                } else {
-                  const next = { ...settings, biometricsEnabled: false };
-                  saveSettings(next);
-                  localStorage.removeItem("biometric_credential_id");
-                  onSuccessToast("Biyometrik yedek girişi kapatıldı.");
-                }
-              }}
-              className={`px-3 py-1.5 rounded-xl text-xs font-black cursor-pointer transition ${
-                settings.biometricsEnabled
-                  ? "bg-slate-900 text-white dark:bg-indigo-600 shadow-xs"
-                  : "bg-slate-200 dark:bg-slate-800 text-slate-500"
-              }`}
-            >
-              {settings.biometricsEnabled ? "AÇIK" : "KAPALI"}
-            </button>
           </div>
         </div>
 
@@ -323,14 +219,14 @@ export const SecuritySettingsPanel: React.FC<SecuritySettingsPanelProps> = ({ on
               {step === 1 && (
                 <form onSubmit={handlePinNext} className="space-y-3">
                   <div className="space-y-1">
-                    <label className="text-[10px] font-black uppercase tracking-wider text-slate-400">Yeni PIN Kodunu Girin (4 Rakam)</label>
+                    <label className="text-[10px] font-black uppercase tracking-wider text-slate-600 dark:text-slate-350">Yeni PIN Kodunu Girin (4 Rakam)</label>
                     <input
                       type="password"
                       inputMode="numeric"
                       maxLength={4}
                       value={pinTemp}
                       onChange={(e) => setPinTemp(e.target.value.replace(/\D/g, ""))}
-                      className="w-full text-center tracking-[0.5em] text-lg font-black bg-white dark:bg-slate-950 border border-slate-250 dark:border-slate-800 rounded-xl py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-800 dark:text-slate-100 placeholder:text-slate-300"
+                      className="w-full text-center tracking-[0.5em] text-lg font-black bg-white dark:bg-slate-950 border border-slate-250 dark:border-slate-800 rounded-xl py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-800 dark:text-slate-100 placeholder:text-slate-350"
                       placeholder="••••"
                       autoFocus
                     />
@@ -365,14 +261,14 @@ export const SecuritySettingsPanel: React.FC<SecuritySettingsPanelProps> = ({ on
               {step === 2 && (
                 <form onSubmit={handlePinConfirmNext} className="space-y-3">
                   <div className="space-y-1">
-                    <label className="text-[10px] font-black uppercase tracking-wider text-slate-400">Tekrar Girerek PIN Kodunu Onaylayın</label>
+                    <label className="text-[10px] font-black uppercase tracking-wider text-slate-600 dark:text-slate-350">Tekrar Girerek PIN Kodunu Onaylayın</label>
                     <input
                       type="password"
                       inputMode="numeric"
                       maxLength={4}
                       value={pinConfirm}
                       onChange={(e) => setPinConfirm(e.target.value.replace(/\D/g, ""))}
-                      className="w-full text-center tracking-[0.5em] text-lg font-black bg-white dark:bg-slate-950 border border-slate-250 dark:border-slate-800 rounded-xl py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-800 dark:text-slate-100 placeholder:text-slate-300"
+                      className="w-full text-center tracking-[0.5em] text-lg font-black bg-white dark:bg-slate-950 border border-slate-250 dark:border-slate-800 rounded-xl py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-800 dark:text-slate-100 placeholder:text-slate-350"
                       placeholder="••••"
                       autoFocus
                     />
@@ -412,7 +308,7 @@ export const SecuritySettingsPanel: React.FC<SecuritySettingsPanelProps> = ({ on
                   </div>
 
                   <div className="space-y-1">
-                    <label className="text-[10px] font-black uppercase tracking-wider text-slate-400">Güvenlik Sorusu Seçiniz</label>
+                    <label className="text-[10px] font-black uppercase tracking-wider text-slate-600 dark:text-slate-350">Güvenlik Sorusu Seçiniz</label>
                     <select
                       value={recoveryQuestion}
                       onChange={(e) => setRecoveryQuestion(e.target.value)}
@@ -426,7 +322,7 @@ export const SecuritySettingsPanel: React.FC<SecuritySettingsPanelProps> = ({ on
                   </div>
 
                   <div className="space-y-1">
-                    <label className="text-[10px] font-black uppercase tracking-wider text-slate-400">Sorunun Yanıtı</label>
+                    <label className="text-[10px] font-black uppercase tracking-wider text-slate-600 dark:text-slate-350">Sorunun Yanıtı</label>
                     <input
                       type="text"
                       maxLength={40}
@@ -467,12 +363,12 @@ export const SecuritySettingsPanel: React.FC<SecuritySettingsPanelProps> = ({ on
         </AnimatePresence>
 
         {/* Informative guidelines */}
-        <div className="p-4 bg-slate-50 dark:bg-slate-900/80 rounded-2xl border border-slate-100 dark:border-slate-800 flex gap-2 text-[10px] text-slate-500 dark:text-slate-400 leading-normal font-semibold">
-          <HelpCircle className="w-5 h-5 mt-0.5 shrink-0 text-slate-400" />
+        <div className="p-4 bg-slate-50 dark:bg-slate-900/80 rounded-2xl border border-slate-100 dark:border-slate-800 flex gap-2 text-xs text-slate-600 dark:text-slate-300 leading-normal font-medium">
+          <HelpCircle className="w-5 h-5 mt-0.5 shrink-0 text-slate-500" />
           <div className="space-y-1">
-            <p className="font-extrabold text-slate-700 dark:text-slate-200">💡 Güvenli Kilit Nasıl Çalışır?</p>
+            <p className="font-extrabold text-slate-800 dark:text-slate-200">💡 Güvenli Kilit Nasıl Çalışır?</p>
             <p>
-              Uygulamayı kapatıp tekrar açtığınızda otomatik kalkan devreye girer. Şifreyi 5 kez üst üste yanlış girmeniz durumunda sistem geçici olarak 30 saniye boyunca kendini askıya alır. Şifrenizi unuttuysanız, belirlediğiniz Güvenlik Sorusu ve Gizli Yanıt ile şifrenizi sıfırlayabilir veya Cihaz Parmak İzi / Yüz ID'niz ile kalkanı anında açabilirsiniz.
+              Uygulamayı kapatıp tekrar açtığınızda otomatik kalkan devreye girer. Şifreyi 5 kez üst üste yanlış girmeniz durumunda sistem geçici olarak 30 saniye boyunca kendini askıya alır. Şifrenizi unuttuysanız, belirlediğiniz Güvenlik Sorusu ve Gizli Yanıt ile şifrenizi sıfırlayabilirsiniz.
             </p>
           </div>
         </div>

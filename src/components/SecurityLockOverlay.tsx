@@ -8,11 +8,8 @@ import { motion, AnimatePresence } from "motion/react";
 import {
   Lock,
   Delete,
-  Fingerprint,
   ShieldAlert,
-  RefreshCw,
   Key,
-  Smile,
   HelpCircle,
   CheckCircle2,
   AlertCircle
@@ -46,9 +43,6 @@ export const SecurityLockOverlay: React.FC<SecurityLockOverlayProps> = ({ onUnlo
   const [attempts, setAttempts] = useState(0);
   const [lockoutTime, setLockoutTime] = useState(0);
   const [shakeCode, setShakeCode] = useState(false);
-  const [biometricScanning, setBiometricScanning] = useState(false);
-  const [biometricSuccess, setBiometricSuccess] = useState(false);
-
   // Recovery (Şifremi Unuttum) UI states
   const [isRecovering, setIsRecovering] = useState(false);
   const [recoveryAnswerInput, setRecoveryAnswerInput] = useState("");
@@ -60,17 +54,6 @@ export const SecurityLockOverlay: React.FC<SecurityLockOverlayProps> = ({ onUnlo
       onUnlockSuccess();
     }
   }, [settings, onUnlockSuccess]);
-
-  // Automated biometric trigger on load for superior experience
-  useEffect(() => {
-    if (settings.isEnabled && settings.biometricsEnabled && lockoutTime === 0 && !isRecovering) {
-      // Small timeout to let component load gracefully
-      const t = setTimeout(() => {
-        triggerBiometricUnlock();
-      }, 600);
-      return () => clearTimeout(t);
-    }
-  }, [settings.isEnabled, settings.biometricsEnabled, lockoutTime, isRecovering]);
 
   // Countdown lockout
   useEffect(() => {
@@ -138,78 +121,6 @@ export const SecurityLockOverlay: React.FC<SecurityLockOverlayProps> = ({ onUnlo
       setErrorMsg("Çok fazla hatalı deneme! Lütfen 30 saniye bekleyin.");
     } else {
       setErrorMsg(`Hatalı şifre girişi yapıldı! Kalan Deneme Hakkı: ${5 - nextAttempts}`);
-    }
-  };
-
-  const triggerBiometricUnlock = async () => {
-    if (lockoutTime > 0) return;
-    setErrorMsg("");
-    setBiometricScanning(true);
-    setBiometricSuccess(false);
-
-    try {
-      // 1. WebAuthn credentials verification check (try real biometric)
-      if (window.PublicKeyCredential) {
-        try {
-          const isSupported = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable().catch(() => false);
-          if (isSupported) {
-            const randomChallenge = new Uint8Array(32);
-            window.crypto.getRandomValues(randomChallenge);
-            
-            const credIdBase64 = localStorage.getItem("biometric_credential_id");
-            const allowCredentialsList = [];
-            if (credIdBase64) {
-              try {
-                const binaryString = atob(credIdBase64);
-                const bytes = new Uint8Array(binaryString.length);
-                for (let i = 0; i < binaryString.length; i++) {
-                  bytes[i] = binaryString.charCodeAt(i);
-                }
-                allowCredentialsList.push({
-                  type: "public-key" as const,
-                  id: bytes
-                });
-              } catch (e) {
-                console.warn(e);
-              }
-            }
-
-            const getOptions: any = {
-              challenge: randomChallenge,
-              rpId: window.location.hostname || "localhost",
-              userVerification: "required",
-              ...(allowCredentialsList.length > 0 ? { allowCredentials: allowCredentialsList } : {})
-            };
-
-            const credential = await navigator.credentials.get({ publicKey: getOptions }).catch(() => null);
-            if (credential) {
-              setBiometricSuccess(true);
-              setTimeout(() => {
-                setBiometricScanning(false);
-                setBiometricSuccess(false);
-                onUnlockSuccess();
-              }, 800);
-              return;
-            }
-          }
-        } catch (e: any) {
-          console.warn("Gerçek biyometrik sorgu veya iframe kısıtlaması algılandı:", e);
-        }
-      }
-
-      // 2. High fidelity simulation fallback that works 100% of the time, in all webviews / sandboxes
-      setTimeout(() => {
-        setBiometricSuccess(true);
-        setTimeout(() => {
-          setBiometricScanning(false);
-          setBiometricSuccess(false);
-          onUnlockSuccess();
-        }, 1000);
-      }, 1500);
-
-    } catch (err) {
-      console.warn("Doğrulama akışı hatası:", err);
-      // Ensure scanning is still interactive even on general flow failure
     }
   };
 
@@ -336,20 +247,7 @@ export const SecurityLockOverlay: React.FC<SecurityLockOverlayProps> = ({ onUnlo
                 </button>
               ))}
 
-              {/* Biometrics Trigger Button */}
-              {settings.biometricsEnabled ? (
-                <button
-                  type="button"
-                  onClick={() => triggerBiometricUnlock()}
-                  disabled={lockoutTime > 0}
-                  className="w-14 h-14 rounded-full bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 text-indigo-400 hover:scale-105 transition active:scale-95 cursor-pointer flex items-center justify-center"
-                  title="Yüz/Parmak İzi"
-                >
-                  <Fingerprint className="w-6 h-6 shrink-0" />
-                </button>
-              ) : (
-                <div className="w-14 h-14" />
-              )}
+              <div className="w-14 h-14" />
 
               <button
                 type="button"
@@ -453,98 +351,6 @@ export const SecurityLockOverlay: React.FC<SecurityLockOverlayProps> = ({ onUnlo
           <span>🔒 Güvenli Veri Kalkanı 256-bit</span>
         </div>
       </motion.div>
-
-      {/* Biometric Interactive Scanner Backdrop/Modal */}
-      <AnimatePresence>
-        {biometricScanning && (
-          <div className="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-[99999] flex items-center justify-center p-4">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="w-full max-w-xs bg-slate-900 border border-slate-800 rounded-3xl p-6 text-center space-y-6 relative overflow-hidden"
-            >
-              <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-500/10 rounded-full blur-xl" />
-
-              <div className="space-y-1">
-                <h3 className="text-[10px] font-black tracking-widest text-indigo-500 uppercase">CİHAZ ONAYI TARANIYOR</h3>
-                <h2 className="text-sm font-black text-white">Parmak İzi / Yüz Doğrulama</h2>
-                <p className="text-[10px] text-slate-400 leading-relaxed font-semibold">
-                  Taramayı tamamlamak için parmağınızı okuyucuya yerleştirin ya da kameraya bakın.
-                </p>
-              </div>
-
-              {/* High Tech Animated Radar Sensor Container */}
-              <div className="relative w-28 h-28 mx-auto flex items-center justify-center">
-                <div className="absolute inset-0 border-2 border-indigo-500/20 rounded-full animate-ping" style={{ animationDuration: "3s" }} />
-                <div className="absolute inset-2 border border-indigo-500/40 rounded-full animate-pulse" />
-                
-                <div
-                  onClick={() => {
-                    if (!biometricSuccess) {
-                      setBiometricSuccess(true);
-                      setTimeout(() => {
-                        setBiometricScanning(false);
-                        setBiometricSuccess(false);
-                        onUnlockSuccess();
-                      }, 900);
-                    }
-                  }}
-                  className={`w-20 h-20 rounded-full border border-indigo-500/30 flex items-center justify-center relative transition-all active:scale-95 cursor-pointer hover:border-indigo-400 ${
-                    biometricSuccess ? "bg-emerald-500/10 border-emerald-500" : "bg-slate-950"
-                  }`}
-                  title="Doğrulamak için Dokunun"
-                >
-                  {biometricSuccess ? (
-                    <Smile className="w-10 h-10 text-emerald-400 animate-bounce" />
-                  ) : (
-                    <>
-                      {/* Scan Radar Line slider */}
-                      <div className="absolute top-0 left-0 w-full h-[2px] bg-indigo-500 shadow-[0_0_10px_#6366f1] animate-[scan_2.2s_infinite_linear]" />
-                      <Fingerprint className="w-10 h-10 text-indigo-400 shrink-0" />
-                    </>
-                  )}
-                </div>
-              </div>
-
-              {biometricSuccess ? (
-                <div className="space-y-1">
-                  <p className="text-xs font-black text-emerald-400 uppercase tracking-widest">
-                    KİMLİK DOĞRULANDI!
-                  </p>
-                  <p className="text-[9px] text-slate-400 font-bold">
-                    Cihaz onayı eşleşti. Giriş yapılıyor...
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  <div className="flex items-center justify-center gap-1.5 text-[9px] font-bold text-slate-400 animate-pulse">
-                    <RefreshCw className="w-3 h-3 animate-spin text-indigo-500" />
-                    <span>Okuyucu aktif, temas aranıyor...</span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setBiometricScanning(false)}
-                    className="px-4 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-[10px] font-extrabold uppercase tracking-wider transition mx-auto cursor-pointer block"
-                  >
-                    Vazgeç ve Şifre Dene
-                  </button>
-                </div>
-              )}
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      {/* Styled Scan keyframes animation inside standard CSS injection */}
-      <style>{`
-        @keyframes scan {
-          0% { top: 0%; opacity: 0; }
-          10% { opacity: 1; }
-          90% { opacity: 1; }
-          100% { top: 100%; opacity: 0; }
-        }
-      `}</style>
     </div>
   );
 };

@@ -182,7 +182,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
           >
             📊 FİNANSAL YÖNETİM MERKEZİ
           </motion.h3>
-          <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 font-medium mt-1">
+          <p className="text-[11px] sm:text-xs text-slate-700 dark:text-slate-300 font-semibold mt-1">
             Bütçenizi, borç durumunuzu ve ödemelerinizi anlık grafiklerle görüntüleyin.
           </p>
         </motion.div>
@@ -200,14 +200,14 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
               <span className="px-1.5 py-0.5 bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[8px] font-black uppercase tracking-wider rounded-md border border-amber-500/20">
                 Sponsorlu Reklam
               </span>
-              <span className="text-[9px] text-slate-400 font-bold">
+              <span className="text-[10px] text-slate-600 dark:text-slate-300 font-bold">
                 • Bütçem Pro Ücretsiz Plan Sponsoru
               </span>
             </div>
             <h4 className="text-xs font-black text-slate-800 dark:text-amber-100 uppercase tracking-tight">
               Banka Faiz Canavarına Son! Borç Transfer Kredisi Fırsatı %1.99
             </h4>
-            <p className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold leading-normal">
+            <p className="text-[11px] text-slate-700 dark:text-slate-300 font-bold leading-normal">
               Borçlarınızı tek çatı altında toplayıp Garanti BBVA Mobil üzerinden hemen yapılandırın.
             </p>
           </div>
@@ -298,7 +298,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
                 {format(monthlyInstallmentsDue)}
               </span>
             </div>
-            <p className="text-[10px] font-medium text-slate-500 dark:text-slate-400 mt-1">
+            <p className="text-[10px] font-semibold text-slate-600 dark:text-slate-300 mt-1">
               Aktif ödeme planlarındaki cari ay taksit yükümlülüğü
             </p>
           </div>
@@ -331,7 +331,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
                 {monthlyPaymentsCount} <span className="text-xs sm:text-sm font-bold text-amber-600/80">Adet</span>
               </span>
             </div>
-            <p className="text-[10px] font-medium text-slate-500 dark:text-slate-400 mt-1">
+            <p className="text-[10px] font-semibold text-slate-600 dark:text-slate-300 mt-1">
               Sisteminizde bu ay başarıyla belgelenen ödeme sayısı
             </p>
           </div>
@@ -501,7 +501,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
                       </motion.span>
                     )}
                   </h4>
-                  <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold tracking-wider uppercase pt-0.5">
+                  <p className="text-[10px] text-slate-600 dark:text-slate-350 font-extrabold tracking-wider uppercase pt-0.5">
                     Mali Gider Limit Takip Sistemi
                   </p>
                 </div>
@@ -541,8 +541,8 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
                   </div>
                 ) : (
                   <div className="flex items-center gap-2">
-                    <p className="text-xs text-slate-500 dark:text-slate-400 font-semibold">
-                      Belirlenen Hedef: <span className="font-extrabold text-slate-800 dark:text-slate-200 font-mono">{format(budgetGoal)}</span>
+                    <p className="text-xs text-slate-700 dark:text-slate-300 font-bold">
+                      Belirlenen Hedef: <span className="font-extrabold text-slate-900 dark:text-white font-mono">{format(budgetGoal)}</span>
                     </p>
                     <button
                       onClick={() => {
@@ -566,7 +566,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
               <div className="md:col-span-5 space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="p-3 bg-slate-50/50 dark:bg-slate-900/30 rounded-2xl border border-slate-100 dark:border-slate-800/40">
-                    <span className="text-[9px] font-black tracking-widest text-slate-400 dark:text-slate-500 uppercase block">
+                    <span className="text-[9px] font-black tracking-widest text-slate-600 dark:text-slate-350 uppercase block">
                       TOPLAM GİDER
                     </span>
                     <span className="text-sm font-black text-rose-600 dark:text-rose-400 font-mono leading-none block mt-1.5">
@@ -575,7 +575,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
                   </div>
 
                   <div className="p-3 bg-slate-50/50 dark:bg-slate-900/30 rounded-2xl border border-slate-100 dark:border-slate-800/40">
-                    <span className="text-[9px] font-black tracking-widest text-slate-400 dark:text-slate-500 uppercase block">
+                    <span className="text-[9px] font-black tracking-widest text-slate-600 dark:text-slate-350 uppercase block">
                       BÜTÇE HEDEFİ
                     </span>
                     <span className="text-sm font-black text-slate-700 dark:text-slate-300 font-mono leading-none block mt-1.5">
@@ -585,7 +585,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
                 </div>
 
                 <div className="p-3.5 rounded-2xl bg-linear-to-r from-slate-50/70 to-slate-100/30 dark:from-slate-900/40 dark:to-slate-900/10 border border-slate-100/80 dark:border-slate-800/60">
-                  <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold tracking-wider uppercase">
+                  <p className="text-[10px] text-slate-600 dark:text-slate-350 font-extrabold tracking-wider uppercase">
                     HARCAMA / LİMİT DURUMU
                   </p>
                   <p className="text-xs text-slate-600 dark:text-slate-300 font-semibold pt-1.5 leading-relaxed">
@@ -711,7 +711,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
             <h4 className="text-sm font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight">
               📝 Günlük Finansal Notlar
             </h4>
-            <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold tracking-wider uppercase">
+            <p className="text-[10px] text-slate-600 dark:text-slate-300 font-extrabold tracking-wider uppercase">
               BÜTÇE HEDEFLERİ VE ÖNEMLİ HATIRLATICILAR KILAVUZU
             </p>
           </div>
@@ -737,7 +737,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
         {/* Notes list */}
         <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
           {notes.length === 0 ? (
-            <p className="text-[11px] text-slate-400 italic text-center py-4 font-semibold">
+            <p className="text-[11px] text-slate-600 dark:text-slate-300 italic text-center py-4 font-bold">
               Henüz bir finansal not eklemediniz. Bütçe kararlarınızı buraya not alabilirsiniz.
             </p>
           ) : (
