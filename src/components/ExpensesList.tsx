@@ -1062,7 +1062,7 @@ export const ExpensesList: React.FC<ExpensesListProps> = ({
                               {c.icon || "🛒"}
                             </span>
                             <span
-                              className={`truncate text-xs font-bold leading-none ${isSelected ? "text-indigo-950 dark:text-indigo-250" : "text-slate-705 dark:text-slate-250"}`}
+                              className={`truncate text-xs font-bold leading-none ${isSelected ? "text-indigo-950 dark:text-indigo-200" : "text-slate-700 dark:text-slate-300"}`}
                               title={c.name}
                             >
                               {c.name}

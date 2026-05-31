@@ -25,7 +25,10 @@ import {
   DollarSign,
   AlertCircle,
   TrendingUpDown,
-  BookOpen
+  BookOpen,
+  Edit,
+  Bell,
+  BellRing
 } from "lucide-react";
 
 interface Contact {
@@ -52,12 +55,14 @@ interface ContactsDebtPanelProps {
   currentUser: string | null;
   format: (amount: number) => string;
   triggerToast?: (msg: string) => void;
+  onAddAlarm?: (titleString: string, dateString: string) => void;
 }
 
 export const ContactsDebtPanel: React.FC<ContactsDebtPanelProps> = ({
   currentUser,
   format,
-  triggerToast
+  triggerToast,
+  onAddAlarm
 }) => {
   const spaceKey = currentUser ? `user_${currentUser}` : "user_anonymous";
 
@@ -67,9 +72,23 @@ export const ContactsDebtPanel: React.FC<ContactsDebtPanelProps> = ({
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
 
+  // Custom Delete and Edit states
+  const [contactToDeleteId, setContactToDeleteId] = useState<string | null>(null);
+  const [contactToEdit, setContactToEdit] = useState<Contact | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editPhone, setEditPhone] = useState("");
+  const [editCategory, setEditCategory] = useState<Contact["category"]>("friend");
+
   // Simulated picker States
   const [isSimulatedPickerOpen, setIsSimulatedPickerOpen] = useState(false);
   const [simulatedSearchText, setSimulatedSearchText] = useState("");
+  const [simulatedDeviceContacts, setSimulatedDeviceContacts] = useState<Array<{ name: string; phone: string; category: Contact["category"] }>>([]);
+
+  // Reminder / Alarm States
+  const [reminderTx, setReminderTx] = useState<ContactTransaction | null>(null);
+  const [reminderOption, setReminderOption] = useState<"on_date" | "day_before" | "custom">("day_before");
+  const [customReminderDate, setCustomReminderDate] = useState("");
+  const [customReminderTime, setCustomReminderTime] = useState("09:00");
 
   const showLocalToast = (msg: string) => {
     if (triggerToast) {
@@ -77,6 +96,41 @@ export const ContactsDebtPanel: React.FC<ContactsDebtPanelProps> = ({
     } else {
       alert(msg);
     }
+  };
+
+  const handleSetReminderSubmit = () => {
+    if (!onAddAlarm || !reminderTx) return;
+
+    const contact = contacts.find((c) => c.id === reminderTx.contactId);
+    const contactName = contact ? contact.name : "Rehber Kişisi";
+
+    let alarmDateStr = "";
+    const dueDateStr = reminderTx.dueDate; // YYYY-MM-DD
+
+    if (reminderOption === "on_date") {
+      alarmDateStr = `${dueDateStr}T09:00`;
+    } else if (reminderOption === "day_before") {
+      try {
+        const d = new Date(dueDateStr);
+        d.setDate(d.getDate() - 1);
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, "0");
+        const day = String(d.getDate()).padStart(2, "0");
+        alarmDateStr = `${year}-${month}-${day}T09:00`;
+      } catch {
+        alarmDateStr = `${dueDateStr}T09:00`;
+      }
+    } else {
+      alarmDateStr = `${customReminderDate}T${customReminderTime || "09:00"}`;
+    }
+
+    onAddAlarm(
+      `${contactName} İçin Ödeme Vadesi: ${reminderTx.description} (${format(reminderTx.amount)})`,
+      alarmDateStr
+    );
+
+    setReminderTx(null);
+    showLocalToast("Ödeme Hatırlatıcısı Başarıyla Kuruldu ⏰");
   };
 
   // Create Contact Form States
@@ -98,30 +152,30 @@ export const ContactsDebtPanel: React.FC<ContactsDebtPanelProps> = ({
   useEffect(() => {
     const savedContacts = localStorage.getItem(`${spaceKey}_contacts_directory`);
     const savedTxs = localStorage.getItem(`${spaceKey}_contacts_transactions`);
+    const savedVcfDevice = localStorage.getItem(`${spaceKey}_parsed_vcf_device_contacts`);
 
     if (savedContacts) {
       setContacts(JSON.parse(savedContacts));
     } else {
-      // Default placeholder contacts to offer initial life to the page
-      const defaults: Contact[] = [
-        { id: "c1", name: "Ahmet Yılmaz", phone: "0532 123 4567", category: "friend", avatarColor: "from-emerald-500 to-teal-600", createdAt: new Date().toISOString() },
-        { id: "c2", name: "Banu Korkmaz (İş Ortağı)", phone: "0555 987 6543", category: "work", avatarColor: "from-indigo-500 to-indigo-700", createdAt: new Date().toISOString() },
-        { id: "c3", name: "Mehmet Amca", phone: "0541 444 2211", category: "family", avatarColor: "from-amber-500 to-orange-600", createdAt: new Date().toISOString() }
-      ];
-      setContacts(defaults);
-      localStorage.setItem(`${spaceKey}_contacts_directory`, JSON.stringify(defaults));
+      setContacts([]);
+      localStorage.setItem(`${spaceKey}_contacts_directory`, JSON.stringify([]));
     }
 
     if (savedTxs) {
       setTransactions(JSON.parse(savedTxs));
     } else {
-      const defaultTxs: ContactTransaction[] = [
-        { id: "t1", contactId: "c1", type: "receivable", amount: 1500, description: "Haftalık borç / borç verdim", dueDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString().split("T")[0], isPaid: false, createdAt: new Date().toISOString() },
-        { id: "t2", contactId: "c2", type: "payable", amount: 4500, description: "Ofis malzemesi tedarik ödemesi", dueDate: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString().split("T")[0], isPaid: false, createdAt: new Date().toISOString() },
-        { id: "t3", contactId: "c3", type: "receivable", amount: 750, description: "Alışveriş yardımı", dueDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString().split("T")[0], isPaid: true, createdAt: new Date().toISOString() }
-      ];
-      setTransactions(defaultTxs);
-      localStorage.setItem(`${spaceKey}_contacts_transactions`, JSON.stringify(defaultTxs));
+      setTransactions([]);
+      localStorage.setItem(`${spaceKey}_contacts_transactions`, JSON.stringify([]));
+    }
+
+    if (savedVcfDevice) {
+      try {
+        setSimulatedDeviceContacts(JSON.parse(savedVcfDevice));
+      } catch (e) {
+        setSimulatedDeviceContacts([]);
+      }
+    } else {
+      setSimulatedDeviceContacts([]);
     }
   }, [spaceKey]);
 
@@ -167,21 +221,6 @@ export const ContactsDebtPanel: React.FC<ContactsDebtPanelProps> = ({
     setNewContactPhone("");
   };
 
-  // Directory / simulated device contact list
-  const simulatedDeviceContacts = [
-    { name: "Serkan Sağlam", phone: "0532 999 1122", category: "work" as const },
-    { name: "Ayşe Yılmaz", phone: "0543 111 2233", category: "friend" as const },
-    { name: "Canan Demir", phone: "0555 444 5566", category: "family" as const },
-    { name: "Esra Tekin", phone: "0533 555 4433", category: "friend" as const },
-    { name: "Bülent Avcı", phone: "0542 333 4455", category: "work" as const },
-    { name: "Ali Kaya", phone: "0551 222 3344", category: "other" as const },
-    { name: "Fatma Nur", phone: "0532 888 7766", category: "family" as const },
-    { name: "Mustafa Koç", phone: "0505 555 1212", category: "work" as const },
-    { name: "Zeynep Aslan", phone: "0552 999 8877", category: "friend" as const },
-    { name: "Emre Şahin", phone: "0541 666 5544", category: "other" as const },
-    { name: "Merve Doğan", phone: "0533 111 9988", category: "family" as const }
-  ];
-
   const handleSelectFromDeviceContacts = async () => {
     if (typeof window !== "undefined" && "contacts" in navigator && "select" in (navigator as any).contacts) {
       try {
@@ -206,6 +245,72 @@ export const ContactsDebtPanel: React.FC<ContactsDebtPanelProps> = ({
     setIsSimulatedPickerOpen(true);
   };
 
+  const handleVcfImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const text = event.target?.result as string;
+        if (!text) return;
+
+        const vcardRegex = /BEGIN:VCARD[\s\S]*?END:VCARD/ig;
+        const cards = text.match(vcardRegex) || [];
+
+        if (cards.length === 0) {
+          showLocalToast("Geçerli bir rehber yedek dosyası (.vcf) bulunamadı! ⚠️");
+          return;
+        }
+
+        const parsedContacts: Array<{ name: string; phone: string; category: "friend" | "family" | "work" | "other" }> = [];
+
+        cards.forEach((card) => {
+          let name = "";
+          const fnMatch = card.match(/FN(?:;[^:]*)?:(.*)/i);
+          if (fnMatch && fnMatch[1]) {
+            name = fnMatch[1].trim();
+          } else {
+            const nMatch = card.match(/N(?:;[^:]*)?:([^;]+);([^;\r\n]+)?/i);
+            if (nMatch) {
+              const lastName = nMatch[1] ? nMatch[1].trim() : "";
+              const firstName = nMatch[2] ? nMatch[2].trim() : "";
+              name = `${firstName} ${lastName}`.trim();
+            }
+          }
+
+          let tel = "";
+          const telMatch = card.match(/TEL(?:;[^:]*)?:([^;\r\n]+)/i);
+          if (telMatch && telMatch[1]) {
+            tel = telMatch[1].trim();
+          }
+
+          name = name.replace(/\\;/g, ";").replace(/\\,/g, ",").replace(/\\/g, "").replace(/\r/g, "");
+          
+          if (name) {
+            parsedContacts.push({
+              name,
+              phone: tel ? tel.replace(/\r/g, "") : "Belirtilmemiş 📞",
+              category: "friend",
+            });
+          }
+        });
+
+        if (parsedContacts.length > 0) {
+          setSimulatedDeviceContacts(parsedContacts);
+          localStorage.setItem(`${spaceKey}_parsed_vcf_device_contacts`, JSON.stringify(parsedContacts));
+          showLocalToast(`Rehber yedek dosyanızdan ${parsedContacts.length} kişi başarıyla okundu! Aşağıdaki listeden dilediğiniz kişiyi tek tek 'Hızlı Ekle ➔' seçeneğiyle ekleyebilirsiniz! 📱🎉`);
+        } else {
+          showLocalToast("Dosyadan kişi ayrıştırılamadı. Geçerli bir .vcf dosyası olduğundan emin olun.");
+        }
+      } catch (err) {
+        console.error("VCF Import error", err);
+        showLocalToast("Dosya okunurken bir hata oluştu! ⚠️");
+      }
+    };
+    reader.readAsText(file);
+  };
+
   const importContactToForm = (name: string, phone: string, cat?: "friend" | "family" | "work" | "other") => {
     setNewContactName(name);
     setNewContactPhone(phone || "Belirtilmemiş 📞");
@@ -213,7 +318,7 @@ export const ContactsDebtPanel: React.FC<ContactsDebtPanelProps> = ({
     setIsAddingContact(true);
   };
 
-  const handleSimulatedSelect = (simulated: typeof simulatedDeviceContacts[0]) => {
+  const handleSimulatedSelect = (simulated: { name: string; phone: string; category: Contact["category"] }) => {
     const gradients = [
       "from-emerald-500 to-teal-600",
       "from-indigo-500 to-indigo-700",
@@ -249,15 +354,7 @@ export const ContactsDebtPanel: React.FC<ContactsDebtPanelProps> = ({
 
   // Delete Contact Handler
   const handleDeleteContact = (id: string) => {
-    if (confirm("Bu kişiyi ve tüm borç/alacak kayıtlarını silmek istiyor musunuz? ⚠️")) {
-      const updatedConts = contacts.filter((c) => c.id !== id);
-      const updatedTxs = transactions.filter((t) => t.contactId !== id);
-      saveContactsData(updatedConts);
-      saveTxsData(updatedTxs);
-      if (selectedContactId === id) {
-        setSelectedContactId(null);
-      }
-    }
+    setContactToDeleteId(id);
   };
 
   // Add Transaction Handler
@@ -363,7 +460,7 @@ export const ContactsDebtPanel: React.FC<ContactsDebtPanelProps> = ({
   return (
     <div className="space-y-6 select-none font-sans">
       {/* Upper Welcome Header */}
-      <div className="p-5 bg-white dark:bg-slate-800 rounded-3xl border border-slate-200/50 dark:border-slate-850 shadow-sm flex flex-col items-center text-center space-y-2">
+      <div className="p-5 bg-white dark:bg-slate-800 rounded-3xl border border-slate-200/50 dark:border-slate-700 shadow-sm flex flex-col items-center text-center space-y-2">
         <div className="p-3.5 bg-indigo-500/10 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 rounded-full">
           <Users className="w-7 h-7" />
         </div>
@@ -381,7 +478,7 @@ export const ContactsDebtPanel: React.FC<ContactsDebtPanelProps> = ({
         <motion.div
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
-          className="p-4 bg-white dark:bg-slate-850 rounded-2xl border border-slate-150 dark:border-slate-800 flex items-center justify-between"
+          className="p-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 flex items-center justify-between"
         >
           <div className="space-y-1">
             <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 tracking-wider block uppercase">Toplayacağımız Toplam Alacak</span>
@@ -400,7 +497,7 @@ export const ContactsDebtPanel: React.FC<ContactsDebtPanelProps> = ({
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.05 }}
-          className="p-4 bg-white dark:bg-slate-850 rounded-2xl border border-slate-150 dark:border-slate-800 flex items-center justify-between"
+          className="p-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 flex items-center justify-between"
         >
           <div className="space-y-1">
             <span className="text-[10px] font-bold text-rose-500 dark:text-rose-400 tracking-wider block uppercase">Ödeyeceğimiz Toplam Borç</span>
@@ -443,7 +540,7 @@ export const ContactsDebtPanel: React.FC<ContactsDebtPanelProps> = ({
       {/* Visualization Row: SVG High-End Custom Gauge Chart & Quick Presets */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Custom Interactive SVG Semi-Gauge Graph */}
-        <div className="p-5 bg-white dark:bg-slate-800 rounded-3xl border border-slate-200/50 dark:border-slate-850 flex flex-col items-center justify-center space-y-4">
+        <div className="p-5 bg-white dark:bg-slate-800 rounded-3xl border border-slate-200/50 dark:border-slate-700 flex flex-col items-center justify-center space-y-4">
           <div className="text-center">
             <h3 className="text-xs font-black uppercase tracking-widest text-slate-700 dark:text-slate-300">
               📊 BORÇ-ALACAK DAHİLİ ORAN DURUMU
@@ -503,7 +600,7 @@ export const ContactsDebtPanel: React.FC<ContactsDebtPanelProps> = ({
         </div>
 
         {/* Categories statistics breakdown bar */}
-        <div className="p-5 bg-white dark:bg-slate-800 rounded-3xl border border-slate-200/50 dark:border-slate-850 flex flex-col justify-between space-y-4">
+        <div className="p-5 bg-white dark:bg-slate-800 rounded-3xl border border-slate-200/50 dark:border-slate-700 flex flex-col justify-between space-y-4">
           <div className="space-y-1">
             <h3 className="text-xs font-black uppercase tracking-widest text-slate-700 dark:text-slate-300">
               📊 KATEGORİSEL REHBER YAPISI
@@ -658,7 +755,7 @@ export const ContactsDebtPanel: React.FC<ContactsDebtPanelProps> = ({
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Rehberde kişi arayın... 🔎"
-              className="w-full pl-9 pr-4 py-2 bg-white dark:bg-slate-800 text-xs text-slate-800 dark:text-white placeholder-slate-400 dark:placeholder:text-slate-500 border border-slate-200 dark:border-slate-850 rounded-xl focus:outline-none focus:ring-1 focus:ring-indigo-500 font-semibold"
+              className="w-full pl-9 pr-4 py-2 bg-white dark:bg-slate-800 text-xs text-slate-800 dark:text-white placeholder-slate-400 dark:placeholder:text-slate-500 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-1 focus:ring-indigo-500 font-semibold"
             />
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
           </div>
@@ -666,7 +763,7 @@ export const ContactsDebtPanel: React.FC<ContactsDebtPanelProps> = ({
           {/* Directory Contact List Items */}
           <div className="space-y-1.5 max-h-[480px] overflow-y-auto pr-1">
             {filteredContacts.length === 0 ? (
-              <div className="p-6 text-center text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/50 dark:border-slate-850 font-bold text-xs italic">
+              <div className="p-6 text-center text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/50 dark:border-slate-700 font-bold text-xs italic">
                 Arama kriterlerine uygun kişi bulunamadı.
               </div>
             ) : (
@@ -678,10 +775,10 @@ export const ContactsDebtPanel: React.FC<ContactsDebtPanelProps> = ({
                   <motion.div
                     key={contact.id}
                     onClick={() => setSelectedContactId(contact.id)}
-                    className={`p-3 bg-white dark:bg-slate-800 rounded-2xl border transition duration-200 cursor-pointer flex items-center justify-between group active:scale-98 ${
+                    className={`p-3 bg-white dark:bg-slate-800 rounded-2xl border transition duration-200 cursor-pointer flex flex-col xs:flex-row xs:items-center justify-between gap-3 group active:scale-98 ${
                       isSelected
                         ? "border-indigo-600 ring-2 ring-indigo-500/10 dark:ring-indigo-500/20 shadow-md"
-                        : "border-slate-150 dark:border-slate-850 hover:border-slate-300 dark:hover:border-slate-700"
+                        : "border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600"
                     }`}
                   >
                     <div className="flex items-center gap-3 min-w-0">
@@ -705,17 +802,47 @@ export const ContactsDebtPanel: React.FC<ContactsDebtPanelProps> = ({
                       </div>
                     </div>
 
-                    <div className="text-right pl-2 leading-none">
-                      <div className="text-[10px] font-mono leading-tight">
-                        {totals.net !== 0 ? (
-                          <span className={`font-black ${totals.net > 0 ? "text-emerald-500" : "text-rose-500"}`}>
-                            {totals.net > 0 ? "Alacak: " : "Borç: "}{format(Math.abs(totals.net))}
-                          </span>
-                        ) : (
-                          <span className="text-slate-600 dark:text-slate-300 font-extrabold text-[9px] uppercase tracking-wide">
-                            DENGELİ ✔️
-                          </span>
-                        )}
+                    <div className="flex items-center gap-2.5 self-end xs:self-center shrink-0">
+                      <div className="text-right leading-none min-w-[70px]">
+                        <div className="text-[10px] font-mono leading-tight">
+                          {totals.net !== 0 ? (
+                            <span className={`font-black ${totals.net > 0 ? "text-emerald-500" : "text-rose-500"}`}>
+                              {totals.net > 0 ? "Alacak: " : "Borç: "}{format(Math.abs(totals.net))}
+                            </span>
+                          ) : (
+                            <span className="text-slate-600 dark:text-slate-300 font-extrabold text-[9px] uppercase tracking-wide">
+                              DENGELİ ✔️
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Card Action Buttons (Edit and Delete) */}
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setContactToEdit(contact);
+                            setEditName(contact.name);
+                            setEditPhone(contact.phone === "Belirtilmemiş 📞" ? "" : contact.phone);
+                            setEditCategory(contact.category);
+                          }}
+                          className="p-1 px-1.5 rounded-lg bg-indigo-50/80 hover:bg-indigo-150 text-indigo-600 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/50 dark:text-indigo-400 transition cursor-pointer flex items-center justify-center text-xs"
+                          title="Kişiyi Düzenle 📝"
+                        >
+                          <Edit className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setContactToDeleteId(contact.id);
+                          }}
+                          className="p-1 px-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 dark:bg-rose-950/20 dark:hover:bg-rose-900/30 dark:text-rose-400 transition cursor-pointer flex items-center gap-0.5 text-xs"
+                          title="Kişiyi Sil 🗑️"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span className="text-[9px] font-bold">Sil</span>
+                        </button>
                       </div>
                     </div>
                   </motion.div>
@@ -742,10 +869,10 @@ export const ContactsDebtPanel: React.FC<ContactsDebtPanelProps> = ({
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -20 }}
-                  className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200/50 dark:border-slate-850 p-5 space-y-4 shadow-sm"
+                  className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200/50 dark:border-slate-700 p-5 space-y-4 shadow-sm"
                 >
                   {/* Selected contact profile header visual tag */}
-                  <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-850 pb-3.5">
+                  <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-700 pb-3.5">
                     <div className="flex items-center gap-3">
                       <div className={`w-10 h-10 rounded-full bg-gradient-to-tr ${contact.avatarColor} text-white flex items-center justify-center font-black text-sm uppercase shadow-sm`}>
                         {contact.name.charAt(0)}
@@ -762,12 +889,29 @@ export const ContactsDebtPanel: React.FC<ContactsDebtPanelProps> = ({
                     </div>
 
                     <div className="flex items-center gap-2">
+                      {/* Edit Contact Button */}
+                      <button
+                        onClick={() => {
+                          setContactToEdit(contact);
+                          setEditName(contact.name);
+                          setEditPhone(contact.phone === "Belirtilmemiş 📞" ? "" : contact.phone);
+                          setEditCategory(contact.category);
+                        }}
+                        className="p-2 px-3 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 border border-indigo-150/10 rounded-xl transition active:scale-95 cursor-pointer flex items-center gap-1"
+                        title="Bilgileri Düzenle 📝"
+                      >
+                        <Edit className="w-4 h-4" />
+                        <span className="text-[11px] font-black uppercase tracking-wider">Düzenle</span>
+                      </button>
+
+                      {/* Delete Contact Button */}
                       <button
                         onClick={() => handleDeleteContact(contact.id)}
-                        className="p-2 bg-rose-50 dark:bg-rose-950/20 text-rose-600 dark:text-rose-400 border border-rose-100/30 rounded-xl hover:bg-rose-100/50 transition active:scale-95 cursor-pointer flex items-center justify-center"
+                        className="p-2 px-3 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/20 text-rose-600 dark:text-rose-400 border border-rose-100/30 rounded-xl transition active:scale-95 cursor-pointer flex items-center gap-1"
                         title="Kişiyi & Defteri Sil ⚠️"
                       >
                         <Trash2 className="w-4 h-4" />
+                        <span className="text-[11px] font-black uppercase tracking-wider">Sil</span>
                       </button>
                     </div>
                   </div>
@@ -795,7 +939,7 @@ export const ContactsDebtPanel: React.FC<ContactsDebtPanelProps> = ({
                     </h3>
                     <button
                       onClick={() => setIsAddingTx((prev) => !prev)}
-                      className="px-2 py-1 bg-slate-900 hover:bg-slate-850 dark:bg-indigo-600 dark:hover:bg-indigo-700 text-white rounded-lg text-[9px] font-black uppercase tracking-wider flex items-center gap-1 transition active:scale-95 cursor-pointer"
+                      className="px-2 py-1 bg-slate-900 hover:bg-slate-800 dark:bg-indigo-600 dark:hover:bg-indigo-700 text-white rounded-lg text-[9px] font-black uppercase tracking-wider flex items-center gap-1 transition active:scale-95 cursor-pointer"
                     >
                       <Plus className="w-3.5 h-3.5" /> Borç/Alacak Ekle
                     </button>
@@ -905,8 +1049,8 @@ export const ContactsDebtPanel: React.FC<ContactsDebtPanelProps> = ({
                               tx.isPaid
                                 ? "bg-slate-50/75 border-slate-200/50 dark:border-slate-950 dark:opacity-60"
                                 : tx.type === "receivable"
-                                ? "bg-emerald-500/[0.02] border-emerald-150 dark:border-emerald-900/30"
-                                : "bg-rose-500/[0.02] border-rose-150 dark:border-rose-900/20"
+                                ? "bg-emerald-500/[0.02] border-emerald-200 dark:border-emerald-900/30"
+                                : "bg-rose-500/[0.02] border-rose-200 dark:border-rose-900/20"
                             }`}
                           >
                             <div className="flex gap-2 min-w-0 flex-1 pr-2">
@@ -946,9 +1090,23 @@ export const ContactsDebtPanel: React.FC<ContactsDebtPanelProps> = ({
                               <span className={`text-[13px] font-black font-mono ${tx.isPaid ? "line-through text-slate-600" : tx.type === "receivable" ? "text-emerald-500" : "text-rose-500"}`}>
                                 {tx.type === "receivable" ? "+" : "-"}{format(tx.amount)}
                               </span>
+                              {!tx.isPaid && onAddAlarm && (
+                                <button
+                                  onClick={() => {
+                                    setReminderTx(tx);
+                                    setReminderOption("day_before");
+                                    setCustomReminderDate(tx.dueDate || "");
+                                    setCustomReminderTime("09:00");
+                                  }}
+                                  className="p-1 rounded-lg bg-indigo-50/80 hover:bg-indigo-100 dark:bg-slate-800 dark:hover:bg-slate-700 text-indigo-600 dark:text-indigo-400 shrink-0 cursor-pointer active:scale-95 transition flex items-center justify-center"
+                                  title="Hatırlatıcı Alarm Kur ⏰"
+                                >
+                                  <Bell className="w-3.5 h-3.5" />
+                                </button>
+                              )}
                               <button
                                 onClick={() => handleDeleteTx(tx.id)}
-                                className="p-1 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-500 hover:text-rose-500 shrink-0 cursor-pointer active:scale-95 transition"
+                                className="p-1 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-500 hover:text-rose-500 shrink-0 cursor-pointer active:scale-95 transition"
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
                               </button>
@@ -960,7 +1118,7 @@ export const ContactsDebtPanel: React.FC<ContactsDebtPanelProps> = ({
                   </div>
 
                   {/* Informative advice message */}
-                  <div className="p-3 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200/50 dark:border-slate-850 text-[9.5px] leading-relaxed text-slate-600 dark:text-slate-350 font-semibold flex items-start gap-2">
+                  <div className="p-3 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200/50 dark:border-slate-800 text-[9.5px] leading-relaxed text-slate-600 dark:text-slate-350 font-semibold flex items-start gap-2">
                     <AlertCircle className="w-4 h-4 mt-0.5 shrink-0 text-slate-500" />
                     <p>
                       <strong>💡 Akıllı Amorti İpuçları:</strong> Herhangi bir borcun solundaki boş yuvarlağa tıkladığınızda işlem "Ödendi" olarak etiketlenir ve üstteki toplam grafiklerden çıkartılır. Karşılıklı transfer tanzimlerinde bu özelliği kullanabilirsiniz.
@@ -969,7 +1127,7 @@ export const ContactsDebtPanel: React.FC<ContactsDebtPanelProps> = ({
                 </motion.div>
               );
             })() : (
-              <div className="p-12 text-center bg-white dark:bg-slate-800 rounded-3xl border border-slate-200/50 dark:border-slate-850 space-y-4">
+              <div className="p-12 text-center bg-white dark:bg-slate-800 rounded-3xl border border-slate-200/50 dark:border-slate-700 space-y-4">
                 <div className="flex flex-col items-center justify-center space-y-2 text-slate-600 dark:text-slate-300">
                   <div className="p-4 bg-indigo-500/10 rounded-full text-indigo-500 animate-pulse">
                     <BookOpen className="w-10 h-10" />
@@ -995,7 +1153,7 @@ export const ContactsDebtPanel: React.FC<ContactsDebtPanelProps> = ({
                 >
                   <div className="flex items-center justify-between border-b dark:border-slate-800 pb-3">
                     <div>
-                      <h3 className="text-sm font-black text-slate-805 dark:text-slate-100 flex items-center gap-1.5 uppercase">
+                      <h3 className="text-sm font-black text-slate-800 dark:text-slate-100 flex items-center gap-1.5 uppercase">
                         📱 TELEFON REHBERİNDEN SEÇ
                       </h3>
                       <p className="text-[10px] text-slate-400 font-bold">Kişilerinizi bir tıkla alacak/verecek dökümünüze aktarın</p>
@@ -1009,33 +1167,69 @@ export const ContactsDebtPanel: React.FC<ContactsDebtPanelProps> = ({
                     </button>
                   </div>
 
+                  {/* Real Device VCF Import Section */}
+                  <div className="p-3.5 bg-indigo-500/[0.03] dark:bg-indigo-950/25 border border-indigo-500/10 dark:border-indigo-900/30 rounded-2xl text-center space-y-2.5 font-sans">
+                    <div className="space-y-1">
+                      <h4 className="text-[10.5px] font-black text-indigo-700 dark:text-indigo-400 uppercase tracking-wide flex items-center justify-center gap-1">
+                        🔑 GERÇEK TELEFON REHBERİNİ İTHAL ET
+                      </h4>
+                      <p className="text-[9.5px] text-slate-600 dark:text-slate-450 font-semibold leading-relaxed px-1">
+                        Gerçek telefon rehberinizi aktarmak çok kolay! Telefonunuzdan <strong className="text-indigo-600 dark:text-indigo-300">Rehber'e girip "Kişileri Paylaş / Dışa Aktar" (.vcf / vCard)</strong> seçeneğiyle indirdiğiniz yedek dosyasını buraya seçin:
+                      </p>
+                    </div>
+                    <label className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-[10px] font-black uppercase tracking-wider cursor-pointer active:scale-95 transition-all shadow-md shadow-indigo-600/15">
+                      📁 REHBER YEDEK DOSYASI SEÇ (.VCF)
+                      <input
+                        type="file"
+                        accept=".vcf"
+                        onChange={handleVcfImport}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
+
                   {/* Search filter for simulated contacts */}
                   <div className="relative">
                     <input
                       type="text"
                       value={simulatedSearchText}
                       onChange={(e) => setSimulatedSearchText(e.target.value)}
-                      placeholder="Rehberde kişi arayın... 🔎"
-                      className="w-full pl-9 pr-4 py-2 bg-slate-50 dark:bg-slate-950 text-xs text-slate-800 dark:text-white border border-slate-200 dark:border-slate-850 rounded-xl focus:outline-none focus:ring-1 focus:ring-indigo-500 font-semibold"
+                      placeholder={simulatedDeviceContacts.length > 0 ? "Rehberde kişi arayın... 🔎" : "Önce .vcf dosyası yükleyin 🔎"}
+                      disabled={simulatedDeviceContacts.length === 0}
+                      className="w-full pl-9 pr-4 py-2 bg-slate-50 dark:bg-slate-950 text-xs text-slate-800 dark:text-white border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-1 focus:ring-indigo-500 font-semibold disabled:opacity-50"
                     />
                     <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
                   </div>
 
                   {/* Contacts Row selection */}
                   <div className="space-y-1.5 overflow-y-auto flex-1 pr-1 max-h-80">
-                    {simulatedDeviceContacts
-                      .filter((sim) =>
+                    {simulatedDeviceContacts.length === 0 ? (
+                      <div className="text-center py-8 text-slate-400 font-semibold space-y-2">
+                        <span className="text-3xl block text-slate-500">📁</span>
+                        <p className="text-[10px] leading-relaxed max-w-[285px] mx-auto text-slate-550 dark:text-slate-400">
+                          Henüz bir rehber yedek dosyası (.vcf) seçilmedi. Lütfen yukarıdaki butondan telefonunuzun yedek dosyasını yükleyin. Örnek rehber silindi.
+                        </p>
+                      </div>
+                    ) : (() => {
+                      const filtered = simulatedDeviceContacts.filter((sim) =>
                         sim.name.toLowerCase().includes(simulatedSearchText.toLowerCase()) ||
                         sim.phone.includes(simulatedSearchText)
-                      )
-                      .map((sim, idx) => (
+                      );
+                      if (filtered.length === 0) {
+                        return (
+                          <div className="text-center py-8 text-slate-400 font-semibold">
+                            <p className="text-[10px]">Aramanızla eşleşen kişi bulunamadı. 🔎</p>
+                          </div>
+                        );
+                      }
+                      return filtered.map((sim, idx) => (
                         <div
                           key={idx}
                           onClick={() => handleSimulatedSelect(sim)}
                           className="p-2.5 bg-slate-50 hover:bg-indigo-50/50 dark:bg-slate-950/40 dark:hover:bg-indigo-950/30 rounded-2xl border border-slate-200/50 dark:border-slate-800/85 transition flex items-center justify-between cursor-pointer group hover:border-indigo-500/50 active:scale-[0.99] font-sans"
                         >
                           <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-500 to-sky-450 text-white font-black text-xs flex items-center justify-center uppercase shadow-xs">
+                            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-500 to-sky-400 text-white font-black text-xs flex items-center justify-center uppercase shadow-xs">
                               {sim.name.charAt(0)}
                             </div>
                             <div>
@@ -1054,7 +1248,321 @@ export const ContactsDebtPanel: React.FC<ContactsDebtPanelProps> = ({
                             </span>
                           </div>
                         </div>
-                      ))}
+                      ));
+                    })()}
+                  </div>
+                </motion.div>
+              </div>
+            )}
+          </AnimatePresence>
+
+          {/* Custom Delete Confirmation Modal */}
+          <AnimatePresence>
+            {contactToDeleteId && (
+              <div className="fixed inset-0 bg-black/70 backdrop-blur-xs z-[9999] flex items-center justify-center p-4">
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95, y: 15 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95, y: 15 }}
+                  className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl max-w-sm w-full p-6 space-y-4 text-left"
+                >
+                  <div className="flex items-center gap-3 text-rose-500">
+                    <div className="p-3 bg-rose-500/10 rounded-full">
+                      <Trash2 className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-black uppercase tracking-wider">Kişiyi Sil</h3>
+                      <p className="text-[10px] text-slate-400 font-bold">Bu işlem geri alınamaz!</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2 text-xs font-semibold text-slate-600 dark:text-slate-300 leading-relaxed">
+                    <p>
+                      Özel listenizdeki <strong className="font-extrabold text-slate-800 dark:text-slate-100">"{(contacts.find(c => c.id === contactToDeleteId))?.name}"</strong> isimli kişiyi ve bu kişiye ait <span className="text-rose-500 font-black">tüm borç, alacak ve bakiye hareket senedini</span> tamamen silmek istediğinizden emin misiniz?
+                    </p>
+                  </div>
+
+                  <div className="flex gap-2 pt-2">
+                    <button
+                      onClick={() => setContactToDeleteId(null)}
+                      type="button"
+                      className="flex-1 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-[10px] font-black uppercase tracking-wider active:scale-95 transition"
+                    >
+                      VAZGEÇ
+                    </button>
+                    <button
+                      onClick={() => {
+                        const id = contactToDeleteId;
+                        const updatedConts = contacts.filter((c) => c.id !== id);
+                        const updatedTxs = transactions.filter((t) => t.contactId !== id);
+                        saveContactsData(updatedConts);
+                        saveTxsData(updatedTxs);
+                        if (selectedContactId === id) {
+                          setSelectedContactId(null);
+                        }
+                        setContactToDeleteId(null);
+                        showLocalToast("Kişi kartı ve tüm hareketleri başarıyla silindi! 🗑️");
+                      }}
+                      type="button"
+                      className="flex-1 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-[10px] font-black uppercase tracking-wider active:scale-95 transition"
+                    >
+                      SİL VE TEMİZLE 🗑️
+                    </button>
+                  </div>
+                </motion.div>
+              </div>
+            )}
+          </AnimatePresence>
+
+          {/* Custom Edit Contact Modal */}
+          <AnimatePresence>
+            {contactToEdit && (
+              <div className="fixed inset-0 bg-black/70 backdrop-blur-xs z-[9999] flex items-center justify-center p-4">
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95, y: 15 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95, y: 15 }}
+                  className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl max-w-sm w-full p-6 space-y-4 text-left"
+                >
+                  <div className="flex items-center gap-3 text-indigo-500">
+                    <div className="p-3 bg-indigo-500/10 rounded-full">
+                      <Edit className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-black uppercase tracking-wider">Kişiyi Düzenle</h3>
+                      <p className="text-[10px] text-slate-400 font-bold">Kişi ad soyad, telefon ve kategori ayarları</p>
+                    </div>
+                  </div>
+
+                  <form onSubmit={(e) => {
+                    e.preventDefault();
+                    if (!editName.trim()) return;
+                    const updated = contacts.map(c => {
+                      if (c.id === contactToEdit.id) {
+                        return {
+                          ...c,
+                          name: editName.trim(),
+                          phone: editPhone.trim() || "Belirtilmemiş 📞",
+                          category: editCategory
+                        };
+                      }
+                      return c;
+                    });
+                    saveContactsData(updated);
+                    setContactToEdit(null);
+                    showLocalToast("Kişi bilgileri başarıyla güncellendi! 💾✨");
+                  }} className="space-y-3">
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-black text-slate-500 uppercase tracking-wider block">Adı Soyadı</label>
+                      <input
+                        required
+                        type="text"
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                        placeholder="Örn: Ahmet Yılmaz"
+                        className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 text-xs text-slate-800 dark:text-white placeholder-slate-400 border border-slate-200 dark:border-slate-800 rounded-xl focus:outline-none focus:ring-1 focus:ring-indigo-500 font-semibold"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-black text-slate-500 uppercase tracking-wider block">Telefon Numarası</label>
+                      <input
+                        type="tel"
+                        value={editPhone}
+                        onChange={(e) => setEditPhone(e.target.value)}
+                        placeholder="Örn: 0532 123 4567"
+                        className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 text-xs text-slate-800 dark:text-white placeholder-slate-400 border border-slate-200 dark:border-slate-800 rounded-xl focus:outline-none focus:ring-1 focus:ring-indigo-500 font-semibold"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-black text-slate-500 uppercase tracking-wider block">Yakınlık Grubu / Kategori</label>
+                      <select
+                        value={editCategory}
+                        onChange={(e) => setEditCategory(e.target.value as any)}
+                        className="w-full px-2 py-2 bg-slate-50 dark:bg-slate-950 text-xs text-slate-800 dark:text-white border border-slate-200 dark:border-slate-800 rounded-xl focus:outline-none focus:ring-1 focus:ring-indigo-500 font-bold"
+                      >
+                        <option value="friend">Arkadaş</option>
+                        <option value="family">Aile / Akraba</option>
+                        <option value="work">İş / Ticaret</option>
+                        <option value="other">Diğer</option>
+                      </select>
+                    </div>
+
+                    <div className="flex gap-2 pt-2">
+                      <button
+                        onClick={() => setContactToEdit(null)}
+                        type="button"
+                        className="flex-1 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-[10px] font-black uppercase tracking-wider active:scale-95 transition"
+                      >
+                        VAZGEÇ
+                      </button>
+                      <button
+                        type="submit"
+                        className="flex-1 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-[10px] font-black uppercase tracking-wider active:scale-95 transition"
+                      >
+                        GÜNCELLE 💾
+                      </button>
+                    </div>
+                  </form>
+                </motion.div>
+              </div>
+            )}
+          </AnimatePresence>
+
+          {/* Reminder / Alarm Setter Modal Overlay */}
+          <AnimatePresence>
+            {reminderTx && (
+              <div className="fixed inset-0 bg-black/75 backdrop-blur-xs z-[9999] flex items-center justify-center p-4">
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95, y: 15 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95, y: 15 }}
+                  className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl max-w-md w-full p-6 space-y-4 text-left"
+                >
+                  <div className="flex items-center justify-between border-b dark:border-slate-800 pb-3">
+                    <div>
+                      <h3 className="text-sm font-black text-slate-800 dark:text-slate-100 flex items-center gap-1.5 uppercase">
+                        ⏰ ÖDEME HATIRLATICISI KUR
+                      </h3>
+                      <p className="text-[10px] text-slate-400 font-bold">Vade yaklaştığında akıllı push uygulama alarmı oluşturun</p>
+                    </div>
+                    <button
+                      onClick={() => setReminderTx(null)}
+                      className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xs font-bold bg-slate-100 dark:bg-slate-800 p-1.5 rounded-full cursor-pointer flex items-center justify-center w-6 h-6"
+                    >
+                      ✕
+                    </button>
+                  </div>
+
+                  <div className="space-y-3.5 py-1">
+                    {/* Tx Info summary badge */}
+                    <div className="p-3 bg-indigo-500/[0.03] border border-indigo-150/15 rounded-2xl space-y-1">
+                      <span className="text-[8px] font-black text-indigo-500 uppercase block tracking-widest">İŞLEM DETAYLARI</span>
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs font-extrabold text-slate-700 dark:text-slate-350">{reminderTx.description}</span>
+                        <span className="text-xs font-black text-slate-800 dark:text-slate-100">{format(reminderTx.amount)}</span>
+                      </div>
+                      <div className="flex justify-between items-center text-[9px] text-slate-400 font-bold">
+                        <span>Orijinal Vade Tarihi:</span>
+                        <span>{reminderTx.dueDate ? new Date(reminderTx.dueDate).toLocaleDateString("tr-TR") : "Belirtilmemiş"}</span>
+                      </div>
+                    </div>
+
+                    {/* Alarm Timing options list */}
+                    <div className="space-y-2">
+                       <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest block">ÖN-TANIMLI HATIRLATICI ZAMANLARI</label>
+                       
+                       <div className="grid grid-cols-1 gap-2">
+                         {/* Option A: 1 Day Before */}
+                         <button
+                           type="button"
+                           onClick={() => setReminderOption("day_before")}
+                           className={`p-3 rounded-2xl border text-left flex items-center justify-between cursor-pointer transition ${
+                             reminderOption === "day_before"
+                               ? "bg-indigo-500/[0.04] border-indigo-500/50 text-indigo-600 dark:text-indigo-400"
+                               : "border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-900"
+                           }`}
+                         >
+                           <div className="flex items-center gap-2.5">
+                             <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${reminderOption === "day_before" ? "border-indigo-500 bg-indigo-500/20" : "border-slate-300"}`}>
+                               {reminderOption === "day_before" && <div className="w-2 h-2 bg-indigo-500 rounded-full" />}
+                             </div>
+                             <div>
+                               <span className="text-xs font-black block">1 Gün Önce</span>
+                               <span className="text-[9px] text-slate-400 font-bold block">Ödeme vadesinden 1 gün önce 09:00'da hatırlat</span>
+                             </div>
+                           </div>
+                         </button>
+
+                         {/* Option B: On the Exact Due Date */}
+                         <button
+                           type="button"
+                           onClick={() => setReminderOption("on_date")}
+                           className={`p-3 rounded-2xl border text-left flex items-center justify-between cursor-pointer transition ${
+                             reminderOption === "on_date"
+                               ? "bg-indigo-500/[0.04] border-indigo-500/50 text-indigo-600 dark:text-indigo-400"
+                               : "border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-900"
+                           }`}
+                         >
+                           <div className="flex items-center gap-2.5">
+                             <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${reminderOption === "on_date" ? "border-indigo-500 bg-indigo-500/20" : "border-slate-300"}`}>
+                               {reminderOption === "on_date" && <div className="w-2 h-2 bg-indigo-500 rounded-full" />}
+                             </div>
+                             <div>
+                               <span className="text-xs font-black block">Vade Gününde</span>
+                               <span className="text-[9px] text-slate-400 font-bold block">Ödeme vadesinin dolduğu gün sabah 09:00'da hatırlat</span>
+                             </div>
+                           </div>
+                         </button>
+
+                         {/* Option C: Custom Date/Time */}
+                         <button
+                           type="button"
+                           onClick={() => setReminderOption("custom")}
+                           className={`p-3 rounded-2xl border text-left flex items-center justify-between cursor-pointer transition ${
+                             reminderOption === "custom"
+                               ? "bg-indigo-500/[0.04] border-indigo-500/50 text-indigo-600 dark:text-indigo-400"
+                               : "border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-900"
+                           }`}
+                         >
+                           <div className="flex items-center gap-2.5">
+                             <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${reminderOption === "custom" ? "border-indigo-500 bg-indigo-500/20" : "border-slate-300"}`}>
+                               {reminderOption === "custom" && <div className="w-2 h-2 bg-indigo-500 rounded-full" />}
+                             </div>
+                             <div>
+                               <span className="text-xs font-black block">Özel Tarih ve Saat</span>
+                               <span className="text-[9px] text-slate-400 font-bold block">Kendi belirleyeceğiniz özel bir zaman dilimini ayarlayın</span>
+                             </div>
+                           </div>
+                         </button>
+                       </div>
+                    </div>
+
+                    {/* Custom inputs wrapper */}
+                    {reminderOption === "custom" && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        className="grid grid-cols-2 gap-3 pt-2"
+                      >
+                        <div className="space-y-1">
+                          <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest block">Özel Alarm Tarihi</label>
+                          <input
+                            type="date"
+                            value={customReminderDate}
+                            onChange={(e) => setCustomReminderDate(e.target.value)}
+                            className="w-full px-3 py-1.5 bg-slate-50 dark:bg-slate-950 text-xs text-slate-800 dark:text-white border border-slate-200 dark:border-slate-800 rounded-xl focus:outline-none focus:ring-1 focus:ring-indigo-500 font-bold font-mono text-center"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest block">Özel Alarm Saati</label>
+                          <input
+                            type="time"
+                            value={customReminderTime}
+                            onChange={(e) => setCustomReminderTime(e.target.value)}
+                            className="w-full px-3 py-1.5 bg-slate-50 dark:bg-slate-950 text-xs text-slate-800 dark:text-white border border-slate-200 dark:border-slate-800 rounded-xl focus:outline-none focus:ring-1 focus:ring-indigo-500 font-bold font-mono text-center"
+                          />
+                        </div>
+                      </motion.div>
+                    )}
+                  </div>
+
+                  <div className="flex gap-2 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setReminderTx(null)}
+                      className="flex-1 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-[10px] font-black uppercase tracking-wider active:scale-95 transition"
+                    >
+                      İPTAL ET
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleSetReminderSubmit}
+                      className="flex-1 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-[10px] font-black uppercase tracking-wider active:scale-95 transition flex items-center justify-center gap-1"
+                    >
+                      <BellRing className="w-3.5 h-3.5" /> ALARMI KUR
+                    </button>
                   </div>
                 </motion.div>
               </div>

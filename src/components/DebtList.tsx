@@ -412,7 +412,7 @@ export const DebtList: React.FC<DebtListProps> = ({
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as any)}
-            className="px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-extrabold focus:outline-none focus:ring-1 focus:ring-indigo-500 hover:border-slate-350 dark:hover:border-slate-650 transition-colors"
+            className="px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-extrabold focus:outline-none focus:ring-1 focus:ring-indigo-500 hover:border-slate-300 dark:hover:border-slate-700 transition-colors"
           >
             <option value="none">Varsayılan</option>
             <option value="amount_desc">En Yüksek Tutar</option>
@@ -517,8 +517,8 @@ export const DebtList: React.FC<DebtListProps> = ({
                           onClick={() => setCurrentPage(pageNum)}
                           className={`w-8 h-8 rounded-xl transition-all duration-150 flex items-center justify-center cursor-pointer shadow-xs ${
                             activePage === pageNum
-                              ? "bg-indigo-600 text-white shadow-md shadow-indigo-650/20"
-                              : "border border-slate-200/60 dark:border-slate-700/60 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-750"
+                              ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/20"
+                              : "border border-slate-200/60 dark:border-slate-700/60 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
                           }`}
                         >
                           {pageNum}

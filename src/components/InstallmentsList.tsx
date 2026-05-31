@@ -4,7 +4,7 @@
  */
 
 import React, { useState } from "react";
-import { PlusCircle, CalendarDays, Wallet, Edit, Trash2, Calendar, ClipboardList } from "lucide-react";
+import { PlusCircle, CalendarDays, Wallet, Edit, Trash2, Calendar } from "lucide-react";
 import { InstallmentDebt } from "../types";
 import { useCurrency } from "../utils/CurrencyContext";
 import { AdMobBanner } from "./AdMobBanner";
@@ -24,7 +24,7 @@ export const InstallmentsList: React.FC<InstallmentsListProps> = ({
   onPayInstallment,
   isPremium,
 }) => {
-  const { format, currencySymbol } = useCurrency();
+  const { format } = useCurrency();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalTitle, setModalTitle] = useState("Yeni Taksitli Borç Planı");
   const [instId, setInstId] = useState<number | undefined>(undefined);
@@ -129,10 +129,6 @@ export const InstallmentsList: React.FC<InstallmentsListProps> = ({
         <div>🗓️ Bu Ay Ödenmesi Gereken Toplam Taksit: <span className="text-base text-indigo-600 dark:text-indigo-400 block font-mono">{format(currentMonthDue)}</span></div>
       </div>
 
-      {!isPremium && (
-        <AdMobBanner unitType="banner" className="opacity-95 py-1" />
-      )}
-
       <div className="space-y-3">
         {installmentDebts.length === 0 ? (
           <div className="text-center py-8 text-xs text-slate-400 font-medium">
@@ -210,6 +206,10 @@ export const InstallmentsList: React.FC<InstallmentsListProps> = ({
           })
         )}
       </div>
+
+      {!isPremium && (
+        <AdMobBanner unitType="banner" className="opacity-95 py-1" />
+      )}
 
       {/* Installment Add/Edit Modal and Form */}
       {isModalOpen && (

@@ -139,7 +139,7 @@ html:not(.dark) .bg-white {
 html:not(.dark) .bg-slate-50,
 html:not(.dark) .bg-slate-100\/40,
 html:not(.dark) .bg-slate-50\/50 {
-  background-color: #e2e8f0/70 !important;
+  background-color: rgba(226, 232, 240, 0.7) !important;
   border-color: #cbd5e1 !important;
 }
 

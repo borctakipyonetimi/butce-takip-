@@ -142,7 +142,7 @@ export const AdMobBanner: React.FC<AdMobBannerProps> = ({
 
   // Large native visual card layout
   return (
-    <div className={`p-4 bg-white dark:bg-slate-850 rounded-2xl border border-slate-200 dark:border-slate-800 relative shadow-xs ${className}`}>
+    <div className={`p-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 relative shadow-xs ${className}`}>
       <div className="flex items-center justify-between mb-2">
         <span className="px-1.5 py-0.5 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 text-[8px] font-black uppercase tracking-wider rounded border border-indigo-500/15 select-none">
           Sponsorlu Akıllı Kampanya
@@ -161,11 +161,11 @@ export const AdMobBanner: React.FC<AdMobBannerProps> = ({
         {/* Big Ad CTA Visual Bar */}
         <div 
           onClick={handleAdClick}
-          className="p-3 bg-slate-50 hover:bg-slate-100 dark:bg-slate-900 dark:hover:bg-slate-800 rounded-xl border border-dashed border-slate-250 dark:border-slate-800 flex items-center justify-between cursor-pointer transition active:scale-98"
+          className="p-3 bg-slate-50 hover:bg-slate-100 dark:bg-slate-900 dark:hover:bg-slate-800 rounded-xl border border-dashed border-slate-200 dark:border-slate-800 flex items-center justify-between cursor-pointer transition active:scale-98"
         >
           <div className="min-w-0 pr-2">
             <span className="text-[9px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-500 block">Kampanya Detayları</span>
-            <span className="text-[10px] font-extrabold text-indigo-605 text-indigo-500 dark:text-indigo-400 block truncate">{activeOffer.sponsor}</span>
+            <span className="text-[10px] font-extrabold text-indigo-500 dark:text-indigo-400 block truncate">{activeOffer.sponsor}</span>
           </div>
           <span className="text-[10px] font-black uppercase tracking-widest text-white bg-indigo-600 py-1 px-2.5 rounded-lg flex items-center gap-1 shadow-sm shrink-0">
             {activeOffer.cta} <ExternalLink className="w-3 h-3" />

@@ -489,7 +489,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
               {/* Goal Input Controls / Display */}
               <div className="flex items-center gap-2 shrink-0">
                 {isEditingGoal ? (
-                  <div className="flex items-center gap-1 bg-slate-50 dark:bg-slate-900 p-1 rounded-xl border border-slate-200 dark:border-slate-705/60 shadow-inner">
+                  <div className="flex items-center gap-1 bg-slate-50 dark:bg-slate-900 p-1 rounded-xl border border-slate-200 dark:border-slate-700/60 shadow-inner">
                     <span className="text-xs text-indigo-500 font-bold pl-2">{currencySymbol}</span>
                     <input
                       type="number"
@@ -726,11 +726,11 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
                 key={note.id}
                 initial={{ opacity: 0, x: -5 }}
                 animate={{ opacity: 1, x: 0 }}
-                className="flex items-center justify-between gap-3 p-3 bg-slate-50/55 dark:bg-slate-900/30 rounded-2xl border border-slate-100 dark:border-slate-800/40 hover:border-slate-250 dark:hover:border-slate-700 transition"
+                className="flex items-center justify-between gap-3 p-3 bg-slate-50/55 dark:bg-slate-900/30 rounded-2xl border border-slate-100 dark:border-slate-800/40 hover:border-slate-300 dark:hover:border-slate-700 transition"
               >
                 <div className="flex items-center gap-2.5 flex-1 min-w-0">
                   <span className="text-sm select-none shrink-0">📌</span>
-                  <span className="text-xs font-semibold text-slate-700 dark:text-slate-250 leading-relaxed break-all">
+                  <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 leading-relaxed break-all">
                     {note.text}
                   </span>
                 </div>

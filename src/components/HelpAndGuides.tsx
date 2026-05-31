@@ -238,7 +238,7 @@ export const HelpAndGuides: React.FC<HelpAndGuidesProps> = ({ activeTab, onNavig
   return (
     <div className="space-y-6">
       {/* Premium Header Banner */}
-      <div className="p-6 bg-gradient-to-br from-indigo-650 to-indigo-800 text-white rounded-3xl shadow-md border border-indigo-500/30 space-y-3 relative overflow-hidden">
+      <div className="p-6 bg-gradient-to-br from-indigo-600 to-indigo-800 text-white rounded-3xl shadow-md border border-indigo-500/30 space-y-3 relative overflow-hidden">
         <div className="absolute top-0 right-0 p-8 opacity-10 select-none pointer-events-none">
           <Star className="w-32 h-32 text-white animate-spin-slow" />
         </div>
@@ -265,7 +265,7 @@ export const HelpAndGuides: React.FC<HelpAndGuidesProps> = ({ activeTab, onNavig
         <div className="grid gap-3 sm:grid-cols-2">
           {/* Card 1: Debt Tracker */}
           <div className="p-4 bg-slate-50/70 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800 rounded-2xl flex items-start gap-3 hover:border-indigo-100 dark:hover:border-slate-700 transition">
-            <div className="p-2 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-650 dark:text-indigo-400 rounded-xl shrink-0">
+            <div className="p-2 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 rounded-xl shrink-0">
               <Layers className="w-4 h-4" />
             </div>
             <div className="space-y-1">
@@ -278,7 +278,7 @@ export const HelpAndGuides: React.FC<HelpAndGuidesProps> = ({ activeTab, onNavig
 
           {/* Card 2: AI Advisor */}
           <div className="p-4 bg-slate-50/70 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800 rounded-2xl flex items-start gap-3 hover:border-emerald-100 dark:hover:border-slate-700 transition">
-            <div className="p-2 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-650 dark:text-emerald-400 rounded-xl shrink-0">
+            <div className="p-2 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 rounded-xl shrink-0">
               <Zap className="w-4 h-4" />
             </div>
             <div className="space-y-1">
@@ -291,7 +291,7 @@ export const HelpAndGuides: React.FC<HelpAndGuidesProps> = ({ activeTab, onNavig
 
           {/* Card 3: Charts & Statistics */}
           <div className="p-4 bg-slate-50/70 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800 rounded-2xl flex items-start gap-3 hover:border-amber-100 dark:hover:border-slate-700 transition">
-            <div className="p-2 bg-amber-50 dark:bg-amber-950/40 text-amber-650 dark:text-amber-400 rounded-xl shrink-0">
+            <div className="p-2 bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 rounded-xl shrink-0">
               <BarChart3 className="w-4 h-4" />
             </div>
             <div className="space-y-1">
@@ -304,7 +304,7 @@ export const HelpAndGuides: React.FC<HelpAndGuidesProps> = ({ activeTab, onNavig
 
           {/* Card 4: Local Storage Safety */}
           <div className="p-4 bg-slate-50/70 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800 rounded-2xl flex items-start gap-3 hover:border-blue-100 dark:hover:border-slate-700 transition">
-            <div className="p-2 bg-blue-50 dark:bg-blue-950/40 text-blue-650 dark:text-blue-400 rounded-xl shrink-0">
+            <div className="p-2 bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 rounded-xl shrink-0">
               <Lock className="w-4 h-4" />
             </div>
             <div className="space-y-1">
@@ -328,7 +328,7 @@ export const HelpAndGuides: React.FC<HelpAndGuidesProps> = ({ activeTab, onNavig
             <p className="text-[10px] text-slate-400 mt-0.5">Serkan SAĞLAM tarafından MIT Açık Kaynak ile tasarlanmıştır.</p>
           </div>
         </div>
-        <span className="self-start sm:self-center px-2 py-1 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-650 dark:text-indigo-400 border border-indigo-100/50 dark:border-indigo-900/30 text-[10px] font-extrabold rounded-lg">
+        <span className="self-start sm:self-center px-2 py-1 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 border border-indigo-100/50 dark:border-indigo-900/30 text-[10px] font-extrabold rounded-lg">
           React SPA / ESM Engine
         </span>
       </div>

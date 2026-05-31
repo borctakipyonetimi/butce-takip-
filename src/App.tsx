@@ -27,6 +27,8 @@ import {
   Sparkles,
   HelpingHand,
   Clock,
+  Eye,
+  EyeOff,
   Settings,
   RotateCw,
   LayoutDashboard,
@@ -2176,24 +2178,67 @@ export default function App() {
         {/* Right side navigation toolbar / tools */}
         <div className="flex items-center justify-between md:justify-end gap-2.5 sm:gap-3 shrink-0 relative z-10 w-full md:w-auto border-t md:border-t-0 border-white/5 pt-3 md:pt-0">
           <div className="flex items-center gap-2 select-none">
-            {isClockVisible && (
-              <div className="hidden md:flex items-center gap-1.5 bg-black/60 dark:bg-black/80 text-[10px] sm:text-xs font-black font-mono tracking-widest px-3 sm:px-4 py-2 rounded-xl text-emerald-400 border border-white/10 shadow-lg shadow-black/40 select-none animate-clock-pulse">
+            {isClockVisible ? (
+              <div className="hidden md:flex items-center gap-2 bg-black/60 dark:bg-black/80 text-[10px] sm:text-xs font-black font-mono tracking-widest px-3 py-2 rounded-xl text-emerald-400 border border-white/10 shadow-lg shadow-black/40 select-none animate-clock-pulse">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)] inline-block shrink-0 animate-ping duration-[1.5s]" />
                 <span className="bg-gradient-to-r from-emerald-400 to-teal-300 bg-clip-text text-transparent">{liveClock}</span>
+                <button
+                  onClick={() => setIsClockVisible(false)}
+                  title="Saati Gizle ✖"
+                  className="p-1 px-[5px] ml-1 bg-white/5 hover:bg-white/15 hover:text-white rounded-md text-emerald-400 transition cursor-pointer flex items-center justify-center"
+                >
+                  <EyeOff className="w-3 h-3" />
+                </button>
               </div>
+            ) : (
+              <button
+                onClick={() => setIsClockVisible(true)}
+                title="Saati Göster"
+                className="hidden md:flex p-2 bg-white/5 hover:bg-white/10 border border-white/10 text-emerald-400 hover:border-emerald-500/20 active:scale-95 text-[10px] font-black rounded-xl transition-all cursor-pointer items-center gap-1 shrink-0"
+              >
+                <Clock className="w-3.5 h-3.5 select-none animate-pulse" />
+                <span>SAATİ AÇ</span>
+              </button>
             )}
-            
-            <button
-              onClick={() => setIsClockVisible((prev) => !prev)}
-              title="Saati Göster/Gizle"
-              className={`p-2 lg:p-2.5 rounded-xl transition-all duration-300 active:scale-95 flex items-center justify-center border border-white/10 cursor-pointer shrink-0 ${
-                isClockVisible 
-                  ? "bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-600/20" 
-                  : "bg-white/5 hover:bg-white/10 text-slate-300"
+
+            {/* Animated Contacts Directory Logo (Replacing old clock toggle button space) */}
+            <motion.button
+              onClick={() => {
+                setActiveTab("contacts");
+                triggerToast("Cari Hesaplar & Kişi Rehberi Açıldı! 👤📖");
+              }}
+              title="Kişi Rehberi & Cari Hesaplar"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              animate={{
+                y: [0, -2, 0],
+                rotate: [0, -1, 1, 0]
+              }}
+              transition={{
+                duration: 4,
+                repeat: Infinity,
+                ease: "easeInOut"
+              }}
+              className={`p-2 lg:p-2.5 rounded-xl transition-all duration-305 flex items-center justify-center border cursor-pointer shrink-0 relative ${
+                activeTab === "contacts"
+                  ? "bg-indigo-600 border-indigo-500 text-white shadow-lg shadow-indigo-600/20"
+                  : "bg-white/5 border-white/10 hover:bg-white/10 text-slate-300 hover:border-indigo-500/30"
               }`}
             >
-              <Clock className={`w-4 h-4 ${isClockVisible ? "animate-spin [animation-duration:25s]" : ""}`} />
-            </button>
+              {/* Binder spiral rings of directory book */}
+              <div className="absolute left-1.5 top-1.5 bottom-1.5 w-0.5 rounded flex flex-col justify-around py-0.5">
+                <div className="w-1 h-1 bg-indigo-400/80 rounded-full" />
+                <div className="w-1 h-1 bg-indigo-400/80 rounded-full" />
+                <div className="w-1 h-1 bg-indigo-400/80 rounded-full" />
+              </div>
+              
+              <Users className={`w-4 h-4 ml-1 text-indigo-300 group-hover:text-white ${activeTab === "contacts" ? "animate-pulse" : "animate-bounce"}`} style={{ animationDuration: "2.5s" }} />
+              
+              <span className="absolute -top-1 -right-1 flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
+              </span>
+            </motion.button>
 
             <button
               onClick={() => setIsSecurityModalOpen(true)}
@@ -2359,7 +2404,7 @@ export default function App() {
           </div>
 
           {/* Local User Login profile area */}
-          <div className="p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl flex flex-col gap-2 relative overflow-hidden border border-slate-200/55 dark:border-slate-805">
+          <div className="p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl flex flex-col gap-2 relative overflow-hidden border border-slate-200/55 dark:border-slate-800">
             {isQuickLoggingIn ? (
               <div className="py-6 text-center space-y-3">
                 <span className="w-6 h-6 rounded-full border-2 border-indigo-500 border-t-transparent animate-spin inline-block" />
@@ -2377,7 +2422,7 @@ export default function App() {
                     value={loginUsername}
                     onChange={(e) => setLoginUsername(e.target.value)}
                     placeholder="Adınız veya kullanıcı adı"
-                    className="w-full px-3 py-1.5 text-xs bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 border border-slate-200 dark:border-slate-705 rounded-xl focus:outline-none focus:ring-1 focus:ring-indigo-500 font-medium text-center"
+                    className="w-full px-3 py-1.5 text-xs bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-1 focus:ring-indigo-500 font-medium text-center"
                   />
                   <button
                     onClick={handleLogin}
@@ -2445,7 +2490,7 @@ export default function App() {
                       <span className="text-[8px] font-black uppercase text-slate-500 dark:text-slate-400 block">PROFİL RESMİ GÜNCELLE</span>
                       
                       {/* Upload Button */}
-                      <label className="block w-full py-1 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-750 border border-slate-200/80 dark:border-slate-700/80 rounded-lg text-[9px] font-bold text-slate-700 dark:text-slate-350 cursor-pointer transition shadow-xs text-center">
+                      <label className="block w-full py-1 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 border border-slate-200/80 dark:border-slate-700/80 rounded-lg text-[9px] font-bold text-slate-700 dark:text-slate-350 cursor-pointer transition shadow-xs text-center">
                         📸 RESİM SEÇ
                         <input
                           type="file"
@@ -2461,7 +2506,7 @@ export default function App() {
                           "from-amber-400 to-rose-500",
                           "from-blue-500 to-purple-600",
                           "from-emerald-400 to-teal-600",
-                          "from-pink-500 to-red-650",
+                          "from-pink-500 to-red-600",
                           "from-indigo-600 to-slate-800"
                         ].map((grad, i) => (
                           <button
@@ -2501,7 +2546,7 @@ export default function App() {
                         value={loginUsername}
                         onChange={(e) => setLoginUsername(e.target.value)}
                         placeholder="Adınız veya kullanıcı adı"
-                        className="w-full px-3 py-1.5 text-xs bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 border border-slate-205 dark:border-slate-705 rounded-xl focus:outline-none focus:ring-1 focus:ring-indigo-500 font-medium text-center"
+                        className="w-full px-3 py-1.5 text-xs bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-1 focus:ring-indigo-500 font-medium text-center"
                       />
                       <button
                         onClick={handleLogin}
@@ -2696,6 +2741,7 @@ export default function App() {
             currentUser={currentUser}
             format={format}
             triggerToast={triggerToast}
+            onAddAlarm={handleAddAlarm}
           />
         )}
 
