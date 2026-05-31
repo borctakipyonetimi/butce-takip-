@@ -248,7 +248,7 @@ export const ProviderLoginModal: React.FC<ProviderLoginModalProps> = ({
                   GÜVENLİ GİRİŞ PANELİ
                 </h3>
                 <h2 className="text-sm font-black text-slate-800 dark:text-slate-100">
-                  Sosyal Hesap veya E-Posta ile Giriş
+                  E-Posta ile Güvenli Giriş
                 </h2>
               </div>
             </div>
@@ -273,61 +273,8 @@ export const ProviderLoginModal: React.FC<ProviderLoginModalProps> = ({
                     </span>
                   </div>
                   <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed font-semibold">
-                    Kayıtlarınızı güvenle bulutta saklamak ve tüm cihazlarınızla anlık eşitlemek için dilediğiniz sosyal hesabınızla veya e-postanızla giriş yapın:
+                    Kayıtlarınızı güvenle bulutta saklamak ve tüm cihazlarınızla anlık eşitlemek için dilediğiniz e-posta adresi ile giriş yapın:
                   </p>
-                </div>
-
-                {/* Social Login Options (Gmail, Hotmail, Facebook, GitHub) */}
-                <div className="space-y-3 pb-2 bg-slate-50 dark:bg-slate-1000/20 dark:bg-slate-950/40 p-4 rounded-2xl border border-slate-100 dark:border-slate-800">
-                  <div className="text-[10px] font-black uppercase tracking-widest text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                    <span>Hızlı Giriş Seçenekleri</span>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2">
-                    {/* Google/Gmail */}
-                    <button
-                      type="button"
-                      onClick={() => handleSocialLogin("gmail")}
-                      className="py-2.5 px-3 bg-white hover:bg-slate-100 dark:bg-slate-900 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-850 dark:border-slate-800 rounded-xl text-[11px] font-black tracking-wide text-slate-800 dark:text-slate-100 transition duration-200 flex items-center justify-center gap-2 cursor-pointer active:scale-97 shadow-sm"
-                    >
-                      <Chrome className="w-4 h-4 text-rose-500 shrink-0" />
-                      <span>Gmail</span>
-                    </button>
-
-                    {/* Hotmail/Microsoft */}
-                    <button
-                      type="button"
-                      onClick={() => handleSocialLogin("hotmail")}
-                      className="py-2.5 px-3 bg-white hover:bg-slate-100 dark:bg-slate-900 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-850 dark:border-slate-800 rounded-xl text-[11px] font-black tracking-wide text-slate-800 dark:text-slate-100 transition duration-200 flex items-center justify-center gap-2 cursor-pointer active:scale-97 shadow-sm"
-                    >
-                      <Mail className="w-4 h-4 text-blue-500 shrink-0" />
-                      <span>Hotmail</span>
-                    </button>
-
-                    {/* Facebook */}
-                    <button
-                      type="button"
-                      onClick={() => handleSocialLogin("facebook")}
-                      className="py-2.5 px-3 bg-white hover:bg-slate-100 dark:bg-slate-900 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-850 dark:border-slate-800 rounded-xl text-[11px] font-black tracking-wide text-slate-800 dark:text-slate-100 transition duration-200 flex items-center justify-center gap-2 cursor-pointer active:scale-97 shadow-sm"
-                    >
-                      <Facebook className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
-                      <span>Facebook</span>
-                    </button>
-
-                    {/* GitHub */}
-                    <button
-                      type="button"
-                      onClick={() => handleSocialLogin("github")}
-                      className="py-2.5 px-3 bg-white hover:bg-slate-100 dark:bg-slate-900 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-850 dark:border-slate-800 rounded-xl text-[11px] font-black tracking-wide text-slate-800 dark:text-slate-100 transition duration-200 flex items-center justify-center gap-2 cursor-pointer active:scale-97 shadow-sm"
-                    >
-                      <Github className="w-4 h-4 text-slate-800 dark:text-slate-200 shrink-0" />
-                      <span>GitHub</span>
-                    </button>
-                  </div>
-                </div>
-
-                <div className="flex items-center my-3 text-[10px] text-slate-600 dark:text-slate-300 uppercase font-black before:content-[''] before:flex-1 before:border-b before:border-slate-200 dark:before:border-slate-800 before:mr-2 after:content-[''] after:flex-1 after:border-b after:border-slate-200 dark:after:border-slate-800 after:ml-2">
-                  veya Manuel E-Posta ile Giriş
                 </div>
 
                 <form onSubmit={handleNextStep} className="space-y-4">
