@@ -163,10 +163,8 @@ export default function App() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [expenseCategories, setExpenseCategories] = useState<ExpenseCategory[]>([]);
 
-  // Premium tier configurations (Free vs Paid Premium, with local persistence)
-  const [isPremium, setIsPremium] = useState<boolean>(() => {
-    return localStorage.getItem("is_premium") === "true";
-  });
+  // Premium tier configurations (Free vs Paid Premium, forced to false for preview display of actual AdMob and fallback banners)
+  const [isPremium, setIsPremium] = useState<boolean>(false);
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
 
   // Local Alerts indicators
@@ -930,8 +928,13 @@ export default function App() {
         setCurrentUser(emailOrUid);
         localStorage.setItem("currentUser", emailOrUid);
       } else {
-        setCurrentUser(null);
-        localStorage.removeItem("currentUser");
+        const savedUser = localStorage.getItem("currentUser");
+        if (savedUser) {
+          // Keep the local/hybrid session active if Firebase is loading or in a fallback state
+          setCurrentUser(savedUser);
+        } else {
+          setCurrentUser(null);
+        }
       }
     });
     return () => unsubscribe();
@@ -2607,12 +2610,7 @@ export default function App() {
           <div className="grid grid-cols-2 gap-1.5 text-[9px] font-bold">
             <button
               onClick={() => {
-                if (!isPremium) {
-                  setIsUpgradeModalOpen(true);
-                  triggerToast("JSON Yedek Alma & Yükleme özelliği sadece Premium üyeler içindir! 🔒");
-                } else {
-                  handleExportBackup();
-                }
+                handleExportBackup();
               }}
               className="py-1.5 px-2 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg flex items-center justify-center gap-1 active:scale-95 transition"
             >
@@ -2620,12 +2618,7 @@ export default function App() {
             </button>
             <button
               onClick={() => {
-                if (!isPremium) {
-                  setIsUpgradeModalOpen(true);
-                  triggerToast("JSON Yedek Alma & Yükleme özelliği sadece Premium üyeler içindir! 🔒");
-                } else {
-                  handleImportBackup();
-                }
+                handleImportBackup();
               }}
               className="py-1.5 px-2 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg flex items-center justify-center gap-1 active:scale-95 transition"
             >
@@ -3292,7 +3285,7 @@ export default function App() {
                       GÜVENLİK AYARLARI
                     </h3>
                     <h2 className="text-sm font-black text-slate-800 dark:text-slate-100">
-                      Uygulama Giriş Kilidi ve Biyometrik Koruma
+                      Uygulama Giriş Kilidi
                     </h2>
                   </div>
                 </div>

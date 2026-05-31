@@ -189,25 +189,6 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
         </motion.div>
       </div>
 
-      {/* Sponsor / Google AdMob Banner section for free tier */}
-      {!isPremium && (
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="space-y-2"
-        >
-          <AdMobBanner unitType="banner" />
-          <div className="flex justify-end pr-2">
-            <button
-              onClick={onUpgradeClick}
-              className="px-2 py-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 text-amber-500 hover:text-amber-600 dark:text-amber-400 text-[9px] font-black rounded-lg transition shadow-xs cursor-pointer flex items-center gap-1 uppercase tracking-tight"
-            >
-              Reklamları Kaldır 💎 Bütçem Pro'ya Geç
-            </button>
-          </div>
-        </motion.div>
-      )}
-
       {/* 4x Grid Stats */}
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
         <div className="p-4 bg-indigo-600 dark:bg-indigo-950/85 text-white rounded-3xl space-y-1.5 relative overflow-hidden group shadow-md hover:shadow-xl transition-all duration-300 flex flex-col items-center justify-center text-center min-h-[100px]">
@@ -315,6 +296,26 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
           </div>
         </motion.div>
       </div>
+
+      {/* Sponsor / Google AdMob Banner section for free tier - Placed above AI & Alarms section */}
+      {!isPremium && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="space-y-2 pt-2.5 pb-1"
+        >
+          <AdMobBanner unitType="banner" />
+          <div className="flex justify-end pr-2">
+            <button
+              type="button"
+              onClick={onUpgradeClick}
+              className="px-2 py-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 text-amber-500 hover:text-amber-600 dark:text-amber-400 text-[9px] font-black rounded-lg transition shadow-xs cursor-pointer flex items-center gap-1 uppercase tracking-tight"
+            >
+              Reklamları Kaldır 💎 Bütçem Pro'ya Geç
+            </button>
+          </div>
+        </motion.div>
+      )}
 
       {/* Dynamic CTA Encouragement banner - Premium Animated Mesh Banner */}
       <div className="banner-premium-gradient p-6 sm:p-8 rounded-3xl text-white space-y-5 relative overflow-hidden shadow-2xl border border-indigo-500/20 group hover:shadow-indigo-950/20 transition-all duration-500">

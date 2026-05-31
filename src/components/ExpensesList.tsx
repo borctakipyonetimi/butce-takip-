@@ -550,11 +550,7 @@ export const ExpensesList: React.FC<ExpensesListProps> = ({
           </button>
           <button
             onClick={() => {
-              if (!isPremium) {
-                if (onUpgradeClick) onUpgradeClick();
-              } else {
-                setIsScannerOpen(true);
-              }
+              setIsScannerOpen(true);
             }}
             className="px-3.5 py-1.5 bg-indigo-600 text-white hover:bg-indigo-700 text-xs font-bold rounded-xl flex items-center gap-1.5 transition active:scale-95 shadow-sm cursor-pointer"
           >

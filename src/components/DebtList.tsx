@@ -263,11 +263,7 @@ export const DebtList: React.FC<DebtListProps> = ({
 
   // Plain HTML Print & PDF trigger functions
   const handlePrint = (isPdf = false) => {
-    if (!isPremium) {
-      if (onUpgradeClick) onUpgradeClick();
-      return;
-    }
-
+    // Bypassed premium block so everyone can use PDF exports
     const filtered = filteredDebts;
     if (filtered.length === 0) {
       alert("Yazdırılacak borç kaydı bulunamadı.");
@@ -364,11 +360,7 @@ export const DebtList: React.FC<DebtListProps> = ({
           </button>
           <button
             onClick={() => {
-              if (!isPremium) {
-                if (onUpgradeClick) onUpgradeClick();
-              } else {
-                setIsScannerOpen(true);
-              }
+              setIsScannerOpen(true);
             }}
             className="px-3 py-1.5 bg-indigo-600/10 border border-indigo-500/25 text-indigo-600 dark:text-indigo-400 rounded-xl text-xs font-bold flex items-center gap-1 hover:bg-indigo-600/20 transition cursor-pointer"
           >
