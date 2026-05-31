@@ -1829,7 +1829,7 @@ export default function App() {
     { id: "monthly", label: "AYLIK TAKİP", icon: Calendar },
     { id: "yearly", label: "YILLIK TAKİP", icon: Activity },
     { id: "debts", label: "BORÇ LİSTESİ", icon: Coins },
-    { id: "contacts", label: "REHBER & ALACAK/VERECEK", icon: Users },
+    { id: "contacts", label: "KİŞİ ALACAK/VERECEK", icon: Users },
     { id: "income", label: "GELİRLER", icon: Wallet },
     { id: "expenses", label: "GİDERLER", icon: ShoppingCart },
     { id: "installments", label: "TAKSİTLİ BORÇLAR", icon: Calendar },
@@ -2140,7 +2140,7 @@ export default function App() {
                   </svg>
                 </span>
                 <span>
-                  BORÇ <span className="text-indigo-400 font-extrabold">TAKİP</span>
+                  BÜTÇEM
                 </span> 
                 <span className="text-[9px] sm:text-[10px] md:text-xs px-2 py-0.5 bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 rounded-lg font-black tracking-widest uppercase animate-pulse">
                   PRO
@@ -2702,6 +2702,7 @@ export default function App() {
           <ContactsDebtPanel
             currentUser={currentUser}
             format={format}
+            triggerToast={triggerToast}
           />
         )}
 
@@ -2736,6 +2737,7 @@ export default function App() {
             onSaveInstallment={handleSaveInstallment}
             onDeleteInstallment={handleDeleteInstallment}
             onPayInstallment={handlePayInstallment}
+            isPremium={isPremium}
           />
         )}
 

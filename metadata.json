@@ -1,5 +1,5 @@
 {
-  "name": "Borç Takip Sistemi",
+  "name": "Bütçem Pro",
   "description": "Yapay zeka asistanlı ve gelişmiş bütçe yönetimli, kategorili borç ve gelir/gider takip uygulaması.",
   "requestFramePermissions": ["camera"],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]

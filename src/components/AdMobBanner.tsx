@@ -82,14 +82,14 @@ export const AdMobBanner: React.FC<AdMobBannerProps> = ({
   if (!adSenseFailed) {
     return (
       <div className={`w-full overflow-hidden ${className}`}>
-        <div className="bg-slate-50/70 dark:bg-slate-900/60 p-1.5 rounded-2xl border border-slate-200/50 dark:border-slate-800 text-center relative">
-          <div className="text-[7.5px] font-black pointer-events-none tracking-widest text-slate-400 dark:text-slate-500 uppercase pb-1 text-center select-none">
+        <div className="bg-slate-50/50 dark:bg-slate-900/40 p-1 rounded-xl border border-slate-200/40 dark:border-slate-800/60 text-center relative">
+          <div className="text-[7px] font-bold pointer-events-none tracking-widest text-slate-400 dark:text-slate-500 uppercase text-center select-none">
             REKLAM / SPONSORLU İÇERİK
           </div>
           {/* Official Google adsbygoogle container using user's Client ID & Slot token */}
           <ins
-            className="adsbygoogle block"
-            style={{ display: "block", minHeight: "65px", width: "100%" }}
+            className="adsbygoogle block animate-pulse"
+            style={{ display: "block", minHeight: "50px", width: "100%" }}
             data-ad-client="ca-pub-4449700232321088"
             data-ad-slot="7540463727"
             data-ad-format="auto"
@@ -104,38 +104,35 @@ export const AdMobBanner: React.FC<AdMobBannerProps> = ({
   if (unitType === "banner") {
     return (
       <div className={`w-full overflow-hidden ${className}`}>
-        <div className="relative p-3 bg-gradient-to-r from-slate-50 to-slate-100/60 dark:from-slate-900/60 dark:to-slate-900/10 rounded-2xl border border-slate-200/60 dark:border-slate-800/80 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3 animate-fade-in">
-          <div className="flex items-center gap-3 w-full sm:w-auto">
-            {/* Tiny premium visual value badge */}
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-500 to-emerald-400 text-white font-black text-xs flex items-center justify-center shadow-xs shrink-0 select-none uppercase">
-              %1.99
+        <div className="relative p-1.5 px-3 bg-gradient-to-r from-slate-50 to-slate-100/60 dark:from-slate-900/65 dark:to-slate-900/20 rounded-xl border border-slate-200/50 dark:border-slate-800 shadow-xs flex items-center justify-between gap-2.5 animate-fade-in min-h-[50px]">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            {/* Extremely compact value badge */}
+            <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-indigo-500 to-emerald-400 text-white font-black text-[9px] flex items-center justify-center shadow-xs shrink-0 select-none uppercase">
+              %1.9
             </div>
 
-            <div className="min-w-0 flex-1 sm:flex-initial text-left">
-              <div className="flex items-center gap-1.5">
-                <span className="px-1.5 py-0.5 bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[7px] font-black uppercase tracking-wider rounded border border-amber-500/15 select-none">
+            <div className="min-w-0 flex-1 text-left leading-none">
+              <div className="flex items-center gap-1">
+                <span className="px-1 py-0.2 bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[6.5px] font-black uppercase tracking-wider rounded border border-amber-500/15 select-none">
                   Sponsorlu
                 </span>
-                <span className="text-[9px] text-slate-400 dark:text-slate-500 font-bold truncate">
+                <span className="text-[8.5px] text-slate-400 dark:text-slate-500 font-bold truncate">
                   {activeOffer.sponsor}
                 </span>
               </div>
-              <h4 className="text-xs font-extrabold text-slate-800 dark:text-slate-100 mt-0.5 truncate leading-tight">
+              <h4 className="text-[10px] font-extrabold text-slate-800 dark:text-slate-100 mt-0.5 truncate max-w-xs">
                 {activeOffer.title}
               </h4>
-              <p className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold truncate leading-none mt-1">
-                {activeOffer.desc}
-              </p>
             </div>
           </div>
 
-          <div className="shrink-0 w-full sm:w-auto text-right">
+          <div className="shrink-0">
             <button
               onClick={handleAdClick}
-              className="w-full sm:w-auto py-1.5 px-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-[9.5px] font-black uppercase tracking-wider transition active:scale-95 flex items-center justify-center gap-1 shadow-sm shadow-indigo-600/15 cursor-pointer"
+              className="py-1 px-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md text-[8.5px] font-black uppercase tracking-tight transition active:scale-95 flex items-center gap-0.5 shadow-sm shadow-indigo-600/15 cursor-pointer leading-none"
             >
               <span>{activeOffer.cta}</span>
-              <ExternalLink className="w-3 h-3" />
+              <ExternalLink className="w-2.5 h-2.5" />
             </button>
           </div>
         </div>

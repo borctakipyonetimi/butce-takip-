@@ -7,12 +7,14 @@ import React, { useState } from "react";
 import { PlusCircle, CalendarDays, Wallet, Edit, Trash2, Calendar, ClipboardList } from "lucide-react";
 import { InstallmentDebt } from "../types";
 import { useCurrency } from "../utils/CurrencyContext";
+import { AdMobBanner } from "./AdMobBanner";
 
 interface InstallmentsListProps {
   installmentDebts: InstallmentDebt[];
   onSaveInstallment: (inst: Partial<InstallmentDebt>) => void;
   onDeleteInstallment: (id: number) => void;
   onPayInstallment: (id: number) => void;
+  isPremium?: boolean;
 }
 
 export const InstallmentsList: React.FC<InstallmentsListProps> = ({
@@ -20,6 +22,7 @@ export const InstallmentsList: React.FC<InstallmentsListProps> = ({
   onSaveInstallment,
   onDeleteInstallment,
   onPayInstallment,
+  isPremium,
 }) => {
   const { format, currencySymbol } = useCurrency();
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -125,6 +128,10 @@ export const InstallmentsList: React.FC<InstallmentsListProps> = ({
         <div>💰 Toplam Kalan Taksit Borç Yükü: <span className="text-base text-rose-500 block font-mono">{format(totalRemaining)}</span></div>
         <div>🗓️ Bu Ay Ödenmesi Gereken Toplam Taksit: <span className="text-base text-indigo-600 dark:text-indigo-400 block font-mono">{format(currentMonthDue)}</span></div>
       </div>
+
+      {!isPremium && (
+        <AdMobBanner unitType="banner" className="opacity-95 py-1" />
+      )}
 
       <div className="space-y-3">
         {installmentDebts.length === 0 ? (

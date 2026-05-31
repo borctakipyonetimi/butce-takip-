@@ -51,11 +51,13 @@ interface ContactTransaction {
 interface ContactsDebtPanelProps {
   currentUser: string | null;
   format: (amount: number) => string;
+  triggerToast?: (msg: string) => void;
 }
 
 export const ContactsDebtPanel: React.FC<ContactsDebtPanelProps> = ({
   currentUser,
-  format
+  format,
+  triggerToast
 }) => {
   const spaceKey = currentUser ? `user_${currentUser}` : "user_anonymous";
 
@@ -64,6 +66,18 @@ export const ContactsDebtPanel: React.FC<ContactsDebtPanelProps> = ({
   const [transactions, setTransactions] = useState<ContactTransaction[]>([]);
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+
+  // Simulated picker States
+  const [isSimulatedPickerOpen, setIsSimulatedPickerOpen] = useState(false);
+  const [simulatedSearchText, setSimulatedSearchText] = useState("");
+
+  const showLocalToast = (msg: string) => {
+    if (triggerToast) {
+      triggerToast(msg);
+    } else {
+      alert(msg);
+    }
+  };
 
   // Create Contact Form States
   const [newContactName, setNewContactName] = useState("");
@@ -151,6 +165,86 @@ export const ContactsDebtPanel: React.FC<ContactsDebtPanelProps> = ({
     setIsAddingContact(false);
     setNewContactName("");
     setNewContactPhone("");
+  };
+
+  // Directory / simulated device contact list
+  const simulatedDeviceContacts = [
+    { name: "Serkan Sağlam", phone: "0532 999 1122", category: "work" as const },
+    { name: "Ayşe Yılmaz", phone: "0543 111 2233", category: "friend" as const },
+    { name: "Canan Demir", phone: "0555 444 5566", category: "family" as const },
+    { name: "Esra Tekin", phone: "0533 555 4433", category: "friend" as const },
+    { name: "Bülent Avcı", phone: "0542 333 4455", category: "work" as const },
+    { name: "Ali Kaya", phone: "0551 222 3344", category: "other" as const },
+    { name: "Fatma Nur", phone: "0532 888 7766", category: "family" as const },
+    { name: "Mustafa Koç", phone: "0505 555 1212", category: "work" as const },
+    { name: "Zeynep Aslan", phone: "0552 999 8877", category: "friend" as const },
+    { name: "Emre Şahin", phone: "0541 666 5544", category: "other" as const },
+    { name: "Merve Doğan", phone: "0533 111 9988", category: "family" as const }
+  ];
+
+  const handleSelectFromDeviceContacts = async () => {
+    if (typeof window !== "undefined" && "contacts" in navigator && "select" in (navigator as any).contacts) {
+      try {
+        const props = ["name", "tel"];
+        const opts = { multiple: false };
+        const contactsSelected = await (navigator as any).contacts.select(props, opts);
+        if (contactsSelected && contactsSelected.length > 0) {
+          const deviceContact = contactsSelected[0];
+          const selectedName = deviceContact.name?.[0] || "";
+          const selectedPhone = deviceContact.tel?.[0] || "";
+          if (selectedName) {
+            importContactToForm(selectedName, selectedPhone);
+            showLocalToast("Kişi bilgileri akıllı rehberden çekildi! 📱");
+            return;
+          }
+        }
+      } catch (err) {
+        console.warn("Native Contacts Select API canceled or errored", err);
+      }
+    }
+    // Open high fidelity address book mockup popup
+    setIsSimulatedPickerOpen(true);
+  };
+
+  const importContactToForm = (name: string, phone: string, cat?: "friend" | "family" | "work" | "other") => {
+    setNewContactName(name);
+    setNewContactPhone(phone || "Belirtilmemiş 📞");
+    if (cat) setNewContactCategory(cat);
+    setIsAddingContact(true);
+  };
+
+  const handleSimulatedSelect = (simulated: typeof simulatedDeviceContacts[0]) => {
+    const gradients = [
+      "from-emerald-500 to-teal-600",
+      "from-indigo-500 to-indigo-700",
+      "from-amber-500 to-orange-600",
+      "from-pink-500 to-rose-600",
+      "from-sky-500 to-blue-700",
+      "from-purple-500 to-fuchsia-700"
+    ];
+    const randomGrad = gradients[Math.floor(Math.random() * gradients.length)];
+
+    // Check if duplicate contact already exists
+    const isDuplicate = contacts.some(c => c.name.toLowerCase() === simulated.name.toLowerCase());
+    if (isDuplicate) {
+      showLocalToast(`"${simulated.name}" zaten listenizde kayıtlı! ⚠️`);
+      setIsSimulatedPickerOpen(false);
+      return;
+    }
+
+    const added: Contact = {
+      id: "cont_" + Date.now(),
+      name: simulated.name,
+      phone: simulated.phone,
+      category: simulated.category,
+      avatarColor: randomGrad,
+      createdAt: new Date().toISOString()
+    };
+
+    const updated = [added, ...contacts];
+    saveContactsData(updated);
+    setIsSimulatedPickerOpen(false);
+    showLocalToast(`${simulated.name} rehberden başarıyla eklendi! 📱🎉`);
   };
 
   // Delete Contact Handler
@@ -274,7 +368,7 @@ export const ContactsDebtPanel: React.FC<ContactsDebtPanelProps> = ({
           <Users className="w-7 h-7" />
         </div>
         <h2 className="text-base font-black text-slate-800 dark:text-slate-100 uppercase tracking-wide">
-          👥 Rehber Kişi Alacak & Verecek Portalı
+          👥 Kişi Alacak & Verecek Defteri
         </h2>
         <p className="text-xs text-slate-600 dark:text-slate-350 max-w-xl font-medium leading-relaxed">
           Borç verdiğiniz arkadaşlarınızı, ödeme bekleyen müşterilerinizi veya borçlu olduğunuz akrabalarınızı akıllı rehber ile gruplayın. Her kişi için bağımsız veri geçmişi tutun.
@@ -460,18 +554,29 @@ export const ContactsDebtPanel: React.FC<ContactsDebtPanelProps> = ({
         
         {/* Left Side: Directory Contact List (5/12 columns) */}
         <div className="lg:col-span-5 space-y-3">
-          <div className="flex items-center justify-between">
-            <h3 className="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-dashed border-slate-200 dark:border-slate-800 pb-2.5">
+            <h3 className="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-slate-200 flex items-center gap-1.5 shrink-0">
               <Users className="w-4 h-4 text-indigo-500" />
               Kişi Listesi ({contacts.length})
             </h3>
 
-            <button
-              onClick={() => setIsAddingContact((prev) => !prev)}
-              className="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-[10px] font-black uppercase tracking-wider flex items-center gap-1 transition-all active:scale-95 cursor-pointer shadow-sm"
-            >
-              <UserPlus className="w-3 h-3" /> Ekle
-            </button>
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={handleSelectFromDeviceContacts}
+                type="button"
+                className="px-2 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[9px] font-black uppercase tracking-wider flex items-center gap-1 transition-all active:scale-95 cursor-pointer shadow-sm shadow-emerald-600/15"
+                title="Cihaz rehberinizden ya da hazır listeden hızlıca kişi aktarın"
+              >
+                <Phone className="w-3 h-3 text-emerald-200 animate-pulse" /> REHBERDEN SEÇ 📱
+              </button>
+              <button
+                onClick={() => setIsAddingContact((prev) => !prev)}
+                type="button"
+                className="px-2 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-[9px] font-black uppercase tracking-wider flex items-center gap-1 transition-all active:scale-95 cursor-pointer shadow-sm shadow-indigo-600/15"
+              >
+                <UserPlus className="w-3 h-3 text-indigo-200" /> MANUEL EKLE
+              </button>
+            </div>
           </div>
 
           {/* Inline Add Contact Form */}
@@ -487,7 +592,7 @@ export const ContactsDebtPanel: React.FC<ContactsDebtPanelProps> = ({
                   onSubmit={handleAddContactSubmit}
                   className="p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-200/60 dark:border-slate-800 space-y-3"
                 >
-                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-700 dark:text-slate-350 block">👥 REHBERE YENİ KİŞİ EKLE</span>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-700 dark:text-slate-350 block">👥 YENİ KİŞİ EKLE</span>
                   
                   <div className="space-y-1">
                     <label className="text-[9px] font-black text-slate-500 uppercase tracking-wider block">Kişi Adı Soyadı</label>
@@ -874,6 +979,84 @@ export const ContactsDebtPanel: React.FC<ContactsDebtPanelProps> = ({
                     Borç hareketlerini, vade dökümünü ve detaylı finansal notlarını incelemek için sol paneldeki rehberden dilediğiniz bir kişiyi seçin.
                   </p>
                 </div>
+              </div>
+            )}
+          </AnimatePresence>
+
+          {/* Simulated Device Contact List Modal Overlay */}
+          <AnimatePresence>
+            {isSimulatedPickerOpen && (
+              <div className="fixed inset-0 bg-black/70 backdrop-blur-xs z-[9999] flex items-center justify-center p-4">
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95, y: 15 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95, y: 15 }}
+                  className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl max-w-md w-full p-6 space-y-4 max-h-[90vh] flex flex-col overflow-hidden text-left"
+                >
+                  <div className="flex items-center justify-between border-b dark:border-slate-800 pb-3">
+                    <div>
+                      <h3 className="text-sm font-black text-slate-805 dark:text-slate-100 flex items-center gap-1.5 uppercase">
+                        📱 TELEFON REHBERİNDEN SEÇ
+                      </h3>
+                      <p className="text-[10px] text-slate-400 font-bold">Kişilerinizi bir tıkla alacak/verecek dökümünüze aktarın</p>
+                    </div>
+                    <button
+                      onClick={() => setIsSimulatedPickerOpen(false)}
+                      type="button"
+                      className="p-1 px-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 hover:text-rose-500 rounded-lg text-xs font-black cursor-pointer transition active:scale-90"
+                    >
+                      KAPAT ✖
+                    </button>
+                  </div>
+
+                  {/* Search filter for simulated contacts */}
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={simulatedSearchText}
+                      onChange={(e) => setSimulatedSearchText(e.target.value)}
+                      placeholder="Rehberde kişi arayın... 🔎"
+                      className="w-full pl-9 pr-4 py-2 bg-slate-50 dark:bg-slate-950 text-xs text-slate-800 dark:text-white border border-slate-200 dark:border-slate-850 rounded-xl focus:outline-none focus:ring-1 focus:ring-indigo-500 font-semibold"
+                    />
+                    <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                  </div>
+
+                  {/* Contacts Row selection */}
+                  <div className="space-y-1.5 overflow-y-auto flex-1 pr-1 max-h-80">
+                    {simulatedDeviceContacts
+                      .filter((sim) =>
+                        sim.name.toLowerCase().includes(simulatedSearchText.toLowerCase()) ||
+                        sim.phone.includes(simulatedSearchText)
+                      )
+                      .map((sim, idx) => (
+                        <div
+                          key={idx}
+                          onClick={() => handleSimulatedSelect(sim)}
+                          className="p-2.5 bg-slate-50 hover:bg-indigo-50/50 dark:bg-slate-950/40 dark:hover:bg-indigo-950/30 rounded-2xl border border-slate-200/50 dark:border-slate-800/85 transition flex items-center justify-between cursor-pointer group hover:border-indigo-500/50 active:scale-[0.99] font-sans"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-500 to-sky-450 text-white font-black text-xs flex items-center justify-center uppercase shadow-xs">
+                              {sim.name.charAt(0)}
+                            </div>
+                            <div>
+                              <h4 className="text-[11.5px] font-black text-slate-800 dark:text-slate-100 leading-tight">
+                                {sim.name}
+                              </h4>
+                              <p className="text-[10px] text-slate-400 font-mono">
+                                📞 {sim.phone}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            <span className="text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-lg bg-indigo-500/10 text-indigo-500 border border-indigo-500/15 group-hover:bg-indigo-600 group-hover:text-white transition-all duration-300">
+                              Hızlı Ekle ➔
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                </motion.div>
               </div>
             )}
           </AnimatePresence>

@@ -280,7 +280,7 @@ export const DebtList: React.FC<DebtListProps> = ({
     const html = `
       <html>
         <head>
-          <title>Borç Takip Sistemi Raporu</title>
+          <title>Bütçem Pro Raporu</title>
           <style>
             body { font-family: sans-serif; padding: 25px; color: #1e293b; }
             h2 { color: #0f172a; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; }
@@ -328,7 +328,7 @@ export const DebtList: React.FC<DebtListProps> = ({
               </tr>
             </tbody>
           </table>
-          <p class="footer">Borç Takip Sistemi | Serkan SAĞLAM | v5.0 Ultimate</p>
+          <p class="footer">Bütçem Pro Finans Yönetim Sistemi | Serkan SAĞLAM | v5.0 Ultimate</p>
         </body>
       </html>
     `;
