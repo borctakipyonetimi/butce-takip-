@@ -842,8 +842,8 @@ export default function App() {
   const [selectedProvider, setSelectedProvider] = useState<"google" | null>(null);
 
   useEffect(() => {
-    const totalDuration = 1000; // Ultra-fast 1 second loading for optimum stability and responsiveness
-    const intervalTime = 20;
+    const totalDuration = 2200; // Smoother 2.2 second professional tech loading flow
+    const intervalTime = 25;
     const steps = totalDuration / intervalTime;
     let currentStep = 0;
 
@@ -1939,28 +1939,103 @@ export default function App() {
               
               {/* Splendid Title Card */}
               <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, ease: "easeOut" }}
-                className="space-y-1"
+                initial="hidden"
+                animate="visible"
+                variants={{
+                  hidden: { opacity: 0 },
+                  visible: {
+                    opacity: 1,
+                    transition: { staggerChildren: 0.08 }
+                  }
+                }}
+                className="space-y-3 select-none"
               >
-                <h1 className="text-3xl sm:text-4xl font-black tracking-widest bg-gradient-to-r from-indigo-200 via-white to-emerald-300 bg-clip-text text-transparent uppercase drop-shadow-[0_4px_12px_rgba(0,0,0,0.5)]">
-                  BÜTÇEM PRO
-                </h1>
-                <p className="text-[10px] text-slate-400 font-extrabold uppercase tracking-widest flex items-center justify-center gap-1.5">
-                  <span>💡 LİMİTSİZ YÖNETİM</span>
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                  <span>AI DESTEKLİ</span>
-                </p>
+                <div className="flex items-center justify-center gap-1 sm:gap-1.5 font-black text-3xl sm:text-4xl tracking-tight drop-shadow-[0_0_15px_rgba(99,102,241,0.55)]">
+                  {"BÜTÇEM".split("").map((char, index) => (
+                    <motion.span
+                      key={`butcem-${index}`}
+                      variants={{
+                        hidden: { opacity: 0, y: -25, rotateY: 90, scale: 0.5 },
+                        visible: { opacity: 1, y: 0, rotateY: 0, scale: 1 }
+                      }}
+                      transition={{ type: "spring", stiffness: 220, damping: 11 }}
+                      className="bg-gradient-to-b from-white via-slate-100 to-indigo-250 bg-clip-text text-transparent inline-block font-black"
+                    >
+                      {char}
+                    </motion.span>
+                  ))}
+                  
+                  <span className="w-2" />
+
+                  {"PRO".split("").map((char, index) => (
+                    <motion.span
+                      key={`pro-${index}`}
+                      variants={{
+                        hidden: { opacity: 0, y: 25, scale: 1.4, filter: "blur(4px)" },
+                        visible: { opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }
+                      }}
+                      transition={{ type: "spring", stiffness: 280, damping: 9, delay: 0.4 }}
+                      style={{ textShadow: "0 0 12px rgba(52,211,153,0.75)" }}
+                      className="bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent inline-block font-black"
+                    >
+                      {char}
+                    </motion.span>
+                  ))}
+                </div>
+
+                <motion.div
+                  initial={{ scaleX: 0, opacity: 0 }}
+                  animate={{ scaleX: 1, opacity: 1 }}
+                  transition={{ delay: 0.7, duration: 0.5, ease: "easeOut" }}
+                  className="w-44 h-[1.5px] bg-gradient-to-r from-transparent via-emerald-400 to-transparent mx-auto relative"
+                >
+                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-2 h-2 bg-emerald-300 rounded-full blur-[2px] animate-ping" />
+                </motion.div>
+
+                {/* Animated and highly professional Bütçe Takip Sub-heading */}
+                <motion.div
+                  initial={{ opacity: 0, y: 15 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.8, duration: 0.5, type: "spring" }}
+                  className="space-y-1 flex flex-col items-center justify-center"
+                >
+                  <p className="text-[11px] sm:text-xs font-black tracking-[0.25em] text-emerald-400 uppercase drop-shadow-[0_0_8px_rgba(52,211,153,0.35)]">
+                    PROFESYONEL BÜTÇE TAKİBİ
+                  </p>
+                  
+                  <motion.p
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: 0.9, duration: 0.4 }}
+                    className="text-[9px] text-slate-400 font-extrabold uppercase tracking-[0.2em] flex items-center justify-center gap-1.5"
+                  >
+                    <span>💡 LİMİTSİZ YÖNETİM</span>
+                    <span className="w-1 h-1 rounded-full bg-emerald-400 animate-pulse" />
+                    <span>AI DESTEKLİ MOTOR</span>
+                  </motion.p>
+                </motion.div>
               </motion.div>
 
               {/* Progress Slider */}
               <div className="space-y-3 pt-1">
-                <div className="w-full h-2 bg-slate-900/90 rounded-full overflow-hidden border border-white/5 relative">
-                  <div 
-                    className="h-full bg-gradient-to-r from-indigo-500 via-purple-500 to-emerald-400 rounded-full transition-all duration-150 ease-out"
-                    style={{ width: `${splashProgress}%` }}
-                  />
+                <div className="w-full h-3 bg-slate-900/95 rounded-full border border-white/10 relative p-[2px] overflow-hidden">
+                  {/* Glowing ambient flow back track */}
+                  <div className="absolute inset-x-0 h-full bg-gradient-to-r from-indigo-500/5 via-purple-500/5 to-emerald-400/5" />
+                  
+                  <motion.div 
+                    className="h-full rounded-full relative flex items-center justify-end"
+                    initial={{ width: "4%" }}
+                    animate={{ width: `${Math.max(4, splashProgress)}%` }}
+                    transition={{ type: "tween", ease: "linear", duration: 0.05 }}
+                    style={{ 
+                      background: "linear-gradient(90deg, #4f46e5 0%, #a855f7 50%, #10b981 100%)"
+                    }}
+                  >
+                    {/* Glowing front lead cursor tip */}
+                    {splashProgress > 1 && (
+                      <span className="w-1.5 h-1.5 mr-0.5 rounded-full bg-white shadow-[0_0_8px_#ffffff] shrink-0 inline-block animate-pulse" />
+                    )}
+                  </motion.div>
                 </div>
                 
                 <div className="flex items-center justify-between text-[10px] font-bold text-slate-400 px-1">
@@ -1968,44 +2043,44 @@ export default function App() {
                     <span className="w-1 h-1 rounded-full bg-indigo-400 animate-ping inline-block" />
                     {splashStatus}
                   </span>
-                  <span className="font-mono font-bold text-indigo-300 bg-indigo-950/60 px-2 py-0.5 rounded-md border border-indigo-500/10">{splashProgress}%</span>
+                  <span className="font-mono font-bold text-indigo-300 bg-indigo-950/60 px-2 py-0.5 rounded-md border border-indigo-500/10 shadow-md">{splashProgress}%</span>
                 </div>
               </div>
 
               {/* Real-time Loading Systems Checklist */}
-              <div className="bg-slate-900/60 p-3.5 rounded-2xl border border-white/5 space-y-2 text-left max-w-xs mx-auto text-[10px] font-bold tracking-wider">
+              <div className="bg-slate-900/60 p-3.5 rounded-2xl border border-white/5 space-y-2.5 text-left max-w-xs mx-auto text-[10px] font-bold tracking-wider">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <span>{splashProgress >= 30 ? "🔒" : "⏳"}</span>
+                    <span className="text-xs">{splashProgress >= 30 ? "⚡" : "⏳"}</span>
                     <span className={splashProgress >= 30 ? "text-slate-400 line-through decoration-emerald-500/50" : "text-slate-300"}>
-                      VERİ TABANI ŞİFRELEME
+                      GÜVENLİ VERİ YAPILANDIRMASI
                     </span>
                   </div>
-                  <span className={splashProgress >= 30 ? "text-emerald-400 font-extrabold" : "text-indigo-400 animate-pulse"}>
-                    {splashProgress >= 30 ? "BAŞARILI ✓" : "YÜKLENİYOR"}
+                  <span className={splashProgress >= 30 ? "text-emerald-400 font-extrabold flex items-center gap-1" : "text-indigo-400 animate-pulse font-extrabold"}>
+                    {splashProgress >= 30 ? "TAMAMLANDI ✓" : "YAPILANDIRILIYOR..."}
                   </span>
                 </div>
                 
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <span>{splashProgress >= 65 ? "🤖" : "⏳"}</span>
+                    <span className="text-xs">{splashProgress >= 65 ? "🧠" : "⏳"}</span>
                     <span className={splashProgress >= 65 ? "text-slate-400 line-through decoration-emerald-500/50" : "text-slate-300"}>
-                      AI FİNANS ANALİZ MOTORU
+                      AKILLI FİNANS MOTORU
                     </span>
                   </div>
-                  <span className={splashProgress >= 65 ? "text-emerald-400 font-extrabold" : splashProgress >= 30 ? "text-indigo-400 animate-pulse" : "text-slate-500"}>
+                  <span className={splashProgress >= 65 ? "text-emerald-400 font-extrabold flex items-center gap-1" : splashProgress >= 30 ? "text-indigo-400 animate-pulse font-extrabold" : "text-slate-500"}>
                     {splashProgress >= 65 ? "HAZIR ✓" : splashProgress >= 30 ? "YÜKLENİYOR" : "BEKLENİYOR"}
                   </span>
                 </div>
 
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <span>{splashProgress >= 90 ? "🔔" : "⏳"}</span>
+                    <span className="text-xs">{splashProgress >= 90 ? "📡" : "⏳"}</span>
                     <span className={splashProgress >= 90 ? "text-slate-400 line-through decoration-emerald-500/50" : "text-slate-300"}>
-                      BİLDİRİM & ALARM SİNYALLERİ
+                      PUSH ALARM SUNUCUSU
                     </span>
                   </div>
-                  <span className={splashProgress >= 90 ? "text-emerald-400 font-extrabold" : splashProgress >= 65 ? "text-indigo-400 animate-pulse" : "text-slate-500"}>
+                  <span className={splashProgress >= 90 ? "text-emerald-400 font-extrabold flex items-center gap-1" : splashProgress >= 65 ? "text-indigo-400 animate-pulse font-extrabold" : "text-slate-500"}>
                     {splashProgress >= 90 ? "BAĞLANDI ✓" : splashProgress >= 65 ? "YÜKLENİYOR" : "BEKLENİYOR"}
                   </span>
                 </div>
@@ -2124,8 +2199,8 @@ export default function App() {
         <div className="absolute bottom-[-20%] left-[2%] w-56 h-16 bg-emerald-500/5 rounded-full blur-2xl pointer-events-none" />
         
         {/* Inner layout for logo and title */}
-        <div className="flex items-center justify-between md:justify-start gap-4 min-w-0 relative z-10 w-full md:w-auto">
-          <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+        <div className="flex items-center justify-between gap-3 sm:gap-4 min-w-0 relative z-10 w-full md:w-auto">
+          <div className="flex items-center gap-2 sm:gap-4 min-w-0">
             <button
               onClick={() => setIsSidebarOpen((prev) => !prev)}
               className="p-2 sm:p-2.5 shrink-0 focus:outline-none bg-white/[0.04] hover:bg-white/[0.1] active:scale-95 rounded-2xl border border-white/10 transition-all cursor-pointer flex items-center justify-center shadow-md shadow-black/30"
@@ -2135,9 +2210,9 @@ export default function App() {
             </button>
             
             <div className="space-y-1 min-w-0">
-              <h1 className="text-lg sm:text-2xl md:text-2xl lg:text-3xl font-black tracking-normal flex items-center select-none whitespace-nowrap gap-2 sm:gap-3 leading-none bg-gradient-to-r from-white via-slate-100 to-indigo-100 bg-clip-text text-transparent">
+              <h1 className="text-lg sm:text-2xl md:text-2xl lg:text-3xl font-black tracking-normal flex items-center select-none whitespace-nowrap gap-1.5 sm:gap-3 leading-none bg-gradient-to-r from-white via-slate-100 to-indigo-100 bg-clip-text text-transparent">
                 <span className="animate-wave-flag inline-block shrink-0 select-none">
-                  <svg viewBox="0 0 1200 800" className="w-[20px] h-[13.5px] sm:w-[32px] sm:h-[21.5px] md:w-[38px] md:h-[25.5px] rounded-xs shadow-md overflow-hidden shrink-0 inline-block border border-white/10" style={{ minWidth: "20px" }}>
+                  <svg viewBox="0 0 1200 800" className="w-[18px] h-[12px] sm:w-[32px] sm:h-[21.5px] md:w-[38px] md:h-[25.5px] rounded-xs shadow-md overflow-hidden shrink-0 inline-block border border-white/10" style={{ minWidth: "18px" }}>
                     <rect width="1200" height="800" fill="#e30a17"/>
                     <circle cx="400" cy="400" r="200" fill="#ffffff"/>
                     <circle cx="450" cy="400" r="160" fill="#e30a17"/>
@@ -2147,45 +2222,40 @@ export default function App() {
                 <span>
                   BÜTÇEM
                 </span> 
-                <span className="text-[9px] sm:text-[10px] md:text-xs px-2 py-0.5 bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 rounded-lg font-black tracking-widest uppercase animate-pulse">
+                <span className="text-[8px] sm:text-[10px] md:text-xs px-1.5 py-0.5 bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 rounded-lg font-black tracking-widest uppercase animate-pulse">
                   PRO
                 </span>
               </h1>
-              <p className={`text-[8px] sm:text-[10px] font-black tracking-wider uppercase flex items-center gap-1.5 select-none leading-none ${isOfflineMode ? "text-amber-400" : "text-emerald-400/90"}`}>
-                <span className="relative flex h-2 w-2 shrink-0">
+              <p className={`text-[7px] sm:text-[10px] font-black tracking-wider uppercase flex items-center gap-1 sm:gap-1.5 select-none leading-none ${isOfflineMode ? "text-amber-400" : "text-emerald-400/90"}`}>
+                <span className="relative flex h-1.5 w-1.5 shrink-0">
                   {isOfflineMode ? (
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500 animate-pulse"></span>
+                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-amber-500 animate-pulse"></span>
                   ) : (
                     <>
                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                      <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500 shadow-[0_0_4px_#10b981]"></span>
                     </>
                   )}
                 </span>
-                {isOfflineMode ? "ÇEVRİMDIŞI MOD (YEREL VERİ GÜVENLİĞİ)" : "BÜTÇEM PRO & AKILLI FINANSAL TAKİP"}
+                <span className="hidden sm:inline">{isOfflineMode ? "ÇEVRİMDIŞI MOD (YEREL VERİ GÜVENLİĞİ)" : "BÜTÇEM PRO & AKILLI FINANSAL TAKİP"}</span>
+                <span className="sm:hidden">{isOfflineMode ? "ÇEVRİMDIŞI" : "AKILLI FINANS TAKİBİ"}</span>
               </p>
             </div>
           </div>
 
-          {/* Clock visible on mobile row next to title to save bottom row space */}
-          {isClockVisible && (
-            <div className="flex md:hidden items-center gap-1 bg-black/60 text-[9px] font-black font-mono tracking-widest px-2 py-1 rounded-lg text-emerald-400 border border-white/10 shadow-md">
-              <span>{liveClock.split(" ")[1] || liveClock}</span>
-            </div>
-          )}
-        </div>
-
-        {/* Right side navigation toolbar / tools */}
-        <div className="flex items-center justify-between md:justify-end gap-2.5 sm:gap-3 shrink-0 relative z-10 w-full md:w-auto border-t md:border-t-0 border-white/5 pt-3 md:pt-0">
-          <div className="flex items-center gap-2 select-none">
+          {/* Clock visible on mobile & desktop in the upper bar to save spacing */}
+          <div className="flex items-center shrink-0">
             {isClockVisible ? (
-              <div className="hidden md:flex items-center gap-2 bg-black/60 dark:bg-black/80 text-[10px] sm:text-xs font-black font-mono tracking-widest px-3 py-2 rounded-xl text-emerald-400 border border-white/10 shadow-lg shadow-black/40 select-none animate-clock-pulse">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)] inline-block shrink-0 animate-ping duration-[1.5s]" />
+              <div className="flex items-center gap-1.5 sm:gap-2 bg-black/60 dark:bg-black/80 text-[9px] sm:text-xs font-black font-mono tracking-widest px-2 sm:px-3 py-1.5 sm:py-2 rounded-xl text-emerald-400 border border-white/10 shadow-lg shadow-black/40 select-none animate-clock-pulse shrink-0">
+                <span className="relative flex h-2 w-2 shrink-0 items-center justify-center">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500 shadow-[0_0_6px_#34d399]"></span>
+                </span>
                 <span className="bg-gradient-to-r from-emerald-400 to-teal-300 bg-clip-text text-transparent">{liveClock}</span>
                 <button
                   onClick={() => setIsClockVisible(false)}
                   title="Saati Gizle ✖"
-                  className="p-1 px-[5px] ml-1 bg-white/5 hover:bg-white/15 hover:text-white rounded-md text-emerald-400 transition cursor-pointer flex items-center justify-center"
+                  className="p-0.5 px-1 ml-0.5 sm:ml-1 bg-white/5 hover:bg-white/15 hover:text-white rounded text-emerald-400 transition cursor-pointer flex items-center justify-center shrink-0 active:scale-95"
                 >
                   <EyeOff className="w-3 h-3" />
                 </button>
@@ -2194,14 +2264,19 @@ export default function App() {
               <button
                 onClick={() => setIsClockVisible(true)}
                 title="Saati Göster"
-                className="hidden md:flex p-2 bg-white/5 hover:bg-white/10 border border-white/10 text-emerald-400 hover:border-emerald-500/20 active:scale-95 text-[10px] font-black rounded-xl transition-all cursor-pointer items-center gap-1 shrink-0"
+                className="flex p-1 bg-white/5 hover:bg-white/10 border border-white/10 text-emerald-400 hover:border-emerald-500/20 active:scale-95 text-[9px] sm:text-xs font-black rounded-lg transition-all cursor-pointer items-center gap-0.5 sm:gap-1 shrink-0"
               >
-                <Clock className="w-3.5 h-3.5 select-none animate-pulse" />
+                <Clock className="w-3 h-3 select-none animate-pulse" />
                 <span>SAATİ AÇ</span>
               </button>
             )}
+          </div>
+        </div>
 
-            {/* Animated Contacts Directory Logo (Replacing old clock toggle button space) */}
+        {/* Right side navigation toolbar / tools */}
+        <div className="flex items-center overflow-x-auto scrollbar-none gap-2 shrink-0 relative z-10 w-full md:w-auto border-t md:border-t-0 border-white/5 pt-3 md:pt-0 justify-between md:justify-end">
+          <div className="flex items-center gap-1.5 sm:gap-2 select-none shrink-0">
+            {/* Animated Contacts Directory Logo */}
             <motion.button
               onClick={() => {
                 setActiveTab("contacts");
@@ -2219,42 +2294,42 @@ export default function App() {
                 repeat: Infinity,
                 ease: "easeInOut"
               }}
-              className={`p-2 lg:p-2.5 rounded-xl transition-all duration-305 flex items-center justify-center border cursor-pointer shrink-0 relative ${
+              className={`p-1.5 sm:p-2 lg:p-2.5 rounded-xl transition-all duration-305 flex items-center justify-center border cursor-pointer shrink-0 relative ${
                 activeTab === "contacts"
                   ? "bg-indigo-600 border-indigo-500 text-white shadow-lg shadow-indigo-600/20"
                   : "bg-white/5 border-white/10 hover:bg-white/10 text-slate-300 hover:border-indigo-500/30"
               }`}
             >
               {/* Binder spiral rings of directory book */}
-              <div className="absolute left-1.5 top-1.5 bottom-1.5 w-0.5 rounded flex flex-col justify-around py-0.5">
-                <div className="w-1 h-1 bg-indigo-400/80 rounded-full" />
-                <div className="w-1 h-1 bg-indigo-400/80 rounded-full" />
-                <div className="w-1 h-1 bg-indigo-400/80 rounded-full" />
+              <div className="absolute left-1 top-1 bottom-1 w-0.5 rounded flex flex-col justify-around py-0.5">
+                <div className="w-[3px] h-[3px] bg-indigo-400/80 rounded-full" />
+                <div className="w-[3px] h-[3px] bg-indigo-400/80 rounded-full" />
+                <div className="w-[3px] h-[3px] bg-indigo-400/80 rounded-full" />
               </div>
               
-              <Users className={`w-4 h-4 ml-1 text-indigo-300 group-hover:text-white ${activeTab === "contacts" ? "animate-pulse" : "animate-bounce"}`} style={{ animationDuration: "2.5s" }} />
+              <Users className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ml-1 text-indigo-300 group-hover:text-white ${activeTab === "contacts" ? "animate-pulse" : "animate-bounce"}`} style={{ animationDuration: "2.5s" }} />
               
-              <span className="absolute -top-1 -right-1 flex h-2 w-2">
+              <span className="absolute -top-0.5 -right-0.5 flex h-1.5 w-1.5">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
+                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-indigo-500"></span>
               </span>
             </motion.button>
 
             <button
               onClick={() => setIsSecurityModalOpen(true)}
               title="Güvenlik ve Kilit Ayarları"
-              className="p-2 lg:p-2.5 bg-indigo-600/15 hover:bg-indigo-600/25 border border-indigo-600/30 text-indigo-400 dark:text-indigo-300 active:scale-95 rounded-xl transition-all flex items-center justify-center space-x-1 duration-300 cursor-pointer shrink-0"
+              className="p-1.5 sm:p-2 lg:p-2.5 bg-indigo-600/15 hover:bg-indigo-600/25 border border-indigo-600/30 text-indigo-400 dark:text-indigo-300 active:scale-95 rounded-xl transition-all flex items-center justify-center space-x-1 duration-300 cursor-pointer shrink-0"
             >
-              <Settings className="w-4 h-4 text-indigo-400 animate-spin [animation-duration:30s]" />
-              <span className="hidden sm:inline text-[10px] font-black tracking-wide uppercase text-indigo-300">Güvenlik</span>
+              <Settings className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-indigo-400 animate-spin [animation-duration:30s]" />
+              <span className="hidden sm:inline text-[9px] sm:text-[10px] font-black tracking-wide uppercase text-indigo-300">Güvenlik</span>
             </button>
             
             <button
               onClick={() => setDarkMode((prev) => !prev)}
               title="Arka Plan Teması"
-              className="p-2 lg:p-2.5 bg-white/5 hover:bg-white/10 border border-white/10 active:scale-95 rounded-xl transition-all text-white flex items-center justify-center duration-300 cursor-pointer shadow-inner shrink-0"
+              className="p-1.5 sm:p-2 lg:p-2.5 bg-white/5 hover:bg-white/10 border border-white/10 active:scale-95 rounded-xl transition-all text-white flex items-center justify-center duration-300 cursor-pointer shadow-inner shrink-0"
             >
-              {darkMode ? <Sun className="w-4 h-4 text-amber-300" /> : <Moon className="w-4 h-4 text-sky-200" />}
+              {darkMode ? <Sun className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-300" /> : <Moon className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-sky-200" />}
             </button>
 
             <button
@@ -2265,9 +2340,9 @@ export default function App() {
                 }, 350);
               }}
               title="Sayfayı Yenile"
-              className="p-2 lg:p-2.5 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 border border-indigo-500/20 active:scale-95 rounded-xl transition-all flex items-center justify-center duration-300 cursor-pointer shrink-0"
+              className="p-1.5 sm:p-2 lg:p-2.5 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 border border-indigo-500/20 active:scale-95 rounded-xl transition-all flex items-center justify-center duration-300 cursor-pointer shrink-0"
             >
-              <RotateCw className="w-4 h-4 text-indigo-400 animate-spin [animation-duration:15s]" />
+              <RotateCw className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-indigo-400 animate-spin [animation-duration:15s]" />
             </button>
 
             <button
@@ -2279,18 +2354,18 @@ export default function App() {
                 }
               }}
               title={`Bildirimler ve Alarmlar (${notifications.length})`}
-              className="p-2 lg:p-2.5 bg-white/5 hover:bg-white/10 border border-white/10 active:scale-95 rounded-xl transition-all text-white flex items-center justify-center duration-300 cursor-pointer shadow-inner relative shrink-0"
+              className="p-1.5 sm:p-2 lg:p-2.5 bg-white/5 hover:bg-white/10 border border-white/10 active:scale-95 rounded-xl transition-all text-white flex items-center justify-center duration-300 cursor-pointer shadow-inner relative shrink-0"
             >
-              <Bell className="w-4 h-4 text-indigo-300" />
+              <Bell className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-indigo-300" />
               {notifications.length > 0 && (
-                <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white font-mono text-[9px] font-black h-4 min-w-[16px] px-1 rounded-full flex items-center justify-center ring-2 ring-slate-900">
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white font-mono text-[8px] sm:text-[9px] font-black h-3.5 min-w-[14px] px-1 rounded-full flex items-center justify-center ring-1 ring-slate-900">
                   {notifications.length}
                 </span>
               )}
             </button>
           </div>
           
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             <div className="relative shrink-0">
               <select
                 value={colorTheme}
@@ -2298,14 +2373,14 @@ export default function App() {
                   setColorTheme(e.target.value);
                   localStorage.setItem("colorTheme", e.target.value);
                 }}
-                className="appearance-none pl-3 pr-7 py-2 lg:py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 dark:bg-slate-900 text-white rounded-xl text-[10px] md:text-xs font-black tracking-wider uppercase focus:outline-none focus:ring-1 focus:ring-indigo-500/50 cursor-pointer transition active:scale-95 text-center min-w-[75px] sm:min-w-[90px]"
+                className="appearance-none pl-2.5 pr-6 py-1.5 sm:py-2 bg-white/5 hover:bg-white/10 border border-white/10 dark:bg-slate-900 text-white rounded-lg sm:rounded-xl text-[9px] sm:text-[10px] md:text-xs font-black tracking-wider uppercase focus:outline-none focus:ring-1 focus:ring-indigo-500/50 cursor-pointer transition active:scale-95 text-center min-w-[65px] sm:min-w-[85px]"
               >
-                <option value="default" className="text-slate-900 bg-white">MAVİ</option>
-                <option value="green" className="text-slate-900 bg-white">YEŞİL</option>
-                <option value="purple" className="text-slate-900 bg-white">MOR</option>
-                <option value="orange" className="text-slate-900 bg-white">TURUNCU</option>
+                <option value="default" className="text-slate-900 bg-white">MAVİ 🔵</option>
+                <option value="green" className="text-slate-900 bg-white">YEŞİL 🟢</option>
+                <option value="purple" className="text-slate-900 bg-white">MOR 🟣</option>
+                <option value="orange" className="text-slate-900 bg-white">TURUNCU 🟠</option>
               </select>
-              <div className="pointer-events-none absolute inset-y-0 right-2 flex items-center text-white/50 text-[8px]" style={{ right: "8px" }}>
+              <div className="pointer-events-none absolute inset-y-0 right-1.5 flex items-center text-white/50 text-[7px]" style={{ right: "6px" }}>
                 ▼
               </div>
             </div>
@@ -2319,14 +2394,14 @@ export default function App() {
                   triggerToast(`Hesaplama Birimi Değiştirildi: ${e.target.value}`);
                 }}
                 title="Para Birimi Değiştir"
-                className="appearance-none pl-3 pr-7 py-2 lg:py-2.5 bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-300 rounded-xl text-[10px] md:text-xs font-black tracking-wider uppercase focus:outline-none focus:ring-1 focus:ring-emerald-500/50 cursor-pointer transition active:scale-95 text-center min-w-[75px] sm:min-w-[90px]"
+                className="appearance-none pl-2.5 pr-6 py-1.5 sm:py-2 bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-300 rounded-lg sm:rounded-xl text-[9px] sm:text-[10px] md:text-xs font-black tracking-wider uppercase focus:outline-none focus:ring-1 focus:ring-emerald-500/50 cursor-pointer transition active:scale-95 text-center min-w-[65px] sm:min-w-[85px]"
               >
                 <option value="TRY" className="text-slate-900 bg-white">TRY (₺)</option>
                 <option value="USD" className="text-slate-900 bg-white">USD ($)</option>
-                <option value="EUR" className="text-slate-900 bg-white">EUR (€)</option>
-                <option value="GBP" className="text-slate-900 bg-white">GBP (£)</option>
+                <option value="EUR" className="text-slate-900 bg-white font-mono">EUR (€)</option>
+                <option value="GBP" className="text-slate-900 bg-white font-mono">GBP (£)</option>
               </select>
-              <div className="pointer-events-none absolute inset-y-0 right-2 flex items-center text-emerald-300/60 text-[8px]" style={{ right: "8px" }}>
+              <div className="pointer-events-none absolute inset-y-0 right-1.5 flex items-center text-emerald-300/60 text-[7px]" style={{ right: "6px" }}>
                 ▼
               </div>
             </div>
