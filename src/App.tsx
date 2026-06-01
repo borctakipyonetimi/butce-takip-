@@ -1211,12 +1211,23 @@ export default function App() {
   const activeMonthIdx = selectedMonth !== null ? selectedMonth : new Date().getMonth();
   const activeYearVal = selectedYear !== null ? selectedYear : new Date().getFullYear();
 
-  // 1. Incomes scoped to chosen period
+  // 1. Incomes scoped to chosen period (including recurring incomes carry forward)
   const filteredIncomesForStats = incomes.filter((i) => {
     if (selectedMonth === null || selectedYear === null) return true;
     try {
       const iDate = new Date(i.date);
-      return iDate.getMonth() === selectedMonth && iDate.getFullYear() === selectedYear;
+      const iMonth = iDate.getMonth();
+      const iYear = iDate.getFullYear();
+
+      if (i.isRecurring !== false) {
+        // Recurring/fixed incomes carry over to any subsequent period
+        const selectedTime = selectedYear * 12 + selectedMonth;
+        const incomeTime = iYear * 12 + iMonth;
+        return selectedTime >= incomeTime;
+      } else {
+        // One-time extra incomes only show up in their exact month
+        return iMonth === selectedMonth && iYear === selectedYear;
+      }
     } catch { return false; }
   });
 
@@ -1238,74 +1249,76 @@ export default function App() {
     } catch { return false; }
   });
 
-  // 4. normal debts scoped to selected month's due dates
-  const filteredNormalDebtsForStats = debts.filter((d) => {
+  // 4. Lifetime totals for cumulative overall debt widgets (un-filtered by period)
+  const trueOverallDebt = debts.reduce((sum, d) => sum + d.amount, 0) + 
+    installmentDebts.reduce((sum, inst) => sum + inst.totalAmount, 0);
+
+  const trueOverallPaid = debts.reduce((sum, d) => sum + d.paid, 0) + 
+    installmentDebts.reduce((sum, inst) => sum + (inst.paidInstallmentCount * (inst.totalAmount / (inst.installmentCount || 1))), 0);
+
+  const trueOverallRemaining = trueOverallDebt - trueOverallPaid;
+
+  // 5. Selected period's specific monthly debt calculation (for "BU AYKİ BORÇ TOPLAMI" & "BU AY KALAN BORÇ")
+  const simpleDebtsInSelectedMonth = debts.filter((d) => {
     if (selectedMonth === null || selectedYear === null) return true;
     if (!d.dueDate) return false;
     try {
       const dDate = new Date(d.dueDate);
-      return dDate.getMonth() === selectedMonth && dDate.getFullYear() === selectedYear;
+      const dMonth = dDate.getMonth();
+      const dYear = dDate.getFullYear();
+      
+      if (dYear === selectedYear && dMonth === selectedMonth) return true;
+      
+      const selectedTime = selectedYear * 12 + selectedMonth;
+      const dueTime = dYear * 12 + dMonth;
+      const isUnpaid = d.paid < d.amount;
+      return selectedTime > dueTime && isUnpaid;
     } catch { return false; }
   });
 
-  // 5. installment debts scoped to selected month
-  const monthlyInstallmentsStats = installmentDebts.map((inst) => {
+  const periodSimpleDebtTotal = simpleDebtsInSelectedMonth.reduce((sum, d) => sum + d.amount, 0);
+  const periodSimpleDebtRemaining = simpleDebtsInSelectedMonth.reduce((sum, d) => sum + Math.max(0, d.amount - d.paid), 0);
+
+  const periodInstallmentTotal = installmentDebts.reduce((sum, inst) => {
+    if (selectedMonth === null || selectedYear === null) {
+      return sum + inst.totalAmount;
+    }
     const startDate = new Date(inst.firstDueDate);
     const startYear = startDate.getFullYear();
     const startMonth = startDate.getMonth();
-    const perMonth = inst.totalAmount / (inst.installmentCount || 1);
-
-    if (selectedMonth === null || selectedYear === null) {
-      const paidVal = inst.paidInstallmentCount * perMonth;
-      return {
-        amount: inst.totalAmount,
-        paid: paidVal,
-        remaining: inst.totalAmount - paidVal,
-        isActiveThisMonth: true,
-      };
-    }
-
     const monthDiff = (selectedYear - startYear) * 12 + (selectedMonth - startMonth);
     const isActiveThisMonth = monthDiff >= 0 && monthDiff < inst.installmentCount;
+    if (isActiveThisMonth) {
+      return sum + (inst.totalAmount / inst.installmentCount);
+    }
+    return sum;
+  }, 0);
 
-    const paidThisMonth = payments
-      .filter((p) => p.debtId === inst.id && p.type === "installment" && (() => {
-        try {
-          const pDate = new Date(p.date);
-          return pDate.getMonth() === selectedMonth && pDate.getFullYear() === selectedYear;
-        } catch { return false; }
-      })())
-      .reduce((sum, p) => sum + p.amount, 0);
-
+  const periodInstallmentRemaining = installmentDebts.reduce((sum, inst) => {
+    if (selectedMonth === null || selectedYear === null) {
+      return sum + (inst.totalAmount - (inst.paidInstallmentCount * (inst.totalAmount / inst.installmentCount)));
+    }
+    const startDate = new Date(inst.firstDueDate);
+    const startYear = startDate.getFullYear();
+    const startMonth = startDate.getMonth();
+    const monthDiff = (selectedYear - startYear) * 12 + (selectedMonth - startMonth);
+    const isActiveThisMonth = monthDiff >= 0 && monthDiff < inst.installmentCount;
     const isPaidThisMonth = inst.paidInstallmentCount > monthDiff;
-    const paidVal = isPaidThisMonth ? perMonth : paidThisMonth;
-    const remainingVal = isActiveThisMonth ? Math.max(0, perMonth - paidVal) : 0;
+    if (isActiveThisMonth && !isPaidThisMonth) {
+      return sum + (inst.totalAmount / inst.installmentCount);
+    }
+    return sum;
+  }, 0);
 
-    return {
-      amount: isActiveThisMonth ? perMonth : 0,
-      paid: isActiveThisMonth ? paidVal : 0,
-      remaining: remainingVal,
-      isActiveThisMonth,
-    };
-  });
-
-  const totalNormalDebt = filteredNormalDebtsForStats.reduce((sum, d) => sum + d.amount, 0);
-  const totalNormalPaid = filteredNormalDebtsForStats.reduce((sum, d) => sum + d.paid, 0);
-
-  const totalInstallmentAmount = monthlyInstallmentsStats.reduce((sum, item) => sum + item.amount, 0);
-  const totalInstallmentPaid = monthlyInstallmentsStats.reduce((sum, item) => sum + item.paid, 0);
-
-  const totalDebt = totalNormalDebt + totalInstallmentAmount;
-  const totalPaid = totalNormalPaid + totalInstallmentPaid;
-  const remainingDebtValue = totalDebt - totalPaid;
+  const computedThisMonthTotalBorc = periodSimpleDebtTotal + periodInstallmentTotal;
+  const computedThisMonthKalanBorc = periodSimpleDebtRemaining + periodInstallmentRemaining;
 
   const totalIncome = filteredIncomesForStats.reduce((sum, i) => sum + i.amount, 0);
   const totalExpense = filteredExpensesForStats.reduce((sum, e) => sum + e.amount, 0);
 
-  const netIncomeValue = totalIncome - totalExpense - totalPaid;
-
-  const computedThisMonthTotalBorc = totalDebt;
-  const computedThisMonthKalanBorc = remainingDebtValue;
+  // Net reserve capacity specifically for the selected month
+  const currentMonthPaidBorc = computedThisMonthTotalBorc - computedThisMonthKalanBorc;
+  const netIncomeValue = totalIncome - totalExpense - currentMonthPaidBorc;
 
   const currentMonthTotalPaymentsCount = filteredPaymentsForStats.length;
 
@@ -1327,9 +1340,9 @@ export default function App() {
   }, 0);
 
   const statsBag: FinancialStats = {
-    totalDebt: totalDebt,
-    totalPaid: totalPaid,
-    remaining: remainingDebtValue,
+    totalDebt: trueOverallDebt,
+    totalPaid: trueOverallPaid,
+    remaining: trueOverallRemaining,
     totalIncome: totalIncome,
     totalExpense: totalExpense,
     netIncome: netIncomeValue,
@@ -1341,7 +1354,18 @@ export default function App() {
     if (selectedMonth === null || selectedYear === null) return true;
     try {
       const d = new Date(i.date);
-      return d.getMonth() === selectedMonth && d.getFullYear() === selectedYear;
+      const iMonth = d.getMonth();
+      const iYear = d.getFullYear();
+
+      if (i.isRecurring !== false) {
+        // Carry forward to subsequently selected months
+        const selectedTime = selectedYear * 12 + selectedMonth;
+        const incomeTime = iYear * 12 + iMonth;
+        return selectedTime >= incomeTime;
+      } else {
+        // One-time extra incomes show up in exact month
+        return iMonth === selectedMonth && iYear === selectedYear;
+      }
     } catch { return true; }
   });
 

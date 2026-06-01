@@ -32,6 +32,7 @@ export const IncomesList: React.FC<IncomesListProps> = ({
   const [name, setName] = useState("");
   const [amount, setAmount] = useState("");
   const [date, setDate] = useState("");
+  const [isRecurring, setIsRecurring] = useState<boolean>(true);
 
   const handleOpenAdd = () => {
     setModalTitle("Gelir Ekle");
@@ -39,6 +40,7 @@ export const IncomesList: React.FC<IncomesListProps> = ({
     setName("");
     setAmount("");
     setDate(new Date().toISOString().slice(0, 10));
+    setIsRecurring(true);
     setIsModalOpen(true);
   };
 
@@ -48,6 +50,7 @@ export const IncomesList: React.FC<IncomesListProps> = ({
     setName(inc.name);
     setAmount(inc.amount.toString());
     setDate(inc.date ? inc.date.slice(0, 10) : new Date().toISOString().slice(0, 10));
+    setIsRecurring(inc.isRecurring !== false);
     setIsModalOpen(true);
   };
 
@@ -67,6 +70,7 @@ export const IncomesList: React.FC<IncomesListProps> = ({
       name: name.trim(),
       amount: parsedAmount,
       date: date || new Date().toISOString(),
+      isRecurring,
     });
     setIsModalOpen(false);
   };
@@ -129,9 +133,18 @@ export const IncomesList: React.FC<IncomesListProps> = ({
                   </div>
                   <div>
                     <p className="font-bold text-xs text-slate-800 dark:text-slate-100">{i.name}</p>
-                    <p className="text-[10px] text-slate-400 flex items-center gap-0.5 font-medium">
-                      <Calendar className="w-3 h-3" /> {new Date(i.date).toLocaleDateString("tr-TR")}
-                    </p>
+                    <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                      <p className="text-[10px] text-slate-400 flex items-center gap-0.5 font-medium">
+                        <Calendar className="w-3 h-3" /> {new Date(i.date).toLocaleDateString("tr-TR")}
+                      </p>
+                      <span className={`px-1.5 py-0.5 text-[8px] font-black rounded-md uppercase tracking-wider ${
+                        i.isRecurring !== false 
+                          ? "bg-indigo-50 dark:bg-indigo-950/40 text-indigo-500 border border-indigo-500/10" 
+                          : "bg-amber-50 dark:bg-amber-950/40 text-amber-600 border border-amber-500/10"
+                      }`}>
+                        {i.isRecurring !== false ? "🔄 Sabit" : "✨ Ek Gelir"}
+                      </span>
+                    </div>
                   </div>
                 </div>
 
@@ -258,6 +271,18 @@ export const IncomesList: React.FC<IncomesListProps> = ({
                   onChange={(e) => setDate(e.target.value)}
                   className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs dark:text-white"
                 />
+              </div>
+              <div className="flex items-center gap-2 pt-1">
+                <input
+                  type="checkbox"
+                  id="isRecurring"
+                  checked={isRecurring}
+                  onChange={(e) => setIsRecurring(e.target.checked)}
+                  className="w-4 h-4 text-emerald-600 border-slate-200 dark:border-slate-700 accent-emerald-500 rounded focus:ring-emerald-500 cursor-pointer"
+                />
+                <label htmlFor="isRecurring" className="text-xs font-bold text-slate-600 dark:text-slate-300 cursor-pointer select-none">
+                  Sabit Gelir (Her Ay Otomatik Devretsin)
+                </label>
               </div>
             </div>
 

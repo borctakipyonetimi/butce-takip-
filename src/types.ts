@@ -17,6 +17,7 @@ export interface Income {
   name: string;
   amount: number;
   date: string;
+  isRecurring?: boolean;
 }
 
 export interface Alarm {

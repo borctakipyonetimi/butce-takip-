@@ -160,7 +160,17 @@ export const DebtList: React.FC<DebtListProps> = ({
         if (!d.dueDate) return false;
         try {
           const dDate = new Date(d.dueDate);
-          return dDate.getMonth() === selectedMonth && dDate.getFullYear() === selectedYear;
+          const dMonth = dDate.getMonth();
+          const dYear = dDate.getFullYear();
+          
+          if (dMonth === selectedMonth && dYear === selectedYear) {
+            return true;
+          }
+          
+          const selectedTime = selectedYear * 12 + selectedMonth;
+          const dueTime = dYear * 12 + dMonth;
+          const isUnpaid = d.paid < d.amount;
+          return selectedTime > dueTime && isUnpaid;
         } catch {
           return false;
         }
@@ -235,6 +245,7 @@ export const DebtList: React.FC<DebtListProps> = ({
     };
   });
 
+  // Monthly filtered stats (used as fallback or extra if needed)
   const totalAmount = debtsInPeriod.reduce((sum, d) => sum + d.amount, 0) + 
     installmentsInPeriod.reduce((sum, item) => sum + item.due, 0);
 
@@ -243,11 +254,30 @@ export const DebtList: React.FC<DebtListProps> = ({
 
   const totalRemaining = totalAmount - totalPaid;
 
+  // True lifetime overall aggregates (un-filtered by period, representing actual total debt burden)
+  const allTimeTotalAmount = debts.reduce((sum, d) => sum + d.amount, 0) + 
+    installmentDebts.reduce((sum, inst) => sum + inst.totalAmount, 0);
+
+  const allTimeTotalPaid = debts.reduce((sum, d) => sum + d.paid, 0) + 
+    installmentDebts.reduce((sum, inst) => sum + (inst.paidInstallmentCount * (inst.totalAmount / (inst.installmentCount || 1))), 0);
+
+  const allTimeRemaining = allTimeTotalAmount - allTimeTotalPaid;
+
   const simpleDebtsDueThisMonth = debts.filter(d => {
-    if (!d.dueDate || d.paid >= d.amount) return false;
+    if (!d.dueDate) return false;
     try {
       const dDate = new Date(d.dueDate);
-      return dDate.getFullYear() === selectedYearVal && dDate.getMonth() === selectedMonthVal;
+      const dMonth = dDate.getMonth();
+      const dYear = dDate.getFullYear();
+      
+      const isUnpaid = d.paid < d.amount;
+      const isDueThisMonth = dYear === selectedYearVal && dMonth === selectedMonthVal;
+      
+      const selectedTime = selectedYearVal * 12 + selectedMonthVal;
+      const dueTime = dYear * 12 + dMonth;
+      const isOverdue = selectedTime > dueTime && isUnpaid;
+      
+      return isDueThisMonth || isOverdue;
     } catch { return false; }
   });
   const simpleDueThisMonthAmount = simpleDebtsDueThisMonth.reduce((sum, d) => sum + (d.amount - d.paid), 0);
@@ -467,8 +497,8 @@ export const DebtList: React.FC<DebtListProps> = ({
           <div className="absolute right-3.5 top-3.5 p-1 bg-indigo-500/10 text-indigo-500 rounded-lg">
             <ClipboardList className="w-4 h-4" />
           </div>
-          <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest block">TOPLAM ÖDENECEK</span>
-          <span className="text-base sm:text-lg font-black font-mono text-indigo-600 dark:text-indigo-400 mt-1 block">{format(totalAmount)}</span>
+          <span className="text-[10px] font-black text-slate-400 dark:text-slate-505 uppercase tracking-widest block">TOPLAM ÖDENECEK</span>
+          <span className="text-base sm:text-lg font-black font-mono text-indigo-600 dark:text-indigo-400 mt-1 block">{format(allTimeTotalAmount)}</span>
           <span className="text-[8px] font-bold text-slate-400 block mt-0.5">Tüm aktif & taksitli genel borçlar</span>
         </div>
 
@@ -476,17 +506,17 @@ export const DebtList: React.FC<DebtListProps> = ({
           <div className="absolute right-3.5 top-3.5 p-1 bg-amber-500/10 text-amber-500 rounded-lg">
             <Calendar className="w-4 h-4" />
           </div>
-          <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest block">BU AY ÖDENECEK</span>
+          <span className="text-[10px] font-black text-slate-400 dark:text-slate-505 uppercase tracking-widest block">BU AY ÖDENECEK</span>
           <span className="text-base sm:text-lg font-black font-mono text-amber-600 dark:text-amber-550 mt-1 block">{format(dueThisMonthAmount)}</span>
           <span className="text-[8px] font-bold text-slate-400 block mt-0.5">Bu ay vadesi gelen tüm taksit & borçlar</span>
         </div>
 
-        <div className="p-4 bg-gradient-to-br from-emerald-500/5 to-emerald-600/[0.02] dark:from-emerald-500/10 dark:to-transparent rounded-2xl border border-emerald-100/40 dark:border-emerald-900/30 shadow-xs relative overflow-hidden">
+        <div className="p-4 bg-gradient-to-br from-emerald-500/5 to-emerald-600/[0.02] dark:from-emerald-500/10 dark:to-transparent rounded-2xl border border-emerald-100/40 dark:border-emerald-950/30 shadow-xs relative overflow-hidden">
           <div className="absolute right-3.5 top-3.5 p-1 bg-emerald-500/10 text-emerald-500 rounded-lg">
             <CheckCircle2 className="w-4 h-4" />
           </div>
-          <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest block">ÖDENEN BORÇ</span>
-          <span className="text-base sm:text-lg font-black font-mono text-emerald-600 dark:text-emerald-400 mt-1 block">{format(totalPaid)}</span>
+          <span className="text-[10px] font-black text-slate-400 dark:text-slate-550 uppercase tracking-widest block">ÖDENEN BORÇ</span>
+          <span className="text-base sm:text-lg font-black font-mono text-emerald-600 dark:text-emerald-400 mt-1 block">{format(allTimeTotalPaid)}</span>
           <span className="text-[8px] font-bold text-slate-400 block mt-0.5">Kapatılan taksit ve ödemeler</span>
         </div>
 
@@ -494,8 +524,8 @@ export const DebtList: React.FC<DebtListProps> = ({
           <div className="absolute right-3.5 top-3.5 p-1 bg-rose-500/10 text-rose-500 rounded-lg">
             <AlertCircle className="w-4 h-4" />
           </div>
-          <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest block">KALAN BORÇ</span>
-          <span className="text-base sm:text-lg font-black font-mono text-rose-600 dark:text-rose-450 mt-1 block">{format(totalRemaining)}</span>
+          <span className="text-[10px] font-black text-slate-400 dark:text-slate-550 uppercase tracking-widest block">KALAN BORÇ</span>
+          <span className="text-base sm:text-lg font-black font-mono text-rose-600 dark:text-rose-455 mt-1 block">{format(allTimeRemaining)}</span>
           <span className="text-[8px] font-bold text-slate-400 block mt-0.5">Geri ödenmesi gereken net bakiye</span>
         </div>
       </div>
