@@ -25,6 +25,12 @@ interface DebtListProps {
   installmentDebts?: InstallmentDebt[];
   isPremium?: boolean;
   onUpgradeClick?: () => void;
+
+  // Selected period control props
+  selectedMonth: number | null;
+  selectedYear: number | null;
+  setSelectedMonth: React.Dispatch<React.SetStateAction<number | null>>;
+  setSelectedYear: React.Dispatch<React.SetStateAction<number | null>>;
 }
 
 export const DebtList: React.FC<DebtListProps> = ({
@@ -39,6 +45,10 @@ export const DebtList: React.FC<DebtListProps> = ({
   installmentDebts = [],
   isPremium = false,
   onUpgradeClick,
+  selectedMonth,
+  selectedYear,
+  setSelectedMonth,
+  setSelectedYear,
 }) => {
   const { format, currencySymbol } = useCurrency();
   const [activeTab, setActiveTab] = useState<"unpaid" | "paid" | "all">("unpaid");
@@ -141,8 +151,20 @@ export const DebtList: React.FC<DebtListProps> = ({
 
   const filteredDebts = [...debts]
     .filter((d) => {
-      if (activeTab === "unpaid") return d.paid < d.amount;
-      if (activeTab === "paid") return d.paid >= d.amount;
+      // 1. Tab filter
+      if (activeTab === "unpaid" && d.paid >= d.amount) return false;
+      if (activeTab === "paid" && d.paid < d.amount) return false;
+
+      // 2. Period filter
+      if (selectedMonth !== null && selectedYear !== null) {
+        if (!d.dueDate) return false;
+        try {
+          const dDate = new Date(d.dueDate);
+          return dDate.getMonth() === selectedMonth && dDate.getFullYear() === selectedYear;
+        } catch {
+          return false;
+        }
+      }
       return true;
     })
     .sort((a, b) => {
@@ -180,31 +202,68 @@ export const DebtList: React.FC<DebtListProps> = ({
     return parseFloat(cleaned) || 0;
   };
 
-  // Dynamically and robustly calculate true overall debt and payment aggregates for BOTH simple & installment debts
-  const totalAmount = debts.reduce((sum, d) => sum + d.amount, 0) + installmentDebts.reduce((sum, inst) => sum + inst.totalAmount, 0);
-  const totalPaid = debts.reduce((sum, d) => sum + d.paid, 0) + installmentDebts.reduce((sum, inst) => sum + (inst.paidInstallmentCount * (inst.totalAmount / inst.installmentCount)), 0);
-  const totalRemaining = totalAmount - totalPaid;
+  // Selected period calculations
+  const selectedYearVal = selectedYear !== null ? selectedYear : new Date().getFullYear();
+  const selectedMonthVal = selectedMonth !== null ? selectedMonth : new Date().getMonth();
 
-  // Calculate debt payments due strictly in the current month
-  const now = new Date();
-  const currentYear = now.getFullYear();
-  const currentMonthIdx = now.getMonth();
+  const debtsInPeriod = debts.filter((d) => {
+    if (selectedMonth === null || selectedYear === null) return true;
+    if (!d.dueDate) return false;
+    try {
+      const dDate = new Date(d.dueDate);
+      return dDate.getMonth() === selectedMonth && dDate.getFullYear() === selectedYear;
+    } catch { return false; }
+  });
+
+  const installmentsInPeriod = installmentDebts.map((inst) => {
+    const perMonth = inst.totalAmount / (inst.installmentCount || 1);
+    if (selectedMonth === null || selectedYear === null) {
+      return {
+        due: inst.totalAmount,
+        paid: inst.paidInstallmentCount * perMonth,
+      };
+    }
+    const startDate = new Date(inst.firstDueDate);
+    const startYear = startDate.getFullYear();
+    const startMonth = startDate.getMonth();
+    const monthDiffCalc = (selectedYear - startYear) * 12 + (selectedMonth - startMonth);
+    const isCurrentlyActive = monthDiffCalc >= 0 && monthDiffCalc < inst.installmentCount;
+    const isCurrentlyPaid = inst.paidInstallmentCount > monthDiffCalc;
+    return {
+      due: isCurrentlyActive ? perMonth : 0,
+      paid: (isCurrentlyActive && isCurrentlyPaid) ? perMonth : 0,
+    };
+  });
+
+  const totalAmount = debtsInPeriod.reduce((sum, d) => sum + d.amount, 0) + 
+    installmentsInPeriod.reduce((sum, item) => sum + item.due, 0);
+
+  const totalPaid = debtsInPeriod.reduce((sum, d) => sum + d.paid, 0) + 
+    installmentsInPeriod.reduce((sum, item) => sum + item.paid, 0);
+
+  const totalRemaining = totalAmount - totalPaid;
 
   const simpleDebtsDueThisMonth = debts.filter(d => {
     if (!d.dueDate || d.paid >= d.amount) return false;
     try {
       const dDate = new Date(d.dueDate);
-      return dDate.getFullYear() === currentYear && dDate.getMonth() === currentMonthIdx;
-    } catch {
-      return false;
-    }
+      return dDate.getFullYear() === selectedYearVal && dDate.getMonth() === selectedMonthVal;
+    } catch { return false; }
   });
-
   const simpleDueThisMonthAmount = simpleDebtsDueThisMonth.reduce((sum, d) => sum + (d.amount - d.paid), 0);
 
-  // Active installments (unpaid count > 0) have one monthly payment due in the current month
-  const activeInstallments = installmentDebts.filter(inst => inst.paidInstallmentCount < inst.installmentCount);
-  const installmentsDueThisMonthAmount = activeInstallments.reduce((sum, inst) => sum + (inst.totalAmount / inst.installmentCount), 0);
+  const installmentsDueThisMonthAmount = installmentDebts.reduce((sum, inst) => {
+    const startDate = new Date(inst.firstDueDate);
+    const startYear = startDate.getFullYear();
+    const startMonth = startDate.getMonth();
+    const monthDiff = (selectedYearVal - startYear) * 12 + (selectedMonthVal - startMonth);
+    const isActiveThisMonth = monthDiff >= 0 && monthDiff < inst.installmentCount;
+    const isPaidThisMonth = inst.paidInstallmentCount > monthDiff;
+    if (isActiveThisMonth && !isPaidThisMonth) {
+      return sum + (inst.totalAmount / inst.installmentCount);
+    }
+    return sum;
+  }, 0);
 
   const dueThisMonthAmount = simpleDueThisMonthAmount + installmentsDueThisMonthAmount;
 
@@ -507,6 +566,15 @@ export const DebtList: React.FC<DebtListProps> = ({
                 {paginatedDebts.map((d) => {
                   const isPaid = d.paid >= d.amount;
                   const percentage = Math.min(((d.paid / d.amount) * 100), 100);
+                  const isOverdue = !isPaid && d.dueDate && (() => {
+                    try {
+                      const today = new Date();
+                      today.setHours(0, 0, 0, 0);
+                      const due = new Date(d.dueDate);
+                      due.setHours(0, 0, 0, 0);
+                      return due < today;
+                    } catch { return false; }
+                  })();
                   return (
                     <div
                       key={d.id}
@@ -520,6 +588,11 @@ export const DebtList: React.FC<DebtListProps> = ({
                           <span className="px-2 py-0.5 bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-300 text-[10px] font-bold rounded-full">
                             📁 {d.category}
                           </span>
+                          {isOverdue && (
+                            <span className="px-2 py-0.5 bg-rose-100 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 text-[10px] font-black rounded-full border border-rose-500/30 flex items-center gap-1 animate-pulse shrink-0 uppercase tracking-tight">
+                              ⚠️ Vadesi Geçmiş
+                            </span>
+                          )}
                           {d.dueDate && (
                             <span className="flex items-center gap-1 text-[10px] font-semibold text-rose-500">
                               <Calendar className="w-3 h-3" /> SKT: {new Date(d.dueDate).toLocaleDateString("tr-TR")}

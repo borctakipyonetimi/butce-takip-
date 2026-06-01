@@ -165,6 +165,10 @@ export default function App() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [expenseCategories, setExpenseCategories] = useState<ExpenseCategory[]>([]);
 
+  // Period Scoper States (All-Time is represented by null)
+  const [selectedMonth, setSelectedMonth] = useState<number | null>(new Date().getMonth());
+  const [selectedYear, setSelectedYear] = useState<number | null>(new Date().getFullYear());
+
   // Premium tier configurations (Free vs Paid Premium, forced to false for preview display of actual AdMob and fallback banners)
   const [isPremium, setIsPremium] = useState<boolean>(false);
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
@@ -797,6 +801,45 @@ export default function App() {
     return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
   }, []);
 
+  // Monitor quality-of-life: trigger a gentle JSON backup reminder if not exported in the last 30 days
+  useEffect(() => {
+    if (!isUnlocked) return;
+
+    // Use sessionStorage to only alert once per active browser session
+    const alertKey = "has_checked_backup_this_session";
+    if (sessionStorage.getItem(alertKey) === "true") {
+      return;
+    }
+    sessionStorage.setItem(alertKey, "true");
+
+    const runBackupCheck = () => {
+      const lastBackupStr = localStorage.getItem("last_backup_export_date");
+      let needsBackupReminder = false;
+
+      if (!lastBackupStr) {
+        needsBackupReminder = true;
+      } else {
+        try {
+          const lastBackupTime = new Date(lastBackupStr).getTime();
+          const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
+          if (lastBackupTime < thirtyDaysAgo) {
+            needsBackupReminder = true;
+          }
+        } catch (e) {
+          needsBackupReminder = true;
+        }
+      }
+
+      if (needsBackupReminder) {
+        triggerToast("💡 Son 30 gündür veri yedeği almadınız. Verilerinizi güvenceye almak için veri yedeklemesi yapın.");
+      }
+    };
+
+    // Postpone slightly to let other startup items loading toasts subside
+    const timer = setTimeout(runBackupCheck, 4000);
+    return () => clearTimeout(timer);
+  }, [isUnlocked]);
+
   const handleApproveSync = async () => {
     if (!auth.currentUser || !syncCodeToApprove) return;
     try {
@@ -1165,86 +1208,123 @@ export default function App() {
   };
 
   // ---------------- Financial Calculations ----------------
-  const totalNormalDebt = debts.reduce((sum, d) => sum + d.amount, 0);
-  const totalNormalPaid = debts.reduce((sum, d) => sum + d.paid, 0);
+  const activeMonthIdx = selectedMonth !== null ? selectedMonth : new Date().getMonth();
+  const activeYearVal = selectedYear !== null ? selectedYear : new Date().getFullYear();
 
-  // Installments total values calculated dynamically & robustly
-  const totalInstallmentAmount = installmentDebts.reduce((sum, inst) => sum + inst.totalAmount, 0);
-  const totalInstallmentPaid = installmentDebts.reduce((sum, inst) => sum + (inst.paidInstallmentCount * (inst.totalAmount / inst.installmentCount || 1)), 0);
-  const totalInstallmentRemaining = totalInstallmentAmount - totalInstallmentPaid;
-
-  const monthlyInstallmentsDue = installmentDebts.reduce((sum, inst) => {
-    if (inst.paidInstallmentCount >= inst.installmentCount) return sum;
-    return sum + inst.totalAmount / inst.installmentCount;
-  }, 0);
-
-  const currentMonthIdx = new Date().getMonth();
-  const currentYearVal = new Date().getFullYear();
-
-  const isPaymentThisMonth = (dateStr: string) => {
-    const d = new Date(dateStr);
-    return d.getMonth() === currentMonthIdx && d.getFullYear() === currentYearVal;
-  };
-
-  const simpleDebtsPaymentsThisMonth = debts.map((d) => {
-    const paidThisMonth = payments
-      .filter((p) => p.debtId === d.id && p.type === "manual" && isPaymentThisMonth(p.date))
-      .reduce((sum, p) => sum + p.amount, 0);
-
-    const remainingNow = Math.max(0, d.amount - d.paid);
-    const startingValThisMonth = remainingNow + paidThisMonth;
-
-    return {
-      id: d.id,
-      startingValThisMonth,
-      remainingNow,
-    };
+  // 1. Incomes scoped to chosen period
+  const filteredIncomesForStats = incomes.filter((i) => {
+    if (selectedMonth === null || selectedYear === null) return true;
+    try {
+      const iDate = new Date(i.date);
+      return iDate.getMonth() === selectedMonth && iDate.getFullYear() === selectedYear;
+    } catch { return false; }
   });
 
-  const installmentPaymentsThisMonth = installmentDebts.map((inst) => {
+  // 2. Expenses scoped to chosen period
+  const filteredExpensesForStats = expenses.filter((e) => {
+    if (selectedMonth === null || selectedYear === null) return true;
+    try {
+      const eDate = new Date(e.date);
+      return eDate.getMonth() === selectedMonth && eDate.getFullYear() === selectedYear;
+    } catch { return false; }
+  });
+
+  // 3. Payments scoped to chosen period
+  const filteredPaymentsForStats = payments.filter((p) => {
+    if (selectedMonth === null || selectedYear === null) return true;
+    try {
+      const pDate = new Date(p.date);
+      return pDate.getMonth() === selectedMonth && pDate.getFullYear() === selectedYear;
+    } catch { return false; }
+  });
+
+  // 4. normal debts scoped to selected month's due dates
+  const filteredNormalDebtsForStats = debts.filter((d) => {
+    if (selectedMonth === null || selectedYear === null) return true;
+    if (!d.dueDate) return false;
+    try {
+      const dDate = new Date(d.dueDate);
+      return dDate.getMonth() === selectedMonth && dDate.getFullYear() === selectedYear;
+    } catch { return false; }
+  });
+
+  // 5. installment debts scoped to selected month
+  const monthlyInstallmentsStats = installmentDebts.map((inst) => {
+    const startDate = new Date(inst.firstDueDate);
+    const startYear = startDate.getFullYear();
+    const startMonth = startDate.getMonth();
     const perMonth = inst.totalAmount / (inst.installmentCount || 1);
+
+    if (selectedMonth === null || selectedYear === null) {
+      const paidVal = inst.paidInstallmentCount * perMonth;
+      return {
+        amount: inst.totalAmount,
+        paid: paidVal,
+        remaining: inst.totalAmount - paidVal,
+        isActiveThisMonth: true,
+      };
+    }
+
+    const monthDiff = (selectedYear - startYear) * 12 + (selectedMonth - startMonth);
+    const isActiveThisMonth = monthDiff >= 0 && monthDiff < inst.installmentCount;
+
     const paidThisMonth = payments
-      .filter((p) => p.debtId === inst.id && p.type === "installment" && isPaymentThisMonth(p.date))
+      .filter((p) => p.debtId === inst.id && p.type === "installment" && (() => {
+        try {
+          const pDate = new Date(p.date);
+          return pDate.getMonth() === selectedMonth && pDate.getFullYear() === selectedYear;
+        } catch { return false; }
+      })())
       .reduce((sum, p) => sum + p.amount, 0);
 
-    const isActiveThisMonth = inst.paidInstallmentCount < inst.installmentCount || paidThisMonth > 0;
-
-    const startingValThisMonth = isActiveThisMonth ? perMonth : 0;
-    const remainingNow = isActiveThisMonth ? Math.max(0, perMonth - paidThisMonth) : 0;
+    const isPaidThisMonth = inst.paidInstallmentCount > monthDiff;
+    const paidVal = isPaidThisMonth ? perMonth : paidThisMonth;
+    const remainingVal = isActiveThisMonth ? Math.max(0, perMonth - paidVal) : 0;
 
     return {
-      id: inst.id,
-      startingValThisMonth,
-      remainingNow,
+      amount: isActiveThisMonth ? perMonth : 0,
+      paid: isActiveThisMonth ? paidVal : 0,
+      remaining: remainingVal,
+      isActiveThisMonth,
     };
   });
 
-  const computedThisMonthTotalBorc =
-    simpleDebtsPaymentsThisMonth.reduce((sum, item) => sum + item.startingValThisMonth, 0) +
-    installmentPaymentsThisMonth.reduce((sum, item) => sum + item.startingValThisMonth, 0);
+  const totalNormalDebt = filteredNormalDebtsForStats.reduce((sum, d) => sum + d.amount, 0);
+  const totalNormalPaid = filteredNormalDebtsForStats.reduce((sum, d) => sum + d.paid, 0);
 
-  const computedThisMonthKalanBorc =
-    simpleDebtsPaymentsThisMonth.reduce((sum, item) => sum + item.remainingNow, 0) +
-    installmentPaymentsThisMonth.reduce((sum, item) => sum + item.remainingNow, 0);
+  const totalInstallmentAmount = monthlyInstallmentsStats.reduce((sum, item) => sum + item.amount, 0);
+  const totalInstallmentPaid = monthlyInstallmentsStats.reduce((sum, item) => sum + item.paid, 0);
 
-  const currentMonthTotalPaymentsCount = payments.filter((p) => {
-    const d = new Date(p.date);
-    return d.getMonth() === currentMonthIdx && d.getFullYear() === currentYearVal;
-  }).length;
-
-  // Track overall sums from databases to display on summary dashboard cards
-  // This mirrors what users actually see in the respective tabs, ensuring 100% intuitive and correct arithmetic
-  const totalIncome = incomes.reduce((sum, i) => sum + i.amount, 0);
-  const totalExpense = expenses.reduce((sum, e) => sum + e.amount, 0);
-
-  // Overall totals
   const totalDebt = totalNormalDebt + totalInstallmentAmount;
   const totalPaid = totalNormalPaid + totalInstallmentPaid;
-  // Taksitli borçların tamamı kalan borç kısmına dahil edilerek gerçek toplam borç yükü hesaplanmalıdır
-  const remainingDebtValue = (totalNormalDebt - totalNormalPaid) + (totalInstallmentAmount - totalInstallmentPaid);
+  const remainingDebtValue = totalDebt - totalPaid;
 
-  // Correct calculation of remaining reserve (Total Income - Total Expense - Total Paid Debt)
+  const totalIncome = filteredIncomesForStats.reduce((sum, i) => sum + i.amount, 0);
+  const totalExpense = filteredExpensesForStats.reduce((sum, e) => sum + e.amount, 0);
+
   const netIncomeValue = totalIncome - totalExpense - totalPaid;
+
+  const computedThisMonthTotalBorc = totalDebt;
+  const computedThisMonthKalanBorc = remainingDebtValue;
+
+  const currentMonthTotalPaymentsCount = filteredPaymentsForStats.length;
+
+  const monthlyInstallmentsDue = installmentDebts.reduce((sum, inst) => {
+    if (selectedMonth === null || selectedYear === null) {
+      if (inst.paidInstallmentCount >= inst.installmentCount) return sum;
+      return sum + inst.totalAmount / inst.installmentCount;
+    }
+    const startDate = new Date(inst.firstDueDate);
+    const startYear = startDate.getFullYear();
+    const startMonth = startDate.getMonth();
+    const monthDiff = (selectedYear - startYear) * 12 + (selectedMonth - startMonth);
+    const isActiveThisMonth = monthDiff >= 0 && monthDiff < inst.installmentCount;
+    const isPaidThisMonth = inst.paidInstallmentCount > monthDiff;
+    if (isActiveThisMonth && !isPaidThisMonth) {
+      return sum + inst.totalAmount / inst.installmentCount;
+    }
+    return sum;
+  }, 0);
 
   const statsBag: FinancialStats = {
     totalDebt: totalDebt,
@@ -1256,6 +1336,22 @@ export default function App() {
     thisMonthTotalBorc: computedThisMonthTotalBorc,
     thisMonthKalanBorc: computedThisMonthKalanBorc
   };
+
+  const filteredIncomesByMonth = incomes.filter((i) => {
+    if (selectedMonth === null || selectedYear === null) return true;
+    try {
+      const d = new Date(i.date);
+      return d.getMonth() === selectedMonth && d.getFullYear() === selectedYear;
+    } catch { return true; }
+  });
+
+  const filteredExpensesByMonth = expenses.filter((e) => {
+    if (selectedMonth === null || selectedYear === null) return true;
+    try {
+      const d = new Date(e.date);
+      return d.getMonth() === selectedMonth && d.getFullYear() === selectedYear;
+    } catch { return true; }
+  });
 
   // ---------------- Profile Session Controls ----------------
   const handleLogin = () => {
@@ -1665,6 +1761,7 @@ export default function App() {
     link.href = URL.createObjectURL(blob);
     link.download = `borc_takip_yedek_${currentUser || "kullanici"}.json`;
     link.click();
+    localStorage.setItem("last_backup_export_date", new Date().toISOString());
     triggerToast("Veri Yedeği İndirildi");
   };
 
@@ -2764,6 +2861,111 @@ export default function App() {
 
       {/* Central View Dashboard Grid content container */}
       <main className="max-w-3xl mx-auto px-4 py-6 pb-24">
+        {/* Global Month/Period Scoper Widget */}
+        {["overview", "debts", "income", "expenses", "installments"].includes(activeTab) && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-5 p-3.5 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/60 dark:border-slate-700/60 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3 text-xs"
+          >
+            <div className="flex items-center gap-2">
+              <span className="p-1.5 bg-indigo-50 dark:bg-slate-900 text-indigo-500 rounded-lg shrink-0">
+                <Calendar className="w-4 h-4" />
+              </span>
+              <div>
+                <span className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 block leading-none tracking-wider mb-1">FİLTRELENEN DÖNEM</span>
+                <span className="font-extrabold text-slate-800 dark:text-slate-100 uppercase tracking-wide">
+                  {selectedMonth !== null && selectedYear !== null 
+                    ? `${["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"][selectedMonth]} ${selectedYear}`
+                    : "🔒 TÜM ZAMANLAR BİRİKİMLİ"}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-1.5 w-full sm:w-auto justify-end">
+              <button
+                type="button"
+                onClick={() => {
+                  if (selectedMonth === null || selectedYear === null) {
+                    const now = new Date();
+                    setSelectedMonth(now.getMonth());
+                    setSelectedYear(now.getFullYear());
+                  } else if (selectedMonth === 0) {
+                    setSelectedMonth(11);
+                    setSelectedYear(selectedYear - 1);
+                  } else {
+                    setSelectedMonth(selectedMonth - 1);
+                  }
+                }}
+                disabled={selectedMonth === null}
+                className="px-2.5 py-1.5 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-xl cursor-pointer disabled:opacity-40 select-none text-[10.5px] font-bold"
+              >
+                ← Önceki
+              </button>
+
+              <select
+                value={selectedMonth === null ? "all" : selectedMonth}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val === "all") {
+                    setSelectedMonth(null);
+                  } else {
+                    setSelectedMonth(parseInt(val));
+                    if (selectedYear === null) setSelectedYear(new Date().getFullYear());
+                  }
+                }}
+                className="px-2.5 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl font-bold text-slate-700 dark:text-slate-200 cursor-pointer text-[10.5px]"
+              >
+                <option value="all">Tüm Dönemler</option>
+                {["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"].map((m, idx) => (
+                  <option key={idx} value={idx}>{m}</option>
+                ))}
+              </select>
+
+              <select
+                value={selectedYear === null ? "all" : selectedYear}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val === "all") {
+                    setSelectedYear(null);
+                    setSelectedMonth(null);
+                  } else {
+                    setSelectedYear(parseInt(val));
+                    if (selectedMonth === null) setSelectedMonth(new Date().getMonth());
+                  }
+                }}
+                disabled={selectedMonth === null}
+                className="px-2.5 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl font-bold text-slate-700 dark:text-slate-200 disabled:opacity-40 cursor-pointer text-[10.5px]"
+              >
+                <option value="all">Yıl</option>
+                {[2025, 2026, 2027, 2028].map((y) => (
+                  <option key={y} value={y}>{y}</option>
+                ))}
+              </select>
+
+              <button
+                type="button"
+                onClick={() => {
+                  if (selectedMonth === null || selectedYear === null) {
+                    const now = new Date();
+                    setSelectedMonth(now.getMonth());
+                    setSelectedYear(now.getFullYear());
+                  } else if (selectedMonth === 11) {
+                    setSelectedMonth(0);
+                    setSelectedYear(selectedYear + 1);
+                  } else {
+                    setSelectedMonth(selectedMonth + 1);
+                  }
+                }}
+                disabled={selectedMonth === null}
+                className="px-2.5 py-1.5 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-xl cursor-pointer disabled:opacity-40 select-none text-[10.5px] font-bold"
+              >
+                Sonraki →
+              </button>
+            </div>
+          </motion.div>
+        )}
+
         {activeTab === "overview" && (
           <DashboardOverview
             stats={statsBag}
@@ -2808,6 +3010,10 @@ export default function App() {
             installmentDebts={installmentDebts}
             isPremium={isPremium}
             onUpgradeClick={() => setIsUpgradeModalOpen(true)}
+            selectedMonth={selectedMonth}
+            selectedYear={selectedYear}
+            setSelectedMonth={setSelectedMonth}
+            setSelectedYear={setSelectedYear}
           />
         )}
 
@@ -2822,7 +3028,7 @@ export default function App() {
 
         {activeTab === "income" && (
           <IncomesList
-            incomes={incomes}
+            incomes={filteredIncomesByMonth}
             onSaveIncome={handleSaveIncome}
             onDeleteIncome={handleDeleteIncome}
             isPremium={isPremium}
@@ -2832,7 +3038,7 @@ export default function App() {
 
         {activeTab === "expenses" && (
           <ExpensesList
-            expenses={expenses}
+            expenses={filteredExpensesByMonth}
             expenseCategories={expenseCategories}
             onSaveExpense={handleSaveExpense}
             onDeleteExpense={handleDeleteExpense}
