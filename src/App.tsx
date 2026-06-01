@@ -1249,12 +1249,38 @@ export default function App() {
     } catch { return false; }
   });
 
-  // 4. Lifetime totals for cumulative overall debt widgets (un-filtered by period)
+  // 4. Lifetime totals for cumulative overall debt widgets (un-filtered by period, integrating contact-based payables as well)
+  const spaceKey = currentUser ? `user_${currentUser}` : "user_anonymous";
+  const savedContactTxsStr = localStorage.getItem(`${spaceKey}_contacts_transactions`);
+  let contactPayablesTotal = 0;
+  let contactPayablesPaid = 0;
+  if (savedContactTxsStr) {
+    try {
+      const txs = JSON.parse(savedContactTxsStr);
+      if (Array.isArray(txs)) {
+        txs.forEach((t: any) => {
+          if (t.type === "payable") {
+            const amt = Number(t.amount) || 0;
+            contactPayablesTotal += amt;
+            if (t.isPaid) {
+              contactPayablesPaid += amt;
+            }
+          }
+        });
+      }
+    } catch (e) {
+      console.error("Error loading contact transactions:", e);
+    }
+  }
+  const contactPayablesRemaining = contactPayablesTotal - contactPayablesPaid;
+
   const trueOverallDebt = debts.reduce((sum, d) => sum + d.amount, 0) + 
-    installmentDebts.reduce((sum, inst) => sum + inst.totalAmount, 0);
+    installmentDebts.reduce((sum, inst) => sum + inst.totalAmount, 0) +
+    contactPayablesTotal;
 
   const trueOverallPaid = debts.reduce((sum, d) => sum + d.paid, 0) + 
-    installmentDebts.reduce((sum, inst) => sum + (inst.paidInstallmentCount * (inst.totalAmount / (inst.installmentCount || 1))), 0);
+    installmentDebts.reduce((sum, inst) => sum + (inst.paidInstallmentCount * (inst.totalAmount / (inst.installmentCount || 1))), 0) +
+    contactPayablesPaid;
 
   const trueOverallRemaining = trueOverallDebt - trueOverallPaid;
 
@@ -1310,15 +1336,145 @@ export default function App() {
     return sum;
   }, 0);
 
-  const computedThisMonthTotalBorc = periodSimpleDebtTotal + periodInstallmentTotal;
-  const computedThisMonthKalanBorc = periodSimpleDebtRemaining + periodInstallmentRemaining;
+  // Calculate monthly contact-based payables (unpaid/payable due in current month or overdue)
+  let periodContactPayablesTotal = 0;
+  let periodContactPayablesRemaining = 0;
+  if (savedContactTxsStr) {
+    try {
+      const txs = JSON.parse(savedContactTxsStr);
+      if (Array.isArray(txs)) {
+        txs.forEach((t: any) => {
+          if (t.type === "payable") {
+            const amt = Number(t.amount) || 0;
+            if (selectedMonth === null || selectedYear === null) {
+              periodContactPayablesTotal += amt;
+              if (!t.isPaid) {
+                periodContactPayablesRemaining += amt;
+              }
+            } else {
+              if (t.dueDate) {
+                try {
+                  const dDate = new Date(t.dueDate);
+                  const dMonth = dDate.getMonth();
+                  const dYear = dDate.getFullYear();
+                  if (dYear === selectedYear && dMonth === selectedMonth) {
+                    periodContactPayablesTotal += amt;
+                    if (!t.isPaid) {
+                      periodContactPayablesRemaining += amt;
+                    }
+                  } else {
+                    const selectedTime = selectedYear * 12 + selectedMonth;
+                    const dueTime = dYear * 12 + dMonth;
+                    if (selectedTime > dueTime && !t.isPaid) {
+                      periodContactPayablesTotal += amt;
+                      periodContactPayablesRemaining += amt;
+                    }
+                  }
+                } catch {
+                  if (!t.isPaid) {
+                    periodContactPayablesTotal += amt;
+                    periodContactPayablesRemaining += amt;
+                  }
+                }
+              } else {
+                if (!t.isPaid) {
+                  periodContactPayablesTotal += amt;
+                  periodContactPayablesRemaining += amt;
+                }
+              }
+            }
+          }
+        });
+      }
+    } catch {}
+  }
+
+  const computedThisMonthTotalBorc = periodSimpleDebtTotal + periodInstallmentTotal + periodContactPayablesTotal;
+  const computedThisMonthKalanBorc = periodSimpleDebtRemaining + periodInstallmentRemaining + periodContactPayablesRemaining;
 
   const totalIncome = filteredIncomesForStats.reduce((sum, i) => sum + i.amount, 0);
   const totalExpense = filteredExpensesForStats.reduce((sum, e) => sum + e.amount, 0);
 
-  // Net reserve capacity specifically for the selected month
+  // Carryover balance (Devreden Bakiye) accumulator from all months prior to selectedMonth & selectedYear
+  let carryOverBalance = 0;
+  if (selectedMonth !== null && selectedYear !== null) {
+    let startYearComp = 2025;
+    let startMonthComp = 0;
+
+    const allDatesComp: Date[] = [];
+    incomes.forEach((i) => { try { allDatesComp.push(new Date(i.date)); } catch {} });
+    expenses.forEach((e) => { try { allDatesComp.push(new Date(e.date)); } catch {} });
+    payments.forEach((p) => { try { allDatesComp.push(new Date(p.date)); } catch {} });
+
+    if (allDatesComp.length > 0) {
+      const minDate = new Date(Math.min(...allDatesComp.map(d => d.getTime())));
+      startYearComp = minDate.getFullYear();
+      startMonthComp = minDate.getMonth();
+    }
+
+    let loopYearComp = startYearComp;
+    let loopMonthComp = startMonthComp;
+    const targetTimeComp = selectedYear * 12 + selectedMonth;
+
+    while (loopYearComp * 12 + loopMonthComp < targetTimeComp) {
+      const loopTimeComp = loopYearComp * 12 + loopMonthComp;
+
+      // Incomes in historical loopMonthComp/loopYearComp
+      const incTotalComp = incomes.reduce((sum, i) => {
+        try {
+          const d = new Date(i.date);
+          const iMonth = d.getMonth();
+          const iYear = d.getFullYear();
+          if (i.isRecurring !== false) {
+            const incTime = iYear * 12 + iMonth;
+            if (loopTimeComp >= incTime) {
+              return sum + i.amount;
+            }
+          } else {
+            if (iMonth === loopMonthComp && iYear === loopYearComp) {
+              return sum + i.amount;
+            }
+          }
+        } catch {}
+        return sum;
+      }, 0);
+
+      // Expenses in historical loopMonthComp/loopYearComp
+      const expTotalComp = expenses.reduce((sum, e) => {
+        try {
+          const d = new Date(e.date);
+          if (d.getMonth() === loopMonthComp && d.getFullYear() === loopYearComp) {
+            return sum + e.amount;
+          }
+        } catch {}
+        return sum;
+      }, 0);
+
+      // Payments in historical loopMonthComp/loopYearComp
+      const payTotalComp = payments.reduce((sum, p) => {
+        try {
+          const d = new Date(p.date);
+          if (d.getMonth() === loopMonthComp && d.getFullYear() === loopYearComp) {
+            return sum + p.amount;
+          }
+        } catch {}
+        return sum;
+      }, 0);
+
+      const monthlyNet = incTotalComp - expTotalComp - payTotalComp;
+      carryOverBalance += monthlyNet;
+
+      loopMonthComp++;
+      if (loopMonthComp > 11) {
+        loopMonthComp = 0;
+        loopYearComp++;
+      }
+    }
+  }
+
+  // Net reserve capacity specifically for the selected month (including carry over from prior months)
   const currentMonthPaidBorc = computedThisMonthTotalBorc - computedThisMonthKalanBorc;
-  const netIncomeValue = totalIncome - totalExpense - currentMonthPaidBorc;
+  const netIncomeValue = totalIncome - totalExpense - currentMonthPaidBorc + carryOverBalance;
 
   const currentMonthTotalPaymentsCount = filteredPaymentsForStats.length;
 
@@ -1347,7 +1503,8 @@ export default function App() {
     totalExpense: totalExpense,
     netIncome: netIncomeValue,
     thisMonthTotalBorc: computedThisMonthTotalBorc,
-    thisMonthKalanBorc: computedThisMonthKalanBorc
+    thisMonthKalanBorc: computedThisMonthKalanBorc,
+    carryOverBalance: carryOverBalance
   };
 
   const filteredIncomesByMonth = incomes.filter((i) => {
@@ -3057,6 +3214,7 @@ export default function App() {
             onDeleteIncome={handleDeleteIncome}
             isPremium={isPremium}
             onUpgradeClick={() => setIsUpgradeModalOpen(true)}
+            carryOverBalance={statsBag.carryOverBalance}
           />
         )}
 

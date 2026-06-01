@@ -216,6 +216,11 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
         <div className="p-4 bg-blue-600 text-white rounded-3xl space-y-1.5 relative overflow-hidden shadow-md transition flex flex-col items-center justify-center text-center min-h-[100px]">
           <span className="text-[10px] font-bold text-blue-105 block uppercase tracking-wide">AYLIK GELİR</span>
           <p className="text-sm sm:text-lg font-black font-mono">{format(stats.totalIncome)}</p>
+          {stats.carryOverBalance !== undefined && stats.carryOverBalance !== 0 && (
+            <span className="text-[9px] text-blue-100 font-extrabold block bg-blue-700/50 px-2 py-0.5 rounded-lg mt-1">
+              Önceki Aydan Devreden: {format(stats.carryOverBalance)}
+            </span>
+          )}
         </div>
 
         <div className="p-4 bg-amber-600 text-white rounded-3xl space-y-1.5 relative overflow-hidden shadow-md transition flex flex-col items-center justify-center text-center min-h-[100px]">

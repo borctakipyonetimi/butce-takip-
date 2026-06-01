@@ -254,12 +254,38 @@ export const DebtList: React.FC<DebtListProps> = ({
 
   const totalRemaining = totalAmount - totalPaid;
 
-  // True lifetime overall aggregates (un-filtered by period, representing actual total debt burden)
+  // True lifetime overall aggregates (un-filtered by period, representing actual total debt burden including contact-based payables)
+  const currentUserLocal = localStorage.getItem("currentUser") || "anonymous";
+  const spaceKeyLocal = currentUserLocal !== "anonymous" ? `user_${currentUserLocal}` : "user_anonymous";
+  const savedContactTxsStrLocal = localStorage.getItem(`${spaceKeyLocal}_contacts_transactions`);
+  let contactPayablesTotalLocal = 0;
+  let contactPayablesPaidLocal = 0;
+  if (savedContactTxsStrLocal) {
+    try {
+      const txs = JSON.parse(savedContactTxsStrLocal);
+      if (Array.isArray(txs)) {
+        txs.forEach((t: any) => {
+          if (t.type === "payable") {
+            const amt = Number(t.amount) || 0;
+            contactPayablesTotalLocal += amt;
+            if (t.isPaid) {
+              contactPayablesPaidLocal += amt;
+            }
+          }
+        });
+      }
+    } catch (e) {
+      console.error("Error loading contact transactions in DebtList:", e);
+    }
+  }
+
   const allTimeTotalAmount = debts.reduce((sum, d) => sum + d.amount, 0) + 
-    installmentDebts.reduce((sum, inst) => sum + inst.totalAmount, 0);
+    installmentDebts.reduce((sum, inst) => sum + inst.totalAmount, 0) +
+    contactPayablesTotalLocal;
 
   const allTimeTotalPaid = debts.reduce((sum, d) => sum + d.paid, 0) + 
-    installmentDebts.reduce((sum, inst) => sum + (inst.paidInstallmentCount * (inst.totalAmount / (inst.installmentCount || 1))), 0);
+    installmentDebts.reduce((sum, inst) => sum + (inst.paidInstallmentCount * (inst.totalAmount / (inst.installmentCount || 1))), 0) +
+    contactPayablesPaidLocal;
 
   const allTimeRemaining = allTimeTotalAmount - allTimeTotalPaid;
 
@@ -295,7 +321,45 @@ export const DebtList: React.FC<DebtListProps> = ({
     return sum;
   }, 0);
 
-  const dueThisMonthAmount = simpleDueThisMonthAmount + installmentsDueThisMonthAmount;
+  let periodContactPayablesRemainingLocal = 0;
+  if (savedContactTxsStrLocal) {
+    try {
+      const txs = JSON.parse(savedContactTxsStrLocal);
+      if (Array.isArray(txs)) {
+        txs.forEach((t: any) => {
+          if (t.type === "payable" && !t.isPaid) {
+            const amt = Number(t.amount) || 0;
+            if (selectedMonthVal === null || selectedYearVal === null) {
+              periodContactPayablesRemainingLocal += amt;
+            } else {
+              if (t.dueDate) {
+                try {
+                  const dDate = new Date(t.dueDate);
+                  const dMonth = dDate.getMonth();
+                  const dYear = dDate.getFullYear();
+                  if (dYear === selectedYearVal && dMonth === selectedMonthVal) {
+                    periodContactPayablesRemainingLocal += amt;
+                  } else {
+                    const selectedTime = selectedYearVal * 12 + selectedMonthVal;
+                    const dueTime = dYear * 12 + dMonth;
+                    if (selectedTime > dueTime) {
+                      periodContactPayablesRemainingLocal += amt;
+                    }
+                  }
+                } catch {
+                  periodContactPayablesRemainingLocal += amt;
+                }
+              } else {
+                periodContactPayablesRemainingLocal += amt;
+              }
+            }
+          }
+        });
+      }
+    } catch {}
+  }
+
+  const dueThisMonthAmount = simpleDueThisMonthAmount + installmentsDueThisMonthAmount + periodContactPayablesRemainingLocal;
 
   const handleOpenAdd = () => {
     setModalTitle("Yeni Borç Ekle");
