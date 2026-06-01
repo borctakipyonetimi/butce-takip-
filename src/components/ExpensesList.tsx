@@ -179,6 +179,13 @@ export const ExpensesList: React.FC<ExpensesListProps> = ({
   onUpgradeClick,
 }) => {
   const { format, currencySymbol } = useCurrency();
+  
+  // Selected Month filter state (defaults to current year & month, e.g. "2026-05")
+  const [selectedMonthStr, setSelectedMonthStr] = useState<string>(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  });
+
   // Saving Advice / Tip Popover State
   const [showTipCategory, setShowTipCategory] =
     useState<ExpenseCategory | null>(null);
@@ -256,7 +263,16 @@ export const ExpensesList: React.FC<ExpensesListProps> = ({
     if (expenseCategories.length > 0) setCategoryId(expenseCategories[0].id);
     setAmount("");
     setDescription("");
-    setDate(new Date().toISOString().slice(0, 10));
+    
+    // Choose dynamic smart default date for past/future monthly addition support
+    const today = new Date();
+    const currentMonthKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
+    if (selectedMonthStr === "all" || selectedMonthStr === currentMonthKey) {
+      setDate(today.toISOString().slice(0, 10));
+    } else {
+      setDate(`${selectedMonthStr}-01`);
+    }
+    
     setIsExpModalOpen(true);
   };
 
@@ -403,12 +419,25 @@ export const ExpensesList: React.FC<ExpensesListProps> = ({
     setDragOverIndex(null);
   };
 
-  const totalExpenses = expenses.reduce((s, e) => s + e.amount, 0);
+  // Dynamically filter expenses according to the selected month (e.g. YYYY-MM)
+  const filteredMonthExpenses = expenses.filter((e) => {
+    if (selectedMonthStr === "all") return true;
+    if (!e.date) return false;
+    try {
+      const eDate = new Date(e.date);
+      const val = `${eDate.getFullYear()}-${String(eDate.getMonth() + 1).padStart(2, "0")}`;
+      return val === selectedMonthStr;
+    } catch {
+      return false;
+    }
+  });
 
-  // Grouping category totals for the visual stats
+  const totalExpenses = filteredMonthExpenses.reduce((s, e) => s + e.amount, 0);
+
+  // Grouping category totals for the visual stats of the selected month
   const categoryTotals: Record<number, number> = {};
   expenseCategories.forEach((cat) => (categoryTotals[cat.id] = 0));
-  expenses.forEach((e) => {
+  filteredMonthExpenses.forEach((e) => {
     if (categoryTotals[e.categoryId] !== undefined) {
       categoryTotals[e.categoryId] += e.amount;
     } else {
@@ -515,14 +544,14 @@ export const ExpensesList: React.FC<ExpensesListProps> = ({
     (c) => c.id === selectedFilterCategoryId,
   );
   const selectedCategoryTotal = selectedFilterCategoryId
-    ? expenses
+    ? filteredMonthExpenses
         .filter((e) => e.categoryId === selectedFilterCategoryId)
         .reduce((sum, e) => sum + e.amount, 0)
     : totalExpenses;
 
   const selectedCategoryCount = selectedFilterCategoryId
-    ? expenses.filter((e) => e.categoryId === selectedFilterCategoryId).length
-    : expenses.length;
+    ? filteredMonthExpenses.filter((e) => e.categoryId === selectedFilterCategoryId).length
+    : filteredMonthExpenses.length;
 
   const percentageOfTotal =
     totalExpenses > 0
@@ -530,8 +559,8 @@ export const ExpensesList: React.FC<ExpensesListProps> = ({
       : "0.0";
 
   const filteredExpenses = selectedFilterCategoryId
-    ? expenses.filter((e) => e.categoryId === selectedFilterCategoryId)
-    : expenses;
+    ? filteredMonthExpenses.filter((e) => e.categoryId === selectedFilterCategoryId)
+    : filteredMonthExpenses;
 
   return (
     <div className="space-y-6">
@@ -562,6 +591,66 @@ export const ExpensesList: React.FC<ExpensesListProps> = ({
           >
             <PlusCircle className="w-4 h-4" /> Gider Ekle
           </button>
+        </div>
+      </div>
+
+      {/* Month Selection Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200/60 dark:border-slate-700/60 shadow-xs">
+        <div className="flex items-center gap-2">
+          <Calendar className="w-4 h-4 text-rose-500" />
+          <span className="text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider">HARCAMA DÖNEMİ SEÇİN:</span>
+        </div>
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <select
+            value={selectedMonthStr}
+            onChange={(e) => setSelectedMonthStr(e.target.value)}
+            className="w-full sm:w-56 px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs text-slate-800 dark:text-white rounded-xl focus:outline-none focus:ring-1 focus:ring-rose-500 font-extrabold cursor-pointer transition"
+          >
+            <option value="all">📅 Tüm Zamanlar</option>
+            {(() => {
+              const options: { value: string; label: string }[] = [];
+              const now = new Date();
+              const startYear = now.getFullYear() - 1;
+              const endYear = now.getFullYear();
+              
+              for (let y = startYear; y <= endYear; y++) {
+                const maxMonth = y === endYear ? now.getMonth() + 2 : 11;
+                for (let m = 0; m <= maxMonth; m++) {
+                  const mStr = String(m + 1).padStart(2, "0");
+                  const val = `${y}-${mStr}`;
+                  const label = `${monthsList[m]} ${y}`;
+                  options.push({ value: val, label });
+                }
+              }
+              
+              // Append any extra dates present in actual loaded expenses
+              expenses.forEach(e => {
+                if (e.date) {
+                  try {
+                    const d = new Date(e.date);
+                    if (!isNaN(d.getTime())) {
+                      const val = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+                      if (!options.some(opt => opt.value === val)) {
+                        options.push({
+                          value: val,
+                          label: `${monthsList[d.getMonth()]} ${d.getFullYear()}`
+                        });
+                      }
+                    }
+                  } catch (e) {}
+                }
+              });
+              
+              // Deduplicate and Sort
+              const uniqueOptions = options.filter((value, index, self) =>
+                index === self.findIndex((t) => t.value === value.value)
+              ).sort((a, b) => b.value.localeCompare(a.value));
+
+              return uniqueOptions.map(opt => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ));
+            })()}
+          </select>
         </div>
       </div>
 

@@ -8,7 +8,7 @@ import { motion } from "motion/react";
 import { PlusCircle, Printer, FileText, CheckCircle2, Circle, AlertCircle, Edit, Trash2, Calendar, ClipboardList, ArrowUpDown, Sparkles, Camera } from "lucide-react";
 import { Debt, InstallmentDebt } from "../types";
 import { useCurrency } from "../utils/CurrencyContext";
-import { DoughnutChart } from "./BudgetCharts";
+import { DoughnutChart, BarChart } from "./BudgetCharts";
 import { AdMobBanner } from "./AdMobBanner";
 import ReceiptScanner from "./ReceiptScanner";
 import { DebtTimelineChart } from "./DebtTimelineChart";
@@ -184,6 +184,29 @@ export const DebtList: React.FC<DebtListProps> = ({
   const totalAmount = debts.reduce((sum, d) => sum + d.amount, 0) + installmentDebts.reduce((sum, inst) => sum + inst.totalAmount, 0);
   const totalPaid = debts.reduce((sum, d) => sum + d.paid, 0) + installmentDebts.reduce((sum, inst) => sum + (inst.paidInstallmentCount * (inst.totalAmount / inst.installmentCount)), 0);
   const totalRemaining = totalAmount - totalPaid;
+
+  // Calculate debt payments due strictly in the current month
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonthIdx = now.getMonth();
+
+  const simpleDebtsDueThisMonth = debts.filter(d => {
+    if (!d.dueDate || d.paid >= d.amount) return false;
+    try {
+      const dDate = new Date(d.dueDate);
+      return dDate.getFullYear() === currentYear && dDate.getMonth() === currentMonthIdx;
+    } catch {
+      return false;
+    }
+  });
+
+  const simpleDueThisMonthAmount = simpleDebtsDueThisMonth.reduce((sum, d) => sum + (d.amount - d.paid), 0);
+
+  // Active installments (unpaid count > 0) have one monthly payment due in the current month
+  const activeInstallments = installmentDebts.filter(inst => inst.paidInstallmentCount < inst.installmentCount);
+  const installmentsDueThisMonthAmount = activeInstallments.reduce((sum, inst) => sum + (inst.totalAmount / inst.installmentCount), 0);
+
+  const dueThisMonthAmount = simpleDueThisMonthAmount + installmentsDueThisMonthAmount;
 
   const handleOpenAdd = () => {
     setModalTitle("Yeni Borç Ekle");
@@ -372,6 +395,45 @@ export const DebtList: React.FC<DebtListProps> = ({
           >
             <PlusCircle className="w-3.5 h-3.5" /> Ekle
           </button>
+        </div>
+      </div>
+
+      {/* Top Level Key Debt Aggregates Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="p-4 bg-gradient-to-br from-indigo-500/5 to-indigo-600/[0.02] dark:from-indigo-500/10 dark:to-transparent rounded-2xl border border-indigo-100/40 dark:border-indigo-900/30 shadow-xs relative overflow-hidden">
+          <div className="absolute right-3.5 top-3.5 p-1 bg-indigo-500/10 text-indigo-500 rounded-lg">
+            <ClipboardList className="w-4 h-4" />
+          </div>
+          <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest block">TOPLAM ÖDENECEK</span>
+          <span className="text-base sm:text-lg font-black font-mono text-indigo-600 dark:text-indigo-400 mt-1 block">{format(totalAmount)}</span>
+          <span className="text-[8px] font-bold text-slate-400 block mt-0.5">Tüm aktif & taksitli genel borçlar</span>
+        </div>
+
+        <div className="p-4 bg-gradient-to-br from-amber-500/5 to-amber-600/[0.02] dark:from-amber-500/10 dark:to-transparent rounded-2xl border border-amber-100/40 dark:border-amber-900/30 shadow-xs relative overflow-hidden">
+          <div className="absolute right-3.5 top-3.5 p-1 bg-amber-500/10 text-amber-500 rounded-lg">
+            <Calendar className="w-4 h-4" />
+          </div>
+          <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest block">BU AY ÖDENECEK</span>
+          <span className="text-base sm:text-lg font-black font-mono text-amber-600 dark:text-amber-550 mt-1 block">{format(dueThisMonthAmount)}</span>
+          <span className="text-[8px] font-bold text-slate-400 block mt-0.5">Bu ay vadesi gelen tüm taksit & borçlar</span>
+        </div>
+
+        <div className="p-4 bg-gradient-to-br from-emerald-500/5 to-emerald-600/[0.02] dark:from-emerald-500/10 dark:to-transparent rounded-2xl border border-emerald-100/40 dark:border-emerald-900/30 shadow-xs relative overflow-hidden">
+          <div className="absolute right-3.5 top-3.5 p-1 bg-emerald-500/10 text-emerald-500 rounded-lg">
+            <CheckCircle2 className="w-4 h-4" />
+          </div>
+          <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest block">ÖDENEN BORÇ</span>
+          <span className="text-base sm:text-lg font-black font-mono text-emerald-600 dark:text-emerald-400 mt-1 block">{format(totalPaid)}</span>
+          <span className="text-[8px] font-bold text-slate-400 block mt-0.5">Kapatılan taksit ve ödemeler</span>
+        </div>
+
+        <div className="p-4 bg-gradient-to-br from-rose-500/5 to-rose-600/[0.02] dark:from-rose-500/10 dark:to-transparent rounded-2xl border border-rose-100/40 dark:border-rose-900/30 shadow-xs relative overflow-hidden">
+          <div className="absolute right-3.5 top-3.5 p-1 bg-rose-500/10 text-rose-500 rounded-lg">
+            <AlertCircle className="w-4 h-4" />
+          </div>
+          <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest block">KALAN BORÇ</span>
+          <span className="text-base sm:text-lg font-black font-mono text-rose-600 dark:text-rose-450 mt-1 block">{format(totalRemaining)}</span>
+          <span className="text-[8px] font-bold text-slate-400 block mt-0.5">Geri ödenmesi gereken net bakiye</span>
         </div>
       </div>
 
@@ -705,38 +767,45 @@ export const DebtList: React.FC<DebtListProps> = ({
         />
       </div>
 
-      {/* Stats Summary Panel with Doughnut Visualizer at the absolute bottom */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-5 bg-white dark:bg-slate-800 rounded-3xl border border-slate-200/50 dark:border-slate-700/60 shadow-xs">
-        {/* Left Side: Stats Badges */}
+      {/* Stats Summary Panel with Doughnut & Bar Visualizers at the absolute bottom */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 p-6 bg-white dark:bg-slate-800 rounded-3xl border border-slate-200/50 dark:border-slate-700/60 shadow-xs">
+        {/* Left Side: Comparison Bar Chart of 4 Dimensions of Debts */}
         <div className="flex flex-col justify-center space-y-3.5">
           <h3 className="text-xs font-black tracking-wider text-slate-400 dark:text-slate-500 uppercase flex items-center gap-1.5">
-            <span>📊 BORÇ DURUM ÖZETİ</span>
+            <span>📊 BORÇ ANALİZ GRAFİĞİ</span>
           </h3>
-          <div className="grid grid-cols-3 gap-3">
-            <div className="p-3 bg-indigo-50/50 dark:bg-indigo-950/20 text-indigo-950 dark:text-indigo-200 rounded-2xl border border-indigo-100/10">
-              <span className="text-[10px] font-bold text-slate-400 block uppercase tracking-wide font-sans">TOPLAM BORÇ</span>
-              <span className="text-xs sm:text-sm font-black font-mono text-indigo-600 dark:text-indigo-400 block truncate mt-1">{format(totalAmount)}</span>
-            </div>
-            <div className="p-3 bg-emerald-50/50 dark:bg-emerald-950/20 text-emerald-950 dark:text-emerald-200 rounded-2xl border border-emerald-100/10">
-              <span className="text-[10px] font-bold text-slate-400 block uppercase tracking-wide font-sans">ÖDENEN</span>
-              <span className="text-xs sm:text-sm font-black font-mono text-emerald-600 dark:text-emerald-400 block truncate mt-1">{format(totalPaid)}</span>
-            </div>
-            <div className="p-3 bg-rose-50/50 dark:bg-rose-950/20 text-rose-950 dark:text-rose-200 rounded-2xl border border-rose-100/10">
-              <span className="text-[10px] font-bold text-slate-400 block uppercase tracking-wide font-sans">KALAN</span>
-              <span className="text-xs sm:text-sm font-black font-mono text-rose-600 dark:text-rose-400 block truncate mt-1">{format(totalRemaining)}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Right Side: DoughnutChart widget */}
-        <div className="flex items-center justify-center p-3 bg-slate-50/50 dark:bg-slate-900/10 rounded-2xl border border-slate-100 dark:border-slate-700/30">
-          <div className="w-full max-w-xs scale-95">
-            <DoughnutChart
+          <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider">
+            Toplam Borç • Bu Ay Ödenecek • Kalan • Ödenen Karşılaştırması
+          </p>
+          <div className="bg-slate-50/50 dark:bg-slate-900/10 p-4 rounded-2xl border border-slate-100 dark:border-slate-700/30">
+            <BarChart
               data={[
+                { label: "Toplam Borç", value: totalAmount, color: "#4f46e5" },
+                { label: "Bu Ay Ödenecek", value: dueThisMonthAmount, color: "#f59e0b" },
                 { label: "Ödenen Borç", value: totalPaid, color: "#10b981" },
                 { label: "Kalan Borç", value: totalRemaining, color: "#ef4444" },
               ]}
             />
+          </div>
+        </div>
+
+        {/* Right Side: DoughnutChart Ratio widget */}
+        <div className="flex flex-col justify-center space-y-3.5">
+          <h3 className="text-xs font-black tracking-wider text-slate-400 dark:text-slate-500 uppercase text-center md:text-left flex items-center gap-1.5">
+            <span>🔒 BORÇ GERİ ÖDEME ORANI</span>
+          </h3>
+          <p className="text-[10px] text-slate-400 dark:text-slate-550 font-bold uppercase tracking-wider text-center md:text-left">
+            Ödenen ve Kalan Borç Oransal Dağılım Analizi
+          </p>
+          <div className="flex items-center justify-center p-3 bg-slate-50/50 dark:bg-slate-900/10 rounded-2xl border border-slate-100 dark:border-slate-700/30">
+            <div className="w-full max-w-xs scale-95">
+              <DoughnutChart
+                data={[
+                  { label: "Ödenen Borç", value: totalPaid, color: "#10b981" },
+                  { label: "Kalan Borç", value: totalRemaining, color: "#ef4444" },
+                ]}
+              />
+            </div>
           </div>
         </div>
       </div>

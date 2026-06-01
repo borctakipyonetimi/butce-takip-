@@ -265,7 +265,7 @@ export const ContactsDebtPanel: React.FC<ContactsDebtPanelProps> = ({
 
         const parsedContacts: Array<{ name: string; phone: string; category: "friend" | "family" | "work" | "other" }> = [];
 
-        cards.forEach((card) => {
+        cards.forEach((card: string) => {
           let name = "";
           const fnMatch = card.match(/FN(?:;[^:]*)?:(.*)/i);
           if (fnMatch && fnMatch[1]) {
