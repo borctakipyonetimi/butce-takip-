@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { Bot, Send, User, Sparkles, Brain, Flame, Target, MessageSquareCode } from "lucide-react";
+import { Bot, Send, User, Sparkles, Brain, Flame, Target, MessageSquareCode, Settings, TrendingUp } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { Debt, Income, Expense, InstallmentDebt, FinancialStats } from "../types";
 
@@ -16,6 +16,84 @@ interface AIChatProps {
   stats: FinancialStats;
 }
 
+// Helper to highlight words between **
+const renderTextWithBold = (text: string) => {
+  const parts = text.split(/\*\*([^*]+)\*\*/g);
+  return parts.map((part, i) => {
+    if (i % 2 === 1) {
+      return (
+        <strong key={i} className="font-extrabold text-indigo-600 dark:text-indigo-400 bg-indigo-500/5 dark:bg-indigo-500/15 px-1 py-0.5 rounded text-[11px] sm:text-xs">
+          {part}
+        </strong>
+      );
+    }
+    return part;
+  });
+};
+
+const FormattedText: React.FC<{ text: string }> = ({ text }) => {
+  const lines = text.split("\n");
+  return (
+    <div className="space-y-2 text-xs md:text-sm leading-relaxed font-sans">
+      {lines.map((line, idx) => {
+        const trimmed = line.trim();
+        if (!trimmed) {
+          return <div key={idx} className="h-1" />;
+        }
+
+        // Subheaders or Header Section
+        if (
+          trimmed.startsWith("###") || 
+          trimmed.startsWith("📊") || 
+          trimmed.startsWith("🚀") || 
+          trimmed.startsWith("🎯") || 
+          trimmed.startsWith("🔔") || 
+          trimmed.startsWith("📈") || 
+          trimmed.startsWith("💡") ||
+          trimmed.startsWith("🚨") ||
+          trimmed.startsWith("🟢") ||
+          trimmed.startsWith("⚡")
+        ) {
+          const cleanText = trimmed.replace(/^###\s*/, "");
+          return (
+            <div key={idx} className="font-extrabold text-slate-900 dark:text-white border-b border-indigo-500/10 dark:border-indigo-500/5 pb-1 pt-2 flex items-center gap-1.5 tracking-wide text-xs sm:text-sm mt-2">
+              <span className="text-indigo-400">✧</span>
+              <span>{renderTextWithBold(cleanText)}</span>
+            </div>
+          );
+        }
+
+        // Bullet point lines starting with •, - or *
+        if (trimmed.startsWith("•") || trimmed.startsWith("-") || trimmed.startsWith("*")) {
+          const cleanText = trimmed.replace(/^[•\-\*]\s*/, "");
+          return (
+            <div key={idx} className="flex items-start gap-2 pl-2 text-slate-700 dark:text-slate-350 py-0.5">
+              <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400 dark:bg-emerald-500 mt-1.5 shrink-0 animate-pulse" />
+              <div className="flex-1">{renderTextWithBold(cleanText)}</div>
+            </div>
+          );
+        }
+
+        // Numeric lists starting with numbers
+        if (/^\d+️⃣/.test(trimmed) || /^\d+\./.test(trimmed)) {
+          return (
+            <div key={idx} className="pl-2 border-l-2 border-indigo-500 dark:border-indigo-600 bg-indigo-500/5 dark:bg-indigo-500/10 py-1.5 rounded-r-md my-1 text-slate-800 dark:text-slate-200">
+              {renderTextWithBold(line)}
+            </div>
+          );
+        }
+
+        // Default paragraph
+        return (
+          <p key={idx} className="text-slate-700 dark:text-slate-300">
+            {renderTextWithBold(line)}
+          </p>
+        );
+      })}
+    </div>
+  );
+};
+
 export const AIChat: React.FC<AIChatProps> = ({ debts, incomes, expenses, installmentDebts, stats }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
@@ -27,6 +105,7 @@ export const AIChat: React.FC<AIChatProps> = ({ debts, incomes, expenses, instal
   const [loading, setLoading] = useState(false);
   const [apiKeyInput, setApiKeyInput] = useState(() => localStorage.getItem("user_gemini_api_key") || "");
   const [showApiKeyField, setShowApiKeyField] = useState(false);
+  const [isApiKeySaved, setIsApiKeySaved] = useState(false);
   
   // Custom scroll refs to target ONLY the scrollable chat container, preventing parent window scroll jump
   const chatContainerRef = useRef<HTMLDivElement>(null);
@@ -50,91 +129,183 @@ export const AIChat: React.FC<AIChatProps> = ({ debts, incomes, expenses, instal
   }, [messages, loading]);
 
   const generateClientFallbackReply = (query: string): string => {
-    const q = query.toLowerCase();
+    const q = (query || "").toLowerCase();
     
-    // Safety calculations
     const dRatio = stats.totalIncome > 0 ? (stats.remaining / stats.totalIncome) : 0;
+    const dRatioPerc = dRatio * 100;
     const expensePercentage = stats.totalIncome > 0 ? (stats.totalExpense / stats.totalIncome) * 100 : 0;
-    
-    let reply = "";
-    
-    if (q.includes("risk") || q.includes("analiz") || q.includes("durum") || q.includes("bütçe") || q.includes("butce") || q.includes("genel")) {
-      reply += `📊 **Finansal Sağlık ve Risk Analiz Raporu (Hibrid Akıllı Hesap Motoru)**\n\n`;
-      reply += `Uzak yapay zeka sunucusuna bağlanılamadı ancak bütçe kayıtlarınız üzerinden anlık mali sağlık simülasyonunu tamamladım:\n\n`;
-      reply += `• **Aylık Toplam Gelir**: ₺${stats.totalIncome.toLocaleString("tr-TR")}\n`;
-      reply += `• **Aylık Toplam Gider**: ₺${stats.totalExpense.toLocaleString("tr-TR")} (%${expensePercentage.toFixed(1)} tasarruf/harcama oranı)\n`;
-      reply += `• **Kalan Net Bakiye (Bebek Adımı Rezervi)**: ₺${stats.netIncome.toLocaleString("tr-TR")}\n`;
-      reply += `• **Kalan Ödenecek Toplam Borç**: ₺${stats.remaining.toLocaleString("tr-TR")} (Toplam borç: ₺${stats.totalDebt.toLocaleString("tr-TR")})\n\n`;
-      
-      reply += `🚨 **Borç Risk Durumunuz**: `;
-      if (dRatio > 5) {
-        reply += `⚡ **YÜKSEK RİSK**\nÖdenecek borçlarınız, aylık toplam gelirinizin 5 katından fazla (%${Math.round(dRatio * 100)}). Harcamaları acilen durdurmalı, taksitli alışverişlerden kaçınmalı ve borçlarınızı konsolide etmelisiniz.\n\n`;
-      } else if (dRatio > 2) {
-        reply += `⚖️ **ORTA RİSK**\nBorç yükünüz kontrol edilebilir seviyede (%${Math.round(dRatio * 100)}) ancak aylık dondurulmuş bakiye oranınız yüksek. Birikimlerinizi artırıp borç kapatma hızınızı yükseltmenizi tavsiye ederim.\n\n`;
-      } else {
-        reply += `🟢 **GÜVENLİ DURUM**\nMali göstergeleriniz son derece dengeli görünüyor (%${Math.round(dRatio * 100)}). Bütçe disiplininizi koruyarak mevcut borçlarınızı kısa sürede kapatabilirsiniz.\n\n`;
+    const savingsRate = stats.totalIncome > 0 ? ((stats.netIncome / stats.totalIncome) * 100) : 0;
+
+    const categoriesList = [
+      { id: 1, name: "Kira", color: "#3b82f6", icon: "🏠" },
+      { id: 2, name: "Market", color: "#10b981", icon: "🛒" },
+      { id: 3, name: "Ulaşım", color: "#f59e0b", icon: "🚗" },
+      { id: 4, name: "Yeme İçme", color: "#ec4899", icon: "🍔" },
+      { id: 5, name: "Faturalar", color: "#ef4444", icon: "⚡" }
+    ];
+
+    const categoryKeywords: Record<string, string[]> = {
+      "Kira": ["kira", "ev", "konut", "depo", "otel", "apart", "rezidans"],
+      "Market": ["market", "gıda", "gida", "yemek", "manav", "kasap", "mutfak", "bim", "migros", "carrefoursa", "şok", "sok", "alışveriş", "alisveris", "groseri", "tekel"],
+      "Ulaşım": ["ulaşım", "ulasim", "yol", "akaryakıt", "akaryakit", "benzin", "otobüs", "otobus", "metro", "taksi", "bilet", "yakıt", "yakit", "otoyol", "köprü", "hgs", "egzoz", "sanayi", "araba"],
+      "Faturalar": ["fatura", "elektrik", "su", "doğalgaz", "dogalgaz", "gaz", "internet", "telefon", "aidat", "asansör", "asansor", "tv", "abonelik"],
+      "Eğlence": ["eğlence", "eglence", "sinema", "kafe", "oyun", "netflix", "konser", "bira", "bar", "restoran", "lokanta", "pub", "ps5", "alkol", "hediye", "hobi", "tatil", "gezi"],
+      "Sağlık": ["sağlık", "saglik", "hastane", "ilaç", "ilac", "eczane", "doktor", "muayene", "diş", "dis", "optik", "gözlük", "reçete", "recete"]
+    };
+
+    let matchedCategory: string | null = null;
+    for (const [catName, keywords] of Object.entries(categoryKeywords)) {
+      if (keywords.some(k => q.includes(k))) {
+        matchedCategory = catName;
+        break;
       }
-      
-      reply += `💡 **Bilgi**: Portalı GitHub Pages veya benzeri statik bir sunucudan açtığınızda arka plan yapay zeka sunucusu bulunamadığı için sistemimiz sizi asla yarı yolda bırakmaz ve bu akıllı matematiksel danışman paneliyle bütçenizi anında analiz eder!`;
-      
-    } else if (q.includes("borç") || q.includes("borc") || q.includes("kapat") || q.includes("erit") || q.includes("strateji") || q.includes("kartopu") || q.includes("avalanche") || q.includes("çığ") || q.includes("cig")) {
-      reply += `🚀 **Akıllı Borç Kapatma ve Eritme Planı**\n\n`;
-      reply += `Mevcut borç listeniz (${debts.length} adet borç) için uygulayabileceğiniz profesyonel borç eritme stratejileri aşağıdadır:\n\n`;
-      
-      reply += `1️⃣ **Kartopu (Snowball) Yöntemi (Önerilen)**:\n`;
-      reply += `• En küçük tutarlı borca odaklanıp onu hızla kapatın. Psikolojik olarak borçların tek tek yok olduğunu görmek sizi motive edecektir.\n`;
-      if (debts.length > 0) {
-        const sortedDebts = [...debts].sort((a,b) => (a.amount - a.paid) - (b.amount - b.paid));
-        const smallest = sortedDebts[0];
-        reply += `👉 *Kartopu Önceliğiniz*: En küçük kalan borcunuz olan **${smallest.name}** (Kalan: ₺${(smallest.amount - smallest.paid).toLocaleString("tr-TR")}) borcuna odaklanıp her ay ekstra ödeme aktarın.\n\n`;
-      } else {
-        reply += `👉 *Kartopu Önceliğiniz*: Henüz kayıtlı borç kaydınız yok, lütfen borç ekleyin.\n\n`;
-      }
-      
-      reply += `2️⃣ **Çığ (Avalanche) Yöntemi**:\n`;
-      reply += `• En yüksek faiz oranına ya da mali yükümlülüğe sahip borca öncelik tanıyın. Matematiksel olarak toplamda en az faiz ödemenizi sağlayacak bilimsel yöntem budur.\n`;
-      if (debts.length > 0) {
-        const sortedByLarge = [...debts].sort((a,b) => (b.amount - b.paid) - (a.amount - a.paid));
-        const largest = sortedByLarge[0];
-        reply += `👉 *Çığ Önceliğiniz*: En yüksek kalan borcunuz olan **${largest.name}** (Kalan: ₺${(largest.amount - largest.paid).toLocaleString("tr-TR")}) borcuna asgarilerden kalan tüm bakiye fazlasını yönlendirin.\n\n`;
-      }
-      
-      reply += `💡 Tasarruf oranlarınızı her ay %10 artırarak bu süreci daha da hızlandırabilirsiniz.`;
-      
-    } else if (q.includes("tasarruf") || q.includes("tasaruf") || q.includes("para biriktir") || q.includes("biriktir") || q.includes("tasarruf yöntemi")) {
-      reply += `🎯 **Kişiselleştirilmiş Tasarruf Danışmanı**\n\n`;
-      reply += `Aylık toplam gelirinize (₺${stats.totalIncome.toLocaleString("tr-TR")}) göre ideal bakiye planınızı modelledim:\n\n`;
-      
-      const idealSavings = stats.totalIncome * 0.2;
-      const emergencyFund = stats.totalExpense * 3;
-      
-      reply += `• **50/30/20 Kuralı**: Gelirinizin %50'sini zorunlu harcamalara, %30'unu lüks isteklerinize ayırın. En az **%20'sini (₺${idealSavings.toLocaleString("tr-TR")})** doğrudan birikim veya borç kapatma fonu olarak ayırmalısınız.\n`;
-      reply += `• **Acil Durum Fonu**: İşsizlik, sağlık vb. durumları için asgari 3 aylık harcamalarınızı kapsayan (Önerilen: ₺${emergencyFund.toLocaleString("tr-TR")}) bir güvence akçesi biriktirin.\n\n`;
-      
-      if (expenses.length > 0) {
-        reply += `🚨 **Harcama Analiz Önceliği**: Toplam ₺${stats.totalExpense.toLocaleString("tr-TR")} tutarında kayıtli ${expenses.length} adet lüks veya genel harcamanız bulunuyor. Bu giderlerden tasarruf ederek mali süreci iki kat hızlandırabilirsiniz!`;
-      } else {
-        reply += `💡 Şu anda kayıtlı gideriniz bulunmuyor. Düzenli olarak giderlerinizi ekleyerek tasarruf açıklarını daha net görebilirsiniz.`;
-      }
-      
-    } else if (q.includes("taksit") || q.includes("limit") || q.includes("hedef") || q.includes("plan")) {
-      reply += `🔔 **Taksit ve Harcama Limit Takip Raporu**\n\n`;
-      reply += `• **Cari Ay Taksit / Harcama Yükü**: ₺${stats.totalExpense.toLocaleString("tr-TR")}\n`;
-      if (installmentDebts.length > 0) {
-        reply += `• **Aktif Devam Eden Taksit**: ${installmentDebts.length} adet borç planı yürürlükte.\n\n`;
-      }
-      
-      reply += `📌 *Finansal Öneri*: Taksitli alışverişler gelecekteki nakit akışınızı bloke eder. Yeni taksitli alışveriş yapmaktan kaçınarak bütçenizi özgürleştirin!`;
-    } else {
-      reply += `💡 **Finansal Analiz ve Yardımcı Asistan**\n\n`;
-      reply += `Yazdığınız mesajı bütçe durumunuzla ilişkilendirerek inceledim:\n\n`;
-      reply += `• **Aylık Gelir**: ₺${stats.totalIncome.toLocaleString("tr-TR")}\n`;
-      reply += `• **Aylık Gider**: ₺${stats.totalExpense.toLocaleString("tr-TR")}\n`;
-      reply += `• **Kalan Net Bakiye**: ₺${stats.netIncome.toLocaleString("tr-TR")}\n`;
-      reply += `• **Kalan Toplam Borç**: ₺${stats.remaining.toLocaleString("tr-TR")}\n\n`;
-      reply += `Bana borç kapatma stratejileri (*kartopu/çığ yöntemleri*), tasarruf tavsiyeleri veya mali risk durumunuz hakkında dilediğinizi sorabilirsiniz. Bütçe verilerinizle anında hesaplama yapabilirim!`;
     }
-    
+
+    let reply = `✨ **Bütçem Pro Gelişmiş Finansal Analiz Raporu**\n\n`;
+
+    if (matchedCategory) {
+      let totalCatSpent = 0;
+      const catObj = categoriesList.find((c) => c.name.toLowerCase() === matchedCategory!.toLowerCase());
+      const catId = catObj ? catObj.id : null;
+
+      const matchedExpenses = expenses.filter((e) => {
+        const desc = (e.description || "").toLowerCase();
+        const inDesc = desc.includes(matchedCategory!.toLowerCase()) || categoryKeywords[matchedCategory!].some(k => desc.includes(k));
+        const inCatId = catId ? e.categoryId === catId : false;
+        return inDesc || inCatId;
+      });
+
+      totalCatSpent = matchedExpenses.reduce((sum, curr) => sum + curr.amount, 0);
+      const catRatioOfExpense = stats.totalExpense > 0 ? (totalCatSpent / stats.totalExpense) * 100 : 0;
+      const catRatioOfIncome = stats.totalIncome > 0 ? (totalCatSpent / stats.totalIncome) * 100 : 0;
+
+      reply += `🔍 **Harcama Kalemi Derinlemesine İncelemesi: ${matchedCategory}**\n\n`;
+      reply += `Bütçe kayıtlarınızda **${matchedCategory}** kategorisi veya açıklamasına yönelik harcamalarınızı bizzat taradım:\n\n`;
+      reply += `• **Kayıtlı Harcama Sayısı**: ${matchedExpenses.length} adet işlem \n`;
+      reply += `• **Sektörel Toplam Gider**: ₺${totalCatSpent.toLocaleString("tr-TR")}\n`;
+      reply += `• **Harcama Yükü (Gider Oranı)**: Toplam giderlerinizin **%${catRatioOfExpense.toFixed(1)}** kadarını oluşturuyor.\n`;
+      reply += `• **Gelir Tüketim Oranı**: Aylık toplam gelirinizin **%${catRatioOfIncome.toFixed(1)}** kadarını sömürüyor.\n\n`;
+
+      if (matchedExpenses.length > 0) {
+        reply += `📊 **Son Harcama Detayları**:\n`;
+        matchedExpenses.slice(0, 5).forEach((e) => {
+          reply += `- ₺${e.amount.toLocaleString("tr-TR")} ➔ *"${e.description || "Açıklama Belirtilmemiş"}"* (${e.date ? e.date.split("T")[0] : "Tarih yok"})\n`;
+        });
+        reply += `\n`;
+      }
+
+      reply += `💡 **Asistan Tasarruf Önerisi**:\n`;
+      if (totalCatSpent > stats.totalIncome * 0.15) {
+        reply += `⚠️ **${matchedCategory}** harcamalarınız aylık gelirinizin %15 sınırını aşmış durumda. Bu kalemde her ay ekstra **%20 tasarruf** yaparak ayda **₺${(totalCatSpent * 0.2).toFixed(0)}** cebinizde tutabilir ve bu kaynağı borçlarınızı eritmek için kullanabilirsiniz! Harici abonelikleri veya lüks liyakat harcamalarını yeniden gözden geçirin.\n`;
+      } else {
+        reply += `🟢 Bu kategorideki harcamalarınız makul sınırda (%15 altında) seyrediyor. Mevcut tasarruflu bütçe disiplininizi tebrik ederim! Yeni lüks taksitler yaratmayarak bu istikrarı koruyun.\n`;
+      }
+
+    } else if (q.includes("risk") || q.includes("analiz") || q.includes("durum") || q.includes("bütçe") || q.includes("butce") || q.includes("genel") || q.includes("karne") || q.includes("sağlık") || q.includes("saglik") || q.includes("rapor")) {
+      reply += `📊 **Kişiselleştirilmiş Bütçe Karnesi ve Risk Analizi**\n\n`;
+      reply += `Aylık kayıtlı hesap parametreleriniz üzerinden gerçekleştirdiğim finansal sağlık taraması çıktısı:\n\n`;
+      reply += `| Mali Metrik | Değer | Bütçe Oran Payı | Durum |\n`;
+      reply += `| :--- | :--- | :--- | :---: |\n`;
+      reply += `| **Aylık Gelir** | ₺${stats.totalIncome.toLocaleString("tr-TR")} | %100 | Nakit Girişi |\n`;
+      reply += `| **Aylık Gider** | ₺${stats.totalExpense.toLocaleString("tr-TR")} | %${expensePercentage.toFixed(1)} | Harcama Oranı |\n`;
+      reply += `| **Net Bakiye** | ₺${stats.netIncome.toLocaleString("tr-TR")} | %${savingsRate.toFixed(1)} | Aylık Tasarruf |\n`;
+      reply += `| **Kalan Borç** | ₺${stats.remaining.toLocaleString("tr-TR")} | %${dRatioPerc.toFixed(0)} | Borç/Gelir Yükü |\n\n`;
+
+      reply += `🚨 **Cari Borç Risk Seviyeniz**: `;
+      if (dRatio > 5) {
+        reply += `⚡ **KIRMIZI ALARM (YÜKSEK MALI RİSK)**\n`;
+        reply += `Mevcut toplam borç yükünüz, aylık gelirinizin **${dRatio.toFixed(1)} katı**! Finansal güvenliğiniz tehlikede. Harcamalarınızı acilen dondurmalı, taksitli borçlanmayı durdurmalı ve tüm bütçe fazlasını en küçük borca kanalize etmelisiniz.\n\n`;
+      } else if (dRatio > 2.5) {
+        reply += `⚖️ **SARI ALARM (ORTA SEVİYE RİSK)**\n`;
+        reply += `Geri ödenmesi gereken borç portföyünüz aylık gelirinizin **${dRatio.toFixed(1)} katı** düzeyinde. Bütçeniz kontrol edilebilir durumda ancak yeni taksitler eklemek sizi yüksek risk sınırına itecektir. Kar topu stratejisiyle acilen borç kapatmaya odaklanın.\n\n`;
+      } else {
+        reply += `🟢 **YEŞİL BÖLGE (GÜVENLİ VE RESİLİENT)**\n`;
+        reply += `Toplam borç yükünüz aylık gelirinizin **${dRatio.toFixed(1)} katı** seviyesinde ve oldukça güvenli sınırda. Mevcut bütçe planınızı koruyarak borçlarınızı takvimine göre sıfırlayabilirsiniz.\n\n`;
+      }
+
+      reply += `💪 **Mali Güçlenme Tavsiyeleriniz**:\n`;
+      if (savingsRate < 10) {
+        reply += `- **Tasarruf Sızıntısı**: Aylık tasarruf oranınız (%${savingsRate.toFixed(1)}) çok düşük. Acil durum fonu oluşturmak için aylık gider bütçenizden en az **%15 kısıntı** planlamalıyız.\n`;
+      } else {
+        reply += `- **Yüksek Likidite Gücü**: Aylık tasarruf oranınız (%${savingsRate.toFixed(1)}) son derece güçlü. Biriktirdiğiniz bu net bakiye fazlasını borç kapatma hızlandırıcısı olarak asgari ödemelerin üzerine ekleyin.\n`;
+      }
+      if (installmentDebts.length > 2) {
+        reply += `- **Taksit Blokajı**: Devam eden **${installmentDebts.length} aktif taksitiniz** gelecekteki nakit akışınızı rehin tutuyor. Gelecek aylarda yeni taksitli işlem yapmayacağınıza dair kendinize söz verin.\n`;
+      }
+
+    } else if (q.includes("borç") || q.includes("borc") || q.includes("kapat") || q.includes("erit") || q.includes("strateji") || q.includes("kartopu") || q.includes("avalanche") || q.includes("çığ") || q.includes("cig") || q.includes("öde")) {
+      reply += `🚀 **Akıllı Borç Sıfırlama ve Yapılandırma Stratejisi**\n\n`;
+      
+      if (debts.length === 0) {
+        reply += `Şu anda sistemde kayıtlı aktif nakit borç kaleminiz bulunmuyor. Yeni borçlar ekleyerek asistanın gerçek-zamanlı kar topu simülasyonunu başlatabilirsiniz!\n\n`;
+      } else {
+        reply += `Mevcut **${debts.length} adet** borç kaleminiz analiz edilerek borçsuz bir yaşama en hızlı ulaşmanızı sağlayacak iki temel metodoloji simüle edilmiştir:\n\n`;
+        
+        const sortedSnowball = [...debts].sort((a, b) => (a.amount - a.paid) - (b.amount - b.paid));
+        const sortedAvalanche = [...debts].sort((a, b) => (b.amount - b.paid) - (a.amount - a.paid));
+
+        reply += `1️⃣ **Kartopu (Snowball) Stratejisi (Psikolojik & En Hızlı Sonuç)**:\n`;
+        reply += `• Kalan net bakiyesi en düşük olan borca agresif ödeme yapıp onu yok edin, diğerlerine asgari yatırın. Bir borcun tamamen silindiğini görmek sizi inanılmaz motive eder.\n`;
+        reply += `👉 **Kartopu İlk Hedefiniz**: En az kalan borç olan **"${sortedSnowball[0].name}"** borcunu kapatmaya odaklanın. Kalan Ödenecek: **₺${(sortedSnowball[0].amount - sortedSnowball[0].paid).toLocaleString("tr-TR")}**.\n\n`;
+
+        reply += `2️⃣ **Çığ (Avalanche) Stratejisi (Matematiksel / En Ekonomik Yol)**:\n`;
+        reply += `• Tutarı veya maliyeti en yüksek olan borca öncelik tanıyın. Böylece toplamda katlanacağınız enflasyonist vade yükünü ve faiz kaybını minimuma indirirsiniz.\n`;
+        reply += `👉 **Çığ İlk Hedefiniz**: En büyük kalan borç olan **"${sortedAvalanche[0].name}"** borcuna odaklanın. Kalan Ödenecek: **₺${(sortedAvalanche[0].amount - sortedAvalanche[0].paid).toLocaleString("tr-TR")}**.\n\n`;
+
+        const monthlyReserve = stats.netIncome;
+        reply += `⏱️ **Borç Eritme Zaman Projeksiyonu**:\n`;
+        if (monthlyReserve > 100) {
+          const monthsNeeded = stats.remaining / monthlyReserve;
+          reply += `• Her ay biriktirdiğiniz **₺${monthlyReserve.toLocaleString("tr-TR")}** tasarruf fazlasının tamamını borç kapatmaya yönlendirirseniz, teorik olarak **${monthsNeeded.toFixed(1)} ay sonra** tamamen borçsuz ve özgür bir hayata kavuşabilirsiniz! 🎉\n\n`;
+        } else {
+          reply += `• ⚠️ Aylık kullanılabilir tasarruf rezerviniz yetersiz (Negatif veya çok düşük nakit akışı). Borçlarınızı planlı sürede sıfırlayabilmek için aylık harcamalarınızı kısmalı veya acilen ek gelir yaratmalısınız. Giderleri azaltmadan borçların azalması matematiksel olarak imkansızdır.\n\n`;
+        }
+      }
+
+    } else if (q.includes("tasarruf") || q.includes("tasaruf") || q.includes("para biriktir") || q.includes("biriktir") || q.includes("tasarruf yöntemi") || q.includes("gider") || q.includes("harcama") || q.includes("bakiye") || q.includes("birikim")) {
+      reply += `🎯 **Profesyonel Tasarruf ve Birikim Rehberi**\n\n`;
+      reply += `Aylık toplam kalibre edilmiş geliriniz olan **₺${stats.totalIncome.toLocaleString("tr-TR")}** temel alınarak oluşturulan tasarruf matrisiniz aşağıdadır:\n\n`;
+      
+      const necessityLimit = stats.totalIncome * 0.50;
+      const wantLimit = stats.totalIncome * 0.30;
+      const savingTarget = stats.totalIncome * 0.20;
+
+      reply += `💡 **İdeal 50/30/20 Bütçe Bölüşümü**:\n`;
+      reply += `- **Zorunlu Giderler (Ev, Fatura, Gıda - %50)**: Maksimum **₺${necessityLimit.toLocaleString("tr-TR")}** ayrılmalı. (Sizin Mevcut Gideriniz: ₺${stats.totalExpense.toLocaleString("tr-TR")})\n`;
+      reply += `- **Kişisel İstekler (Sosyal Yaşam - %30)**: Maksimum **₺${wantLimit.toLocaleString("tr-TR")}** ayrılmalı.\n`;
+      reply += `- **Borç Ödeme ve Birikim Fonu (%20)**: Aylık asgari **₺${savingTarget.toLocaleString("tr-TR")}** hedef koyulmalı.\n\n`;
+
+      reply += `🌟 **Eyleme Geçilebilir Tasarruf Reçetesi**:\n`;
+      reply += `1. **Acil Durum Fonu (Emergency Fund)**: Olası harika fırsatlar veya beklenmedik krizler için asgari 3 aylık yaşamsal harcamalarınızı kapsayan (Önerilen Güvence Kaynağı: **₺${(stats.totalExpense * 3).toLocaleString("tr-TR")}**) bir kenar akçesi biriktirmeye başlayın.\n`;
+      if (expenses.length > 0) {
+        reply += `2. **Gereksiz Abonelikler ve Harcama Optimizasyonu**: Sistemde kayıtlı **${expenses.length} adet harcamanızı** tek tek gözden geçirdim. Küçük ve tekrarlayan harcamaları keserek ayda ortalama **₺400** ila **₺1.500** arasında doğrudan ek bütçe yaratabilirsiniz.\n`;
+      } else {
+        reply += `2. **Gider Kaydı Tutma**: Şu an hiç anlık gider kalemi girmemişsiniz. Harcamalarınızı disipline etmek ve nereye bütçe sızıntısı olduğunu teşhis etmek için 'Harcamalar' sekmesinden harcamalarınızı kaydetmeye başlayın.\n`;
+      }
+
+    } else if (q.includes("merhaba") || q.includes("selam") || q.includes("hey") || q.includes("nasılsın") || q.includes("kimsin") || q.includes("yardım") || q.includes("help")) {
+      reply += `👋 **Merhaba! Ben Bütçem Pro Bireysel Finans Danışmanınız.**\n\n`;
+      reply += `Finansal hedeflerinize emin adımlarla yürümeniz, tüm borçlarınızı planlı şekilde sıfırlamanız ve bütçenizi en verimli şekilde yönetebilmeniz için bizzat buradayım.\n\n`;
+      reply += `Aşağıdaki konuları bütçe verilerinizle bizzat hesaplayabiliyorum. Bana dilediğinizi yazabilirsiniz:\n`;
+      reply += `• 📊 **Genel Bütçe Karnesi**: "Mevcut bütçe durumum genel olarak nasıl?"\n`;
+      reply += `• 🚀 **Borç Eritme Stratejileri**: "Borçlarımı kartopu veya avalanche ile nasıl eritirim?"\n`;
+      reply += `• 🎯 **Gider ve Tasarruf Tüyoları**: "Birikim yapmak için hangi harcamalarımı kısmalıyım?"\n`;
+      reply += `• 🔍 **Kategori Analizi**: "Market (veya faturalar) için ne kadar harcama yaptım?"\n\n`;
+      reply += `Sorularınızı bekliyorum!`;
+
+    } else {
+      reply += `👋 **Bütçem Pro Bireysel Finansal Tavsiye Özet Raporu**\n\n`;
+      reply += `Yazdığınız soruyu bütçenizin genel matematiksel verileriyle ilişkilendirerek detaylı şekilde analiz ettim:\n\n`;
+      reply += `• **Aylık Gelir Kaynağınız**: ₺${stats.totalIncome.toLocaleString("tr-TR")}\n`;
+      reply += `• **Aylık Gider Yükünüz**: ₺${stats.totalExpense.toLocaleString("tr-TR")}\n`;
+      reply += `• **Kalan Serbest Net Rezerve**: ₺${stats.netIncome.toLocaleString("tr-TR")}\n`;
+      reply += `• **Geri Ödenecek Kalan Toplam Borç**: ₺${stats.remaining.toLocaleString("tr-TR")} (Ödenen: ₺${stats.totalPaid.toLocaleString("tr-TR")})\n\n`;
+      reply += `Bana borç kapatma simülasyonları (*Kartopu/Çığ yöntemleri*), sektörel harcama analizleri (*market, fatura, kira harcamaları*) veya tasarruf yöntemleri hakkında sorular yöneltebilirsiniz. Bütçe bizzat hesaplanarak size en rasyonel öneriler sunulacaktır!`;
+    }
+
+    reply += `\n\n---\n`;
+    reply += `⚙️ *Bilgi: Bu analiz çevrimdışı finans hesaplama motoru tarafından bütçe verileriniz bizzat hesaplanarak üretilmiştir. Çevrimiçi yapay zekayı (Gemini 3.5) aktifleştirmek isterseniz, yan menüdeki **Yapay Zekâ Motor Ayarları** alanından kendi Gemini API Anahtarınızı kolayca kaydedebilirsiniz.*`;
+
     return reply;
   };
 
@@ -149,82 +320,16 @@ export const AIChat: React.FC<AIChatProps> = ({ debts, incomes, expenses, instal
     setMessages((prev) => [...prev, { sender: "user", text: question }]);
     setLoading(true);
 
-    const userApiKey = localStorage.getItem("user_gemini_api_key");
+    const userApiKey = localStorage.getItem("user_gemini_api_key") || undefined;
 
-    if (userApiKey && userApiKey.trim() !== "") {
-      try {
-        const sysInstruction = `Sen 'Bütçem Pro' finans portalının akıllı yapay zeka asistanısın. Kullanıcıya bütçe yönetimi, tasarruf, borç kapatma stratejileri (Kartopu / Çığ yöntemleri) konusunda yardımcı oluyorsun.
-
-Mevcut Finansal Durum:
-- Toplam Gelir: ₺${stats.totalIncome.toLocaleString("tr-TR")}
-- Toplam Gider: ₺${stats.totalExpense.toLocaleString("tr-TR")}
-- Net Kalan Bakiye: ₺${stats.netIncome.toLocaleString("tr-TR")}
-- Toplam Borç: ₺${stats.totalDebt.toLocaleString("tr-TR")}
-- Kalan Ödenecek Borç: ₺${stats.remaining.toLocaleString("tr-TR")}
-- Taksitli Borç Sayısı: ${installmentDebts.length} adet
-
-Kullanıcının Borçları:
-${debts.map(d => `- ${d.name}: Toplam ₺${d.amount}, Ödenen ₺${d.paid}, Kalan ₺${d.amount - d.paid}, SKT: ${d.dueDate || "Yok"}`).join("\n")}
-
-Kullanıcının Taksitleri:
-${installmentDebts.map(inst => `- ${inst.name}: Toplam ₺${inst.totalAmount}, ${inst.installmentCount} Taksit (Ödenen: ${inst.paidInstallmentCount} adet), Aylık Taksit: ₺${(inst.totalAmount / inst.installmentCount).toFixed(2)}`).join("\n")}
-
-Görevlerin:
-1. Gelir/gider ve kalan borç analizini yaparak kullanıcının risk seviyesini (Yüksek, Orta, Düşük) belirle.
-2. Tasarruf, borç kapatma stratejileri (Kartopu / Çığ yöntemleri vb.) hakkında pratik öneriler ver.
-3. Kullanıcının sorduğu soruları finansal verileri baz alarak dost canlısı, rasyonel ve cesaretlendirici bir tonla somutlaştırarak cevapla.
-4. Cevaplarının okunabilirliği için markdown, başlıklar ve maddeler kullan.`;
-
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${userApiKey.trim()}`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            contents: [
-              ...messages.slice(-6).map(m => ({
-                role: m.sender === "user" ? "user" : "model",
-                parts: [{ text: m.text }]
-              })),
-              {
-                role: "user",
-                parts: [{ text: `Sistem Bilgileri:\n${sysInstruction}\n\nKullanıcı Sorusuna Cevap Ver:\n${question}` }]
-              }
-            ],
-            generationConfig: {
-              temperature: 0.5,
-              maxOutputTokens: 1000
-            }
-          })
-        });
-
-        if (!response.ok) {
-          const errData = await response.json().catch(() => ({}));
-          throw new Error(errData?.error?.message || "Gemini API bağlantısı başarısız oldu.");
-        }
-
-        const data = await response.json();
-        const replyText = data?.candidates?.[0]?.content?.parts?.[0]?.text || "Boş yanıt alındı.";
-        setMessages((prev) => [...prev, { sender: "bot", text: replyText }]);
-      } catch (err: any) {
-        console.warn("[AIChat Client-Side Direct API Error]:", err);
-        setMessages((prev) => [
-          ...prev,
-          {
-            sender: "bot",
-            text: `⚠️ Girilen Gemini API Anahtarı ile bağlantı kurulamadı: ${err.message}\nLütfen anahtarın doğruluğunu kontrol edin veya offline asistanı kullanın.`,
-          },
-        ]);
-      } finally {
-        setLoading(false);
-      }
-      return;
-    }
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 6000);
 
     try {
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        signal: controller.signal,
         body: JSON.stringify({
           message: question,
           context: {
@@ -235,8 +340,11 @@ Görevlerin:
             stats,
           },
           chatHistory: messages.slice(-10),
+          userApiKey: userApiKey,
         }),
       });
+
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         throw new Error("Yapay zeka servisi yanıt vermedi.");
@@ -245,6 +353,7 @@ Görevlerin:
       const data = await response.json();
       setMessages((prev) => [...prev, { sender: "bot", text: data.reply }]);
     } catch (err: any) {
+      clearTimeout(timeoutId);
       console.warn("[AIChat Frontend Fallback] Backend chat failed or is offline. Generating high-quality mathematical fallback response directly in client:", err);
       const fallbackReply = generateClientFallbackReply(question);
       setMessages((prev) => [
@@ -295,9 +404,13 @@ Görevlerin:
           </div>
           <div>
             <div className="flex flex-wrap items-center gap-2">
-              <h2 className="text-md sm:text-lg font-black tracking-tight text-slate-800 dark:text-slate-100 uppercase">
+              <motion.h2
+                animate={{ y: [0, -1.2, 0] }}
+                transition={{ repeat: Infinity, duration: 4.5, ease: "easeInOut" }}
+                className="text-md sm:text-lg font-black tracking-tight text-slate-800 dark:text-slate-100 uppercase"
+              >
                 FİNANSAL DANIŞMANLIK & AKILLI ANALİZ PORTALI
-              </h2>
+              </motion.h2>
               {/* Pulsing state indicator badge */}
               <motion.span
                 animate={{
@@ -384,7 +497,11 @@ Görevlerin:
                           : "bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 rounded-tl-none border border-slate-200/40 dark:border-slate-700/60 hover:shadow-md"
                       }`}
                     >
-                      {msg.text}
+                      {isUser ? (
+                        msg.text
+                      ) : (
+                        <FormattedText text={msg.text} />
+                      )}
                     </div>
                   </div>
                 </motion.div>
@@ -429,6 +546,71 @@ Görevlerin:
             </motion.div>
           )}
         </div>
+      </div>
+
+      {/* Collapsible API Key settings panel */}
+      <div className="bg-slate-50 dark:bg-slate-800/45 rounded-2xl border border-slate-200/50 dark:border-slate-700/60 p-4 transition-all shadow-3xs">
+        <button
+          onClick={() => setShowApiKeyField(!showApiKeyField)}
+          className="w-full flex items-center justify-between text-left cursor-pointer focus:outline-none"
+        >
+          <div className="flex items-center gap-2">
+            <Settings className="w-4 h-4 text-indigo-500 animate-[spin_10s_linear_infinite]" />
+            <span className="text-xs font-black tracking-wide uppercase text-slate-700 dark:text-slate-350">
+              Yapay Zekâ Motor Ayarları (İsteğe Bağlı)
+            </span>
+          </div>
+          <span className="text-[10px] text-slate-400 font-extrabold font-mono hover:text-indigo-500 transition">
+            {showApiKeyField ? "Gizle ▲" : "Göster (Anahtar Ekle) ▼"}
+          </span>
+        </button>
+
+        <AnimatePresence>
+          {showApiKeyField && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.25 }}
+              className="overflow-hidden mt-3 pt-3 border-t border-slate-250/20 dark:border-slate-700/30 space-y-3"
+            >
+              <p className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 leading-relaxed font-semibold">
+                Sistem varsayılan olarak bütçe analizlerini <strong className="text-indigo-500 dark:text-indigo-400">Çevrimdışı Yapay Zekâ Analiz Motoru</strong> ile süper hızlı ve güvenli yapar. Dilerseniz kendi kişisel <strong className="text-indigo-500 dark:text-indigo-400">Gemini API Key</strong> anahtarınızı kaydederek doğrudan geniş modelleri sorgulayabilirsiniz:
+              </p>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <input
+                  type="password"
+                  value={apiKeyInput}
+                  onChange={(e) => {
+                    setApiKeyInput(e.target.value);
+                    setIsApiKeySaved(false);
+                  }}
+                  placeholder="AIzaSy... ile başlayan Gemini API anahtarınızı girin"
+                  className="flex-1 px-3 py-2 text-xs bg-white dark:bg-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-1 focus:ring-indigo-500 placeholder-slate-400"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    localStorage.setItem("user_gemini_api_key", apiKeyInput);
+                    setIsApiKeySaved(true);
+                  }}
+                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 font-black text-xs text-white rounded-xl transition cursor-pointer self-start sm:self-auto shrink-0"
+                >
+                  Kaydet 💾
+                </button>
+              </div>
+              {isApiKeySaved && (
+                <motion.div
+                  initial={{ opacity: 0, y: -5 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="p-2.5 bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-xl text-[10px] sm:text-xs font-bold border border-emerald-500/10 flex items-center gap-1.5"
+                >
+                  🟢 Gemini API Anahtarı başarıyla tarayıcıya kaydedildi! Üst düzey akıllı mod aktif.
+                </motion.div>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Suggested Quick Questions Panel with beautiful tag stylings */}

@@ -364,9 +364,13 @@ export const DebtList: React.FC<DebtListProps> = ({
     <div className="space-y-4">
       {/* Mini Stats and Title */}
       <div className="flex flex-col gap-3 justify-between sm:flex-row sm:items-center">
-        <h2 className="text-lg font-bold flex items-center gap-2 text-slate-800 dark:text-slate-100">
+        <motion.h2
+          animate={{ y: [0, -1.2, 0] }}
+          transition={{ repeat: Infinity, duration: 4.5, ease: "easeInOut" }}
+          className="text-lg font-bold flex items-center gap-2 text-slate-800 dark:text-slate-100"
+        >
           <ClipboardList className="w-5 h-5 text-indigo-500" /> BORÇ LİSTESİ
-        </h2>
+        </motion.h2>
         
         <div className="flex items-center gap-2">
           <button

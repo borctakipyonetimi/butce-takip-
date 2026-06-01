@@ -464,9 +464,13 @@ export const ContactsDebtPanel: React.FC<ContactsDebtPanelProps> = ({
         <div className="p-3.5 bg-indigo-500/10 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 rounded-full">
           <Users className="w-7 h-7" />
         </div>
-        <h2 className="text-base font-black text-slate-800 dark:text-slate-100 uppercase tracking-wide">
+        <motion.h2
+          animate={{ y: [0, -1.2, 0] }}
+          transition={{ repeat: Infinity, duration: 4.5, ease: "easeInOut" }}
+          className="text-base font-black text-slate-800 dark:text-slate-100 uppercase tracking-wide"
+        >
           👥 Kişi Alacak & Verecek Defteri
-        </h2>
+        </motion.h2>
         <p className="text-xs text-slate-600 dark:text-slate-350 max-w-xl font-medium leading-relaxed">
           Borç verdiğiniz arkadaşlarınızı, ödeme bekleyen müşterilerinizi veya borçlu olduğunuz akrabalarınızı akıllı rehber ile gruplayın. Her kişi için bağımsız veri geçmişi tutun.
         </p>

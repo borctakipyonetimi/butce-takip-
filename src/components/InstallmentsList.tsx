@@ -5,6 +5,7 @@
 
 import React, { useState } from "react";
 import { PlusCircle, CalendarDays, Wallet, Edit, Trash2, Calendar } from "lucide-react";
+import { motion } from "motion/react";
 import { InstallmentDebt } from "../types";
 import { useCurrency } from "../utils/CurrencyContext";
 import { AdMobBanner } from "./AdMobBanner";
@@ -113,9 +114,13 @@ export const InstallmentsList: React.FC<InstallmentsListProps> = ({
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-bold flex items-center gap-2 text-slate-800 dark:text-slate-100">
+        <motion.h2
+          animate={{ y: [0, -1.2, 0] }}
+          transition={{ repeat: Infinity, duration: 4.5, ease: "easeInOut" }}
+          className="text-lg font-bold flex items-center gap-2 text-slate-800 dark:text-slate-100"
+        >
           <CalendarDays className="w-5 h-5 text-indigo-500" /> TAKSİTLİ BORÇLAR
-        </h2>
+        </motion.h2>
         <button
           onClick={handleOpenAdd}
           className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 transition active:scale-95 shadow-sm"

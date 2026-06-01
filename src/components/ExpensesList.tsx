@@ -18,6 +18,7 @@ import {
   Sparkles,
   X,
   Lightbulb,
+  TrendingUp,
 } from "lucide-react";
 import { motion } from "motion/react";
 import { Expense, ExpenseCategory } from "../types";
@@ -565,10 +566,14 @@ export const ExpensesList: React.FC<ExpensesListProps> = ({
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-3 justify-between sm:flex-row sm:items-center">
-        <h2 className="text-lg font-bold flex items-center gap-2 text-slate-800 dark:text-slate-100">
+        <motion.h2
+          animate={{ y: [0, -1.2, 0] }}
+          transition={{ repeat: Infinity, duration: 4.5, ease: "easeInOut" }}
+          className="text-lg font-bold flex items-center gap-2 text-slate-800 dark:text-slate-100"
+        >
           <ShoppingCart className="w-5 h-5 text-rose-500" /> AYLIK HARCAMA
           GİDERLERİ
-        </h2>
+        </motion.h2>
 
         <div className="flex items-center gap-2">
           <button
@@ -664,9 +669,20 @@ export const ExpensesList: React.FC<ExpensesListProps> = ({
         <div className="flex items-center gap-2">
           {netBalance !== undefined && (
             netBalance >= 0 ? (
-              <span id="expense-netbalance-success-badge" className="p-1 bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-lg flex items-center justify-center shrink-0" title="Net Bakiye Artıda - Finansal Durum Sağlıklı">
-                <Check className="w-3.5 h-3.5" />
-              </span>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <span id="expense-netbalance-success-badge" className="p-1 bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-lg flex items-center justify-center shrink-0" title="Net Bakiye Artıda - Finansal Durum Sağlıklı">
+                  <Check className="w-3.5 h-3.5" />
+                </span>
+                <motion.span
+                  animate={{ opacity: [0.6, 1, 0.6], scale: [0.96, 1.04, 0.96] }}
+                  transition={{ repeat: Infinity, duration: 2.8, ease: "easeInOut" }}
+                  className="p-1 px-1.5 bg-emerald-500/15 dark:bg-emerald-500/25 text-emerald-600 dark:text-emerald-300 rounded-lg flex items-center justify-center gap-1 shrink-0 text-[9px] font-black tracking-wide border border-emerald-500/20"
+                  title="Pozitif Tasarruf İvmesi - Tebrikler!"
+                >
+                  <TrendingUp className="w-3.5 h-3.5" />
+                  <span className="hidden xs:inline text-[8px]">POZİTİF İVME</span>
+                </motion.span>
+              </div>
             ) : (
               <span id="expense-netbalance-alert-badge" className="p-1 bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400 rounded-lg flex items-center justify-center shrink-0 animate-pulse" title="Net Bakiye Ekside - Lütfen Bütçenize Dikkat Edin">
                 <AlertTriangle className="w-3.5 h-3.5" />

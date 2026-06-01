@@ -2858,9 +2858,13 @@ export default function App() {
         {activeTab === "notifications" && (
           <div className="space-y-6 animate-fade-in">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-bold flex items-center gap-2 text-slate-800 dark:text-slate-100 uppercase tracking-wide">
+              <motion.h2
+                animate={{ y: [0, -1.2, 0] }}
+                transition={{ repeat: Infinity, duration: 4.5, ease: "easeInOut" }}
+                className="text-lg font-bold flex items-center gap-2 text-slate-800 dark:text-slate-100 uppercase tracking-wide"
+              >
                 <Bell className="w-5 h-5 text-indigo-500 animate-swing" /> Alarmlar ve Bildirimler
-              </h2>
+              </motion.h2>
               <div className="flex gap-2">
                 <button
                   onClick={() => {

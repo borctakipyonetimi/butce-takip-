@@ -5,6 +5,7 @@
 
 import React, { useState } from "react";
 import { PlusCircle, Trash2, Edit, PiggyBank, Calendar, DollarSign, Wallet } from "lucide-react";
+import { motion } from "motion/react";
 import { Income } from "../types";
 import { DoughnutChart, LineChart } from "./BudgetCharts";
 import { useCurrency } from "../utils/CurrencyContext";
@@ -88,9 +89,13 @@ export const IncomesList: React.FC<IncomesListProps> = ({
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-bold flex items-center gap-2 text-slate-800 dark:text-slate-100">
+        <motion.h2
+          animate={{ y: [0, -1.2, 0] }}
+          transition={{ repeat: Infinity, duration: 4.5, ease: "easeInOut" }}
+          className="text-lg font-bold flex items-center gap-2 text-slate-800 dark:text-slate-100"
+        >
           <PiggyBank className="w-5 h-5 text-emerald-500" /> GELİRLER
-        </h2>
+        </motion.h2>
         <button
           onClick={handleOpenAdd}
           className="px-3.5 py-1.5 bg-emerald-600 text-white hover:bg-emerald-700 text-xs font-bold rounded-xl flex items-center gap-1.5 transition active:scale-95 shadow-sm"

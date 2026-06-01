@@ -5,6 +5,7 @@
 
 import React, { useState } from "react";
 import { Calendar, BarChart3, LineChart as LucideLine, ClipboardList, Wallet, ShoppingBag } from "lucide-react";
+import { motion } from "motion/react";
 import { Debt, Income, Expense, PaymentLog } from "../types";
 import { BarChart, LineChart } from "./BudgetCharts";
 import { useCurrency } from "../utils/CurrencyContext";
@@ -62,9 +63,13 @@ export const FollowUpMonthlyYearly: React.FC<FollowUpMonthlyYearlyProps> = ({
     return (
       <div className="space-y-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <h2 className="text-lg font-bold flex items-center gap-2 text-slate-800 dark:text-slate-100">
+          <motion.h2
+            animate={{ y: [0, -1.2, 0] }}
+            transition={{ repeat: Infinity, duration: 4.5, ease: "easeInOut" }}
+            className="text-lg font-bold flex items-center gap-2 text-slate-800 dark:text-slate-100"
+          >
             <Calendar className="w-5 h-5 text-indigo-500" /> AYLIK ÖDEME VE BÜTÇE TAKİBİ
-          </h2>
+          </motion.h2>
           
           <div className="flex items-center gap-2">
             <select
@@ -155,9 +160,13 @@ export const FollowUpMonthlyYearly: React.FC<FollowUpMonthlyYearlyProps> = ({
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h2 className="text-lg font-bold flex items-center gap-2 text-slate-800 dark:text-slate-100">
+        <motion.h2
+          animate={{ y: [0, -1.2, 0] }}
+          transition={{ repeat: Infinity, duration: 4.5, ease: "easeInOut" }}
+          className="text-lg font-bold flex items-center gap-2 text-slate-800 dark:text-slate-100"
+        >
           <LucideLine className="w-5 h-5 text-indigo-500" /> YILLIK PAY ANALİZİ VE EĞİLİM GRAFİKLERİ
-        </h2>
+        </motion.h2>
 
         <select
           value={selectedYear}
