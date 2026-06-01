@@ -2565,7 +2565,7 @@ export default function App() {
                       <span className="text-[8px] font-black uppercase text-slate-500 dark:text-slate-400 block">PROFİL RESMİ GÜNCELLE</span>
                       
                       {/* Upload Button */}
-                      <label className="block w-full py-1 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 border border-slate-200/80 dark:border-slate-700/80 rounded-lg text-[9px] font-bold text-slate-700 dark:text-slate-350 cursor-pointer transition shadow-xs text-center">
+                      <label className="block w-full py-1 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 border border-slate-200/80 dark:border-slate-700/80 rounded-lg text-[9px] font-bold text-slate-700 dark:text-slate-300 cursor-pointer transition shadow-xs text-center">
                         📸 RESİM SEÇ
                         <input
                           type="file"
@@ -2675,7 +2675,7 @@ export default function App() {
                         ) : (
                           <span
                             onClick={() => setIsUpgradeModalOpen(true)}
-                            className="px-1.5 py-0.5 bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-350 hover:bg-amber-500 hover:text-white dark:hover:bg-amber-600 dark:hover:text-white rounded-md text-[8px] font-black tracking-wider cursor-pointer transition flex items-center gap-0.5"
+                            className="px-1.5 py-0.5 bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-amber-500 hover:text-white dark:hover:bg-amber-600 dark:hover:text-white rounded-md text-[8px] font-black tracking-wider cursor-pointer transition flex items-center gap-0.5"
                             title="Premium'a Geç"
                           >
                             ÜCRETSİZ ⭐
@@ -3640,7 +3640,7 @@ export default function App() {
                           localStorage.setItem("is_premium", "false");
                           triggerToast("Ücretsiz plana başarıyla geçiş yapıldı (Test modülü) ⭐");
                         }}
-                        className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-350 font-black text-xs uppercase tracking-wider rounded-xl transition cursor-pointer active:scale-97 border border-dashed border-slate-300 dark:border-slate-700"
+                        className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-black text-xs uppercase tracking-wider rounded-xl transition cursor-pointer active:scale-97 border border-dashed border-slate-300 dark:border-slate-700"
                       >
                         Ücretsiz Sürümü Test Et (Dev-Downgrade)
                       </button>

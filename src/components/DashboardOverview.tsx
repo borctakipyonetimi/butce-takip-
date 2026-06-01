@@ -480,7 +480,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
                       </motion.span>
                     )}
                   </h4>
-                  <p className="text-[10px] text-slate-600 dark:text-slate-350 font-extrabold tracking-wider uppercase pt-0.5">
+                  <p className="text-[10px] text-slate-600 dark:text-slate-300 font-extrabold tracking-wider uppercase pt-0.5">
                     Mali Gider Limit Takip Sistemi
                   </p>
                 </div>
@@ -545,7 +545,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
               <div className="md:col-span-5 space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="p-3 bg-slate-50/50 dark:bg-slate-900/30 rounded-2xl border border-slate-100 dark:border-slate-800/40">
-                    <span className="text-[9px] font-black tracking-widest text-slate-600 dark:text-slate-350 uppercase block">
+                    <span className="text-[9px] font-black tracking-widest text-slate-600 dark:text-slate-300 uppercase block">
                       TOPLAM GİDER
                     </span>
                     <span className="text-sm font-black text-rose-600 dark:text-rose-400 font-mono leading-none block mt-1.5">
@@ -554,7 +554,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
                   </div>
 
                   <div className="p-3 bg-slate-50/50 dark:bg-slate-900/30 rounded-2xl border border-slate-100 dark:border-slate-800/40">
-                    <span className="text-[9px] font-black tracking-widest text-slate-600 dark:text-slate-350 uppercase block">
+                    <span className="text-[9px] font-black tracking-widest text-slate-600 dark:text-slate-300 uppercase block">
                       BÜTÇE HEDEFİ
                     </span>
                     <span className="text-sm font-black text-slate-700 dark:text-slate-300 font-mono leading-none block mt-1.5">
@@ -564,7 +564,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
                 </div>
 
                 <div className="p-3.5 rounded-2xl bg-linear-to-r from-slate-50/70 to-slate-100/30 dark:from-slate-900/40 dark:to-slate-900/10 border border-slate-100/80 dark:border-slate-800/60">
-                  <p className="text-[10px] text-slate-600 dark:text-slate-350 font-extrabold tracking-wider uppercase">
+                  <p className="text-[10px] text-slate-600 dark:text-slate-300 font-extrabold tracking-wider uppercase">
                     HARCAMA / LİMİT DURUMU
                   </p>
                   <p className="text-xs text-slate-600 dark:text-slate-300 font-semibold pt-1.5 leading-relaxed">

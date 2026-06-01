@@ -67,7 +67,7 @@ const FormattedText: React.FC<{ text: string }> = ({ text }) => {
         if (trimmed.startsWith("•") || trimmed.startsWith("-") || trimmed.startsWith("*")) {
           const cleanText = trimmed.replace(/^[•\-\*]\s*/, "");
           return (
-            <div key={idx} className="flex items-start gap-2 pl-2 text-slate-700 dark:text-slate-350 py-0.5">
+            <div key={idx} className="flex items-start gap-2 pl-2 text-slate-700 dark:text-slate-300 py-0.5">
               <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400 dark:bg-emerald-500 mt-1.5 shrink-0 animate-pulse" />
               <div className="flex-1">{renderTextWithBold(cleanText)}</div>
             </div>
@@ -556,7 +556,7 @@ export const AIChat: React.FC<AIChatProps> = ({ debts, incomes, expenses, instal
         >
           <div className="flex items-center gap-2">
             <Settings className="w-4 h-4 text-indigo-500 animate-[spin_10s_linear_infinite]" />
-            <span className="text-xs font-black tracking-wide uppercase text-slate-700 dark:text-slate-350">
+            <span className="text-xs font-black tracking-wide uppercase text-slate-700 dark:text-slate-300">
               Yapay Zekâ Motor Ayarları (İsteğe Bağlı)
             </span>
           </div>

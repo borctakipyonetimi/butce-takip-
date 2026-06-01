@@ -471,7 +471,7 @@ export const ContactsDebtPanel: React.FC<ContactsDebtPanelProps> = ({
         >
           👥 Kişi Alacak & Verecek Defteri
         </motion.h2>
-        <p className="text-xs text-slate-600 dark:text-slate-350 max-w-xl font-medium leading-relaxed">
+        <p className="text-xs text-slate-600 dark:text-slate-300 max-w-xl font-medium leading-relaxed">
           Borç verdiğiniz arkadaşlarınızı, ödeme bekleyen müşterilerinizi veya borçlu olduğunuz akrabalarınızı akıllı rehber ile gruplayın. Her kişi için bağımsız veri geçmişi tutun.
         </p>
       </div>
@@ -531,7 +531,7 @@ export const ContactsDebtPanel: React.FC<ContactsDebtPanelProps> = ({
             <span className={`text-xl font-black font-mono block ${netBalance >= 0 ? "text-emerald-500" : "text-rose-500"}`}>
               {netBalance >= 0 ? "+" : ""}{format(netBalance)}
             </span>
-            <span className="text-[9px] text-slate-600 dark:text-slate-350 font-bold block">
+            <span className="text-[9px] text-slate-600 dark:text-slate-300 font-bold block">
               {netBalance >= 0 ? "⚠️ Finansal dengemiz artı hanesinde." : "⚠️ Alacaklardan daha fazla borç mevcut."}
             </span>
           </div>
@@ -693,7 +693,7 @@ export const ContactsDebtPanel: React.FC<ContactsDebtPanelProps> = ({
                   onSubmit={handleAddContactSubmit}
                   className="p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-200/60 dark:border-slate-800 space-y-3"
                 >
-                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-700 dark:text-slate-350 block">👥 YENİ KİŞİ EKLE</span>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-700 dark:text-slate-300 block">👥 YENİ KİŞİ EKLE</span>
                   
                   <div className="space-y-1">
                     <label className="text-[9px] font-black text-slate-500 uppercase tracking-wider block">Kişi Adı Soyadı</label>
@@ -882,7 +882,7 @@ export const ContactsDebtPanel: React.FC<ContactsDebtPanelProps> = ({
                         {contact.name.charAt(0)}
                       </div>
                       <div>
-                        <h3 className="text-xs font-black uppercase tracking-widest text-slate-600 dark:text-slate-350">MÜŞTERİ CARİ & AMORTİSMAN HESABI</h3>
+                        <h3 className="text-xs font-black uppercase tracking-widest text-slate-600 dark:text-slate-300">MÜŞTERİ CARİ & AMORTİSMAN HESABI</h3>
                         <h2 className="text-sm font-black text-slate-800 dark:text-slate-100 flex items-center gap-2">
                           {contact.name}
                           <span className="text-[9px] font-black uppercase bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 px-1.5 py-0.5 rounded-md border border-indigo-100/20">
@@ -938,7 +938,7 @@ export const ContactsDebtPanel: React.FC<ContactsDebtPanelProps> = ({
 
                   {/* Transaction add portal trigger line */}
                   <div className="flex items-center justify-between pt-1">
-                    <h3 className="text-[10px] font-black uppercase tracking-wider text-slate-600 dark:text-slate-350">
+                    <h3 className="text-[10px] font-black uppercase tracking-wider text-slate-600 dark:text-slate-300">
                       📜 ALIŞVERİŞ VE BORÇ GEÇMİŞİ LİSTESİ ({cTxs.length})
                     </h3>
                     <button
@@ -962,7 +962,7 @@ export const ContactsDebtPanel: React.FC<ContactsDebtPanelProps> = ({
                           onSubmit={handleAddTxSubmit}
                           className="p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-200/60 dark:border-slate-800 space-y-3"
                         >
-                          <span className="text-[9.5px] font-black uppercase tracking-widest text-slate-700 dark:text-slate-350 block">➕ İŞLEM / FİŞ EKLEME FORMU</span>
+                          <span className="text-[9.5px] font-black uppercase tracking-widest text-slate-700 dark:text-slate-300 block">➕ İŞLEM / FİŞ EKLEME FORMU</span>
 
                           <div className="grid grid-cols-2 gap-3">
                             <div className="space-y-1">
@@ -1122,7 +1122,7 @@ export const ContactsDebtPanel: React.FC<ContactsDebtPanelProps> = ({
                   </div>
 
                   {/* Informative advice message */}
-                  <div className="p-3 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200/50 dark:border-slate-800 text-[9.5px] leading-relaxed text-slate-600 dark:text-slate-350 font-semibold flex items-start gap-2">
+                  <div className="p-3 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200/50 dark:border-slate-800 text-[9.5px] leading-relaxed text-slate-600 dark:text-slate-300 font-semibold flex items-start gap-2">
                     <AlertCircle className="w-4 h-4 mt-0.5 shrink-0 text-slate-500" />
                     <p>
                       <strong>💡 Akıllı Amorti İpuçları:</strong> Herhangi bir borcun solundaki boş yuvarlağa tıkladığınızda işlem "Ödendi" olarak etiketlenir ve üstteki toplam grafiklerden çıkartılır. Karşılıklı transfer tanzimlerinde bu özelliği kullanabilirsiniz.
@@ -1444,7 +1444,7 @@ export const ContactsDebtPanel: React.FC<ContactsDebtPanelProps> = ({
                     <div className="p-3 bg-indigo-500/[0.03] border border-indigo-150/15 rounded-2xl space-y-1">
                       <span className="text-[8px] font-black text-indigo-500 uppercase block tracking-widest">İŞLEM DETAYLARI</span>
                       <div className="flex justify-between items-center">
-                        <span className="text-xs font-extrabold text-slate-700 dark:text-slate-350">{reminderTx.description}</span>
+                        <span className="text-xs font-extrabold text-slate-700 dark:text-slate-300">{reminderTx.description}</span>
                         <span className="text-xs font-black text-slate-800 dark:text-slate-100">{format(reminderTx.amount)}</span>
                       </div>
                       <div className="flex justify-between items-center text-[9px] text-slate-400 font-bold">

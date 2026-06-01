@@ -219,14 +219,14 @@ export const SecuritySettingsPanel: React.FC<SecuritySettingsPanelProps> = ({ on
               {step === 1 && (
                 <form onSubmit={handlePinNext} className="space-y-3">
                   <div className="space-y-1">
-                    <label className="text-[10px] font-black uppercase tracking-wider text-slate-600 dark:text-slate-350">Yeni PIN Kodunu Girin (4 Rakam)</label>
+                    <label className="text-[10px] font-black uppercase tracking-wider text-slate-600 dark:text-slate-300">Yeni PIN Kodunu Girin (4 Rakam)</label>
                     <input
                       type="password"
                       inputMode="numeric"
                       maxLength={4}
                       value={pinTemp}
                       onChange={(e) => setPinTemp(e.target.value.replace(/\D/g, ""))}
-                      className="w-full text-center tracking-[0.5em] text-lg font-black bg-white dark:bg-slate-950 border border-slate-250 dark:border-slate-800 rounded-xl py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-800 dark:text-slate-100 placeholder:text-slate-350"
+                      className="w-full text-center tracking-[0.5em] text-lg font-black bg-white dark:bg-slate-950 border border-slate-250 dark:border-slate-800 rounded-xl py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-800 dark:text-slate-100 placeholder:text-slate-400"
                       placeholder="••••"
                       autoFocus
                     />
@@ -243,7 +243,7 @@ export const SecuritySettingsPanel: React.FC<SecuritySettingsPanelProps> = ({ on
                     <button
                       type="button"
                       onClick={() => setSetupMode("idle")}
-                      className="px-3 py-1.5 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-350 text-xs font-black rounded-lg cursor-pointer"
+                      className="px-3 py-1.5 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-black rounded-lg cursor-pointer"
                     >
                       Kapat
                     </button>
@@ -261,14 +261,14 @@ export const SecuritySettingsPanel: React.FC<SecuritySettingsPanelProps> = ({ on
               {step === 2 && (
                 <form onSubmit={handlePinConfirmNext} className="space-y-3">
                   <div className="space-y-1">
-                    <label className="text-[10px] font-black uppercase tracking-wider text-slate-600 dark:text-slate-350">Tekrar Girerek PIN Kodunu Onaylayın</label>
+                    <label className="text-[10px] font-black uppercase tracking-wider text-slate-600 dark:text-slate-300">Tekrar Girerek PIN Kodunu Onaylayın</label>
                     <input
                       type="password"
                       inputMode="numeric"
                       maxLength={4}
                       value={pinConfirm}
                       onChange={(e) => setPinConfirm(e.target.value.replace(/\D/g, ""))}
-                      className="w-full text-center tracking-[0.5em] text-lg font-black bg-white dark:bg-slate-950 border border-slate-250 dark:border-slate-800 rounded-xl py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-800 dark:text-slate-100 placeholder:text-slate-350"
+                      className="w-full text-center tracking-[0.5em] text-lg font-black bg-white dark:bg-slate-950 border border-slate-250 dark:border-slate-800 rounded-xl py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-800 dark:text-slate-100 placeholder:text-slate-400"
                       placeholder="••••"
                       autoFocus
                     />
@@ -285,7 +285,7 @@ export const SecuritySettingsPanel: React.FC<SecuritySettingsPanelProps> = ({ on
                     <button
                       type="button"
                       onClick={() => setStep(1)}
-                      className="px-3 py-1.5 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-350 text-xs font-black rounded-lg cursor-pointer"
+                      className="px-3 py-1.5 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-black rounded-lg cursor-pointer"
                     >
                       Geri Dön
                     </button>
@@ -308,7 +308,7 @@ export const SecuritySettingsPanel: React.FC<SecuritySettingsPanelProps> = ({ on
                   </div>
 
                   <div className="space-y-1">
-                    <label className="text-[10px] font-black uppercase tracking-wider text-slate-600 dark:text-slate-350">Güvenlik Sorusu Seçiniz</label>
+                    <label className="text-[10px] font-black uppercase tracking-wider text-slate-600 dark:text-slate-300">Güvenlik Sorusu Seçiniz</label>
                     <select
                       value={recoveryQuestion}
                       onChange={(e) => setRecoveryQuestion(e.target.value)}
@@ -322,7 +322,7 @@ export const SecuritySettingsPanel: React.FC<SecuritySettingsPanelProps> = ({ on
                   </div>
 
                   <div className="space-y-1">
-                    <label className="text-[10px] font-black uppercase tracking-wider text-slate-600 dark:text-slate-350">Sorunun Yanıtı</label>
+                    <label className="text-[10px] font-black uppercase tracking-wider text-slate-600 dark:text-slate-300">Sorunun Yanıtı</label>
                     <input
                       type="text"
                       maxLength={40}
@@ -344,7 +344,7 @@ export const SecuritySettingsPanel: React.FC<SecuritySettingsPanelProps> = ({ on
                     <button
                       type="button"
                       onClick={() => setStep(2)}
-                      className="px-3 py-1.5 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-350 text-xs font-black rounded-lg cursor-pointer"
+                      className="px-3 py-1.5 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-black rounded-lg cursor-pointer"
                     >
                       Geri Dön
                     </button>

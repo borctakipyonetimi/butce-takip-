@@ -1257,7 +1257,7 @@ export const ExpensesList: React.FC<ExpensesListProps> = ({
                           🤖 YAPAY ZEKA TAVSİYESİ
                         </span>
                       </div>
-                      <p className="text-[11px] text-slate-600 dark:text-slate-350 font-semibold leading-relaxed">
+                      <p className="text-[11px] text-slate-600 dark:text-slate-300 font-semibold leading-relaxed">
                         {getSavingTipForCategory(
                           selectedCat.name,
                           selectedCat.icon || "🛒",
