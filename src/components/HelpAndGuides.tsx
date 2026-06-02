@@ -215,20 +215,66 @@ export const HelpAndGuides: React.FC<HelpAndGuidesProps> = ({ activeTab, onNavig
     return (
       <div className="space-y-4">
         <h2 className="text-xl font-bold flex items-center gap-2 text-slate-800 dark:text-slate-100">
-          <Shield className="w-5 h-5 text-blue-500" /> GİZLİLİK POLİTİKASI
+          <Shield className="w-5 h-5 text-indigo-500" /> BÜTÇEM PRO GİZLİLİK POLİTİKASI
         </h2>
-        <div className="space-y-3 text-xs md:text-sm text-slate-500 dark:text-slate-400 leading-relaxed max-h-96 overflow-y-auto pr-1">
-          <p className="font-semibold text-slate-700 dark:text-slate-300">Son Güncelleme: 21 Mayıs 2026</p>
+        <div className="space-y-4 text-xs md:text-sm text-slate-600 dark:text-slate-400 leading-relaxed max-h-120 overflow-y-auto pr-2">
+          <p className="font-semibold text-slate-700 dark:text-slate-305">Son Güncelleme: 2 Haziran 2026</p>
+          
           <p>
-            Bu mobil/web uygulaması (“Borç Takip Sistemi”) kullanıcının kişisel veri güvenliğini en ileri seviyede tutmaktadır:
+            <strong>Bütçem Pro</strong> bireysel finans yönetimi, borç ve taksit takip platformu olarak, kullanıcı gizliliğini ve veri egemenliğini en üst öncelik olarak kabul eder. Uygulamamızı kullanırken mali verilerinizin gizliliği ve güvenliği hakkında bilmeniz gereken tüm detaylar aşağıda açıklanmıştır:
           </p>
-          <ul className="list-disc pl-5 space-y-1">
-            <li><strong>Verileriniz Tamamen Yereldir:</strong> Ad, borç, gelir gibi girdiğiniz tüm veriler sadece kendi cihazınızın internet tarayıcısında (Local Storage) barındırılır. Hiçbir sunucumuza aktarılmaz.</li>
-            <li><strong>JSON Yedekleme:</strong> Verilerinizi dilediğiniz gibi "Dışa Aktar" seçeneğiyle şifresiz, JSON formatında indirip saklayabilir veya başka bir cihaza "İçe Aktar" seçeneğiyle yükleyebilirsiniz.</li>
-            <li><strong>Kullanıcı Profilleri:</strong> Uygulama içinde oluşturduğunuz kullanıcı adları yine yerel olarak verilerinizi ayrıştırmak için kullanılır, internete sızdırılmaz.</li>
-            <li><strong>Reklamlar:</strong> Google AdSense reklam mekanizması ilgi alanlarınıza göre reklam ulaştırmak adına geçici çerezler barındırabilir.</li>
-          </ul>
-          <p>Her türlü soru için <span className="underline font-semibold text-indigo-500">info.borctakipyonetimi@gmail.com</span> adresinden bize direkt ulaşabilirsiniz.</p>
+
+          <div className="space-y-2.5">
+            <h3 className="font-extrabold text-slate-800 dark:text-slate-200 uppercase tracking-tight text-xs">
+              1. Verilerin Tamamen Yerel Depolanması (Zero-Server Architecture)
+            </h3>
+            <p>
+              Girdiğiniz hiçbir hassas finansal veri (maaş, ek gelir, her türlü borç, taksit tutarı, harcama kayıtları veya işlem detayları) harici bir bulut veritabanına ya da sunucularımıza <strong>kaydedilmez</strong>. Tüm mali kayıtlarınız, sadece kendi cihazınızın tarayıcısında çalışan güvenli yerel depolama biriminde (<strong>Local Storage / IndexedDB</strong>) barındırılır. Verilerinize erişim, kontrol ve silme yetkisi tamamen fiziksel olarak cihaza sahip olan kullanıcıya aittir.
+            </p>
+          </div>
+
+          <div className="space-y-2.5">
+            <h3 className="font-extrabold text-slate-800 dark:text-slate-200 uppercase tracking-tight text-xs">
+              2. Fiş Tarayıcı (OCR) ve Kamera İzinleri Çalışma Mantığı
+            </h3>
+            <p>
+              Uygulamadaki Fiş/Fatura Tarayıcı özelliğini kullandığınızda, cihazınızın kamerasına erişim veya galeriden dosya yükleme izni istenir. Kameradan alınan anlık akış veya yüklenen görsel, faturadaki verileri (tutar, tarih, KDV oranı vb.) OCR teknolojisi ile otomatik olarak ayıklamak üzere güvenli API uç noktamıza şifreli (HTTPS) bağlantı aracılığıyla gönderilir. 
+              <strong> Bu görsel dosyalar sunucu tarafında veri okuma işleminin hemen ardından bellekten anında, kalıcı olarak silinir;</strong> sunucu disklerinde hiçbir şekilde yedeklenmez ve depolanmaz.
+            </p>
+          </div>
+
+          <div className="space-y-2.5">
+            <h3 className="font-extrabold text-slate-800 dark:text-slate-200 uppercase tracking-tight text-xs">
+              3. Yapay Zeka Finans Asistanı ve API Anahtarları
+            </h3>
+            <p>
+              Bütçem Pro yerleşik yapay zeka asistanı (Gemini AI), finansal verilerinizi rasyonel şekilde analiz etmek üzere tasarlanmıştır. Asistanla konuşurken veya otomatik analiz gerçekleştirilirken, yerelde kayıtlı özet bütçe metrikleriniz API çağrısına güvenli üst bilgi şeklinde dahil edilir. Kullanıcılar kendi kişbileyici Gemini API anahtarlarını girmek isterlerse, bu anahtar yine sadece cihazlarında yerel olarak saklanır. AI etkileşim geçmişiniz hiçbir reklam platformu veya veri brokeri ile ticari amaçla kesinlikle paylaşılmaz.
+            </p>
+          </div>
+
+          <div className="space-y-2.5">
+            <h3 className="font-extrabold text-slate-800 dark:text-slate-200 uppercase tracking-tight text-xs">
+              4. Çerezler ve Üçüncü Taraf Reklam Servisleri (AdMob / AdSense)
+            </h3>
+            <p>
+              Uygulamanın ücretsiz sürümünde yer alan reklam alanları için Google AdMob kullanılmaktadır. Google AdMob, size daha ilgi çekici veya ülkenizin mevzuatına uygun reklamlar sunabilmek adına geçici reklam tanımlayıcıları ve çerezler (cookies) kullanabilir. "Reklamsız Pro Sürüm" tercih edildiğinde bu çerezlerin ve reklam takip mekanizmalarının tamamı devre dışı bırakılır.
+            </p>
+          </div>
+
+          <div className="space-y-2.5">
+            <h3 className="font-extrabold text-slate-800 dark:text-slate-200 uppercase tracking-tight text-xs">
+              5. Veri Yedekleme, Taşınabilirlik ve İmha Haklarınız
+            </h3>
+            <p>
+              Yedekleme ve cihazlar arası veri transferi amacıyla "Cevrimdışı JSON Yedek İndir" özelliğini dilediğiniz zaman kullanabilirsiniz. Bu işlem verilerinizi tamamen şifresiz bir metin dosyası olarak cihazınıza kaydeder. Dosyanın güvenliğini sağlamak sizin sorumluluğunuzdadır. İstediğiniz an uygulamanın Ayarlar menüsünden "Tüm Verileri Sıfırla" butonuna dokunarak veya tarayıcı önbelleğinizi temizleyerek Bütçem Pro bünyesindeki tüm kayıtlarınızı geri dönülemez biçimde kalıcı olarak imha edebilirsiniz.
+            </p>
+          </div>
+
+          <div className="space-y-2.5 pt-2 border-t border-slate-200 dark:border-slate-800">
+            <p>
+              Gizlilik sözleşmemiz veya veri güvenliği politikamızla ilgili merak ettiğiniz tüm sorular ya da geri bildirimler için bizimle <a href="mailto:info.borctakipyonetimi@gmail.com" className="underline font-bold text-indigo-500 hover:text-indigo-650 transition">info.borctakipyonetimi@gmail.com</a> adresinden doğrudan iletişime geçebilirsiniz.
+            </p>
+          </div>
         </div>
       </div>
     );
