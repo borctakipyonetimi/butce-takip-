@@ -186,7 +186,7 @@ export const InstallmentsList: React.FC<InstallmentsListProps> = ({
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2 self-start sm:self-center shrink-0">
+                <div className="flex items-center flex-wrap gap-2 self-start sm:self-center shrink-0">
                   <button
                     onClick={() => handleOpenEdit(inst)}
                     className="p-2 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100 rounded-lg transition"
@@ -201,13 +201,18 @@ export const InstallmentsList: React.FC<InstallmentsListProps> = ({
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
-                  {inst.paidInstallmentCount > 0 && onRevertPayment && (
+                  {onRevertPayment && (
                     <button
+                      disabled={inst.paidInstallmentCount === 0}
                       onClick={() => onRevertPayment(inst.id)}
-                      title="Son taksit ödemesini geri al"
-                      className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200/50 dark:border-slate-700 font-extrabold text-xs rounded-xl flex items-center gap-1 transition active:scale-95 shadow-xs"
+                      title={inst.paidInstallmentCount === 0 ? "Geri alınacak ödeme bulunmuyor" : "Son taksit ödemesini geri al"}
+                      className={`px-3 py-1.5 font-extrabold text-xs rounded-xl flex items-center gap-1 transition active:scale-95 shadow-xs ${
+                        inst.paidInstallmentCount === 0
+                          ? "bg-slate-50 dark:bg-slate-900/40 text-slate-400 dark:text-slate-600 border border-slate-205/30 dark:border-slate-800/30 cursor-not-allowed opacity-50"
+                          : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200/50 dark:border-slate-700 cursor-pointer"
+                      }`}
                     >
-                      <RotateCcw className="w-3.5 h-3.5 animate-spin-once" /> Geri Al
+                      <RotateCcw className="w-3.5 h-3.5" /> Geri Al
                     </button>
                   )}
                   {!isCompleted && (

@@ -199,6 +199,7 @@ export const ExpensesList: React.FC<ExpensesListProps> = ({
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
   const [date, setDate] = useState("");
+  const [isCatDropdownOpen, setIsCatDropdownOpen] = useState(false);
 
   // AI OCR scanner state and callback
   const [isScannerOpen, setIsScannerOpen] = useState(false);
@@ -264,6 +265,7 @@ export const ExpensesList: React.FC<ExpensesListProps> = ({
     if (expenseCategories.length > 0) setCategoryId(expenseCategories[0].id);
     setAmount("");
     setDescription("");
+    setIsCatDropdownOpen(false);
     
     // Choose dynamic smart default date for past/future monthly addition support
     const today = new Date();
@@ -286,6 +288,7 @@ export const ExpensesList: React.FC<ExpensesListProps> = ({
     setDate(
       e.date ? e.date.slice(0, 10) : new Date().toISOString().slice(0, 10),
     );
+    setIsCatDropdownOpen(false);
     setIsExpModalOpen(true);
   };
 
@@ -1324,21 +1327,54 @@ export const ExpensesList: React.FC<ExpensesListProps> = ({
             </button>
 
             <div className="space-y-3">
-              <div>
+              <div className="relative">
                 <label className="text-[10px] font-bold text-slate-400 block mb-1">
                   KATEGORİ SEÇİN
                 </label>
-                <select
-                  value={categoryId}
-                  onChange={(e) => setCategoryId(parseInt(e.target.value))}
-                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs dark:text-white focus:outline-none"
+                <button
+                  type="button"
+                  onClick={() => setIsCatDropdownOpen(!isCatDropdownOpen)}
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs dark:text-white flex items-center justify-between hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
                 >
-                  {expenseCategories.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.icon || "🛒"} {c.name}
-                    </option>
-                  ))}
-                </select>
+                  <span className="flex items-center gap-1.5 font-bold">
+                    {(() => {
+                      const selectedC = expenseCategories.find(c => c.id === categoryId);
+                      return selectedC ? (
+                        <>
+                          <span className="text-sm">{selectedC.icon || "🛒"}</span>
+                          <span>{selectedC.name}</span>
+                        </>
+                      ) : (
+                        "Kategori Seçin"
+                      );
+                    })()}
+                  </span>
+                  <span className={`text-[10px] text-slate-400 font-extrabold transition-transform duration-200 ${isCatDropdownOpen ? "rotate-180" : ""}`}>
+                    ▼
+                  </span>
+                </button>
+                {isCatDropdownOpen && (
+                  <>
+                    <div className="fixed inset-0 z-10" onClick={() => setIsCatDropdownOpen(false)} />
+                    <div className="absolute left-0 right-0 mt-1 max-h-48 overflow-y-auto bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg z-20 divide-y divide-slate-100 dark:divide-slate-700/50">
+                      {expenseCategories.map((c) => (
+                        <button
+                          key={c.id}
+                          type="button"
+                          onClick={() => {
+                            setCategoryId(c.id);
+                            setIsCatDropdownOpen(false);
+                          }}
+                          className={`w-full px-3 py-2 text-left text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-705 flex items-center gap-2 transition cursor-pointer ${c.id === categoryId ? "bg-rose-50/40 dark:bg-rose-950/20 font-bold" : ""}`}
+                        >
+                          <span className="text-sm shrink-0">{c.icon || "🛒"}</span>
+                          <span className="flex-1 shrink-0">{c.name}</span>
+                          <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: c.color }} />
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
               </div>
               <div>
                 <label className="text-[10px] font-bold text-slate-400 block mb-1">
