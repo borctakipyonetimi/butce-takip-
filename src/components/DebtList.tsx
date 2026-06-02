@@ -31,6 +31,7 @@ interface DebtListProps {
   selectedYear: number | null;
   setSelectedMonth: React.Dispatch<React.SetStateAction<number | null>>;
   setSelectedYear: React.Dispatch<React.SetStateAction<number | null>>;
+  stats?: any;
 }
 
 export const DebtList: React.FC<DebtListProps> = ({
@@ -49,6 +50,7 @@ export const DebtList: React.FC<DebtListProps> = ({
   selectedYear,
   setSelectedMonth,
   setSelectedYear,
+  stats,
 }) => {
   const { format, currencySymbol } = useCurrency();
   const [activeTab, setActiveTab] = useState<"unpaid" | "paid" | "all">("unpaid");
@@ -561,8 +563,8 @@ export const DebtList: React.FC<DebtListProps> = ({
           <div className="absolute right-3.5 top-3.5 p-1 bg-indigo-500/10 text-indigo-500 rounded-lg">
             <ClipboardList className="w-4 h-4" />
           </div>
-          <span className="text-[10px] font-black text-slate-400 dark:text-slate-505 uppercase tracking-widest block">TOPLAM ÖDENECEK</span>
-          <span className="text-base sm:text-lg font-black font-mono text-indigo-600 dark:text-indigo-400 mt-1 block">{format(allTimeTotalAmount)}</span>
+          <span className="text-[10px] font-black text-slate-400 dark:text-slate-505 uppercase tracking-widest block">GENEL LİMİT TOPLAMI</span>
+          <span className="text-base sm:text-lg font-black font-mono text-indigo-600 dark:text-indigo-400 mt-1 block">{format(stats?.totalDebt ?? allTimeTotalAmount)}</span>
           <span className="text-[8px] font-bold text-slate-400 block mt-0.5">Tüm aktif & taksitli genel borçlar</span>
         </div>
 
@@ -571,7 +573,7 @@ export const DebtList: React.FC<DebtListProps> = ({
             <Calendar className="w-4 h-4" />
           </div>
           <span className="text-[10px] font-black text-slate-400 dark:text-slate-505 uppercase tracking-widest block">BU AY ÖDENECEK</span>
-          <span className="text-base sm:text-lg font-black font-mono text-amber-600 dark:text-amber-550 mt-1 block">{format(dueThisMonthAmount)}</span>
+          <span className="text-base sm:text-lg font-black font-mono text-amber-600 dark:text-amber-550 mt-1 block">{format(stats?.thisMonthTotalBorc ?? dueThisMonthAmount)}</span>
           <span className="text-[8px] font-bold text-slate-400 block mt-0.5">Bu ay vadesi gelen tüm taksit & borçlar</span>
         </div>
 
@@ -579,18 +581,18 @@ export const DebtList: React.FC<DebtListProps> = ({
           <div className="absolute right-3.5 top-3.5 p-1 bg-emerald-500/10 text-emerald-500 rounded-lg">
             <CheckCircle2 className="w-4 h-4" />
           </div>
-          <span className="text-[10px] font-black text-slate-400 dark:text-slate-550 uppercase tracking-widest block">ÖDENEN BORÇ</span>
-          <span className="text-base sm:text-lg font-black font-mono text-emerald-600 dark:text-emerald-400 mt-1 block">{format(allTimeTotalPaid)}</span>
-          <span className="text-[8px] font-bold text-slate-400 block mt-0.5">Kapatılan taksit ve ödemeler</span>
+          <span className="text-[10px] font-black text-slate-400 dark:text-slate-550 uppercase tracking-widest block">BU AY ÖDENEN</span>
+          <span className="text-base sm:text-lg font-black font-mono text-emerald-600 dark:text-emerald-400 mt-1 block">{format(stats !== undefined ? (stats.thisMonthTotalBorc - stats.thisMonthKalanBorc) : (allTimeTotalPaid))}</span>
+          <span className="text-[8px] font-bold text-slate-400 block mt-0.5">Seçili ay kapatılan borç/taksitler</span>
         </div>
 
         <div className="p-4 bg-gradient-to-br from-rose-500/5 to-rose-600/[0.02] dark:from-rose-500/10 dark:to-transparent rounded-2xl border border-rose-100/40 dark:border-rose-900/30 shadow-xs relative overflow-hidden">
           <div className="absolute right-3.5 top-3.5 p-1 bg-rose-500/10 text-rose-500 rounded-lg">
             <AlertCircle className="w-4 h-4" />
           </div>
-          <span className="text-[10px] font-black text-slate-400 dark:text-slate-550 uppercase tracking-widest block">KALAN BORÇ</span>
-          <span className="text-base sm:text-lg font-black font-mono text-rose-600 dark:text-rose-455 mt-1 block">{format(allTimeRemaining)}</span>
-          <span className="text-[8px] font-bold text-slate-400 block mt-0.5">Geri ödenmesi gereken net bakiye</span>
+          <span className="text-[10px] font-black text-slate-400 dark:text-slate-550 uppercase tracking-widest block">BU AY KALAN BORÇ</span>
+          <span className="text-base sm:text-lg font-black font-mono text-rose-600 dark:text-rose-455 mt-1 block">{format(stats?.thisMonthKalanBorc ?? dueThisMonthAmount)}</span>
+          <span className="text-[8px] font-bold text-slate-400 block mt-0.5">Bu ay ödenmesi gereken net bakiye</span>
         </div>
       </div>
 

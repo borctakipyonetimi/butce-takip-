@@ -1302,23 +1302,19 @@ export default function App() {
     } catch { return false; }
   });
 
-  const periodSimpleDebtTotal = simpleDebtsInSelectedMonth.reduce((sum, d) => sum + d.amount, 0);
   const periodSimpleDebtRemaining = simpleDebtsInSelectedMonth.reduce((sum, d) => sum + Math.max(0, d.amount - d.paid), 0);
 
-  const periodInstallmentTotal = installmentDebts.reduce((sum, inst) => {
-    if (selectedMonth === null || selectedYear === null) {
-      return sum + inst.totalAmount;
-    }
-    const startDate = new Date(inst.firstDueDate);
-    const startYear = startDate.getFullYear();
-    const startMonth = startDate.getMonth();
-    const monthDiff = (selectedYear - startYear) * 12 + (selectedMonth - startMonth);
-    const isActiveThisMonth = monthDiff >= 0 && monthDiff < inst.installmentCount;
-    if (isActiveThisMonth) {
-      return sum + (inst.totalAmount / inst.installmentCount);
-    }
-    return sum;
-  }, 0);
+  // Actual payments logged during this month for simple debts
+  const periodSimpleDebtPaidThisMonth = payments.filter((p) => {
+    if (p.type !== "manual") return false;
+    if (selectedMonth === null || selectedYear === null) return true;
+    try {
+      const pDate = new Date(p.date);
+      return pDate.getMonth() === selectedMonth && pDate.getFullYear() === selectedYear;
+    } catch { return false; }
+  }).reduce((sum, p) => sum + p.amount, 0);
+
+  const periodSimpleDebtTotal = periodSimpleDebtRemaining + periodSimpleDebtPaidThisMonth;
 
   const periodInstallmentRemaining = installmentDebts.reduce((sum, inst) => {
     if (selectedMonth === null || selectedYear === null) {
@@ -1335,6 +1331,17 @@ export default function App() {
     }
     return sum;
   }, 0);
+
+  const periodInstallmentPaidThisMonth = payments.filter((p) => {
+    if (p.type !== "installment") return false;
+    if (selectedMonth === null || selectedYear === null) return true;
+    try {
+      const pDate = new Date(p.date);
+      return pDate.getMonth() === selectedMonth && pDate.getFullYear() === selectedYear;
+    } catch { return false; }
+  }).reduce((sum, p) => sum + p.amount, 0);
+
+  const periodInstallmentTotal = periodInstallmentRemaining + periodInstallmentPaidThisMonth;
 
   // Calculate monthly contact-based payables (unpaid/payable due in current month or overdue)
   let periodContactPayablesTotal = 0;
@@ -1389,8 +1396,9 @@ export default function App() {
     } catch {}
   }
 
-  const computedThisMonthTotalBorc = periodSimpleDebtTotal + periodInstallmentTotal + periodContactPayablesTotal;
   const computedThisMonthKalanBorc = periodSimpleDebtRemaining + periodInstallmentRemaining + periodContactPayablesRemaining;
+  const computedThisMonthPaidBorc = periodSimpleDebtPaidThisMonth + periodInstallmentPaidThisMonth + (periodContactPayablesTotal - periodContactPayablesRemaining);
+  const computedThisMonthTotalBorc = computedThisMonthKalanBorc + computedThisMonthPaidBorc;
 
   const totalIncome = filteredIncomesForStats.reduce((sum, i) => sum + i.amount, 0);
   const totalExpense = filteredExpensesForStats.reduce((sum, e) => sum + e.amount, 0);
@@ -1936,7 +1944,32 @@ export default function App() {
 
   // ---------------- Backup Utilities ----------------
   const handleExportBackup = () => {
-    const bag = { debts, incomes, alarms, notifications, installmentDebts, payments, expenses, expenseCategories };
+    const contactsKey = `${spaceKey}_contacts_directory`;
+    const contactTxsKey = `${spaceKey}_contacts_transactions`;
+    
+    let contactsData = [];
+    let contactTxsData = [];
+    
+    try {
+      contactsData = JSON.parse(localStorage.getItem(contactsKey) || "[]");
+    } catch {}
+    try {
+      contactTxsData = JSON.parse(localStorage.getItem(contactTxsKey) || "[]");
+    } catch {}
+
+    const bag = { 
+      debts, 
+      incomes, 
+      alarms, 
+      notifications, 
+      installmentDebts, 
+      payments, 
+      expenses, 
+      expenseCategories,
+      contacts: contactsData,
+      contactTransactions: contactTxsData
+    };
+    
     const blob = new Blob([JSON.stringify(bag, null, 2)], { type: "application/json" });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
@@ -2058,25 +2091,47 @@ export default function App() {
       reader.onload = (evt) => {
         try {
           const parsed = JSON.parse(evt.target?.result as string);
-          setDebts(parsed.debts || []);
-          setIncomes(parsed.incomes || []);
-          setAlarms(parsed.alarms || []);
-          setNotifications(parsed.notifications || []);
-          setInstallmentDebts(parsed.installmentDebts || []);
-          setPayments(parsed.payments || []);
-          setExpenses(parsed.expenses || []);
-          setExpenseCategories(parsed.expenseCategories || []);
+          
+          const rawDebts = parsed.debts || parsed.allDebts || parsed.debtList || [];
+          const rawIncomes = parsed.incomes || parsed.allIncomes || parsed.incomeList || [];
+          const rawAlarms = parsed.alarms || parsed.allAlarms || parsed.alarmList || [];
+          const rawNotifs = parsed.notifications || parsed.allNotifications || parsed.notificationList || [];
+          const rawInstallments = parsed.installmentDebts || parsed.installments || parsed.installmentList || [];
+          const rawPayments = parsed.payments || parsed.payments_logs || parsed.paymentList || [];
+          const rawExpenses = parsed.expenses || parsed.allExpenses || parsed.expenseList || [];
+          const rawCategories = parsed.expenseCategories || parsed.categories || parsed.categoryList || [];
+          
+          setDebts(rawDebts);
+          setIncomes(rawIncomes);
+          setAlarms(rawAlarms);
+          setNotifications(rawNotifs);
+          setInstallmentDebts(rawInstallments);
+          setPayments(rawPayments);
+          setExpenses(rawExpenses);
+          setExpenseCategories(rawCategories);
+          
           saveAllToUser(
-            parsed.debts || [],
-            parsed.incomes || [],
-            parsed.alarms || [],
-            parsed.notifications || [],
-            parsed.installmentDebts || [],
-            parsed.payments || [],
-            parsed.expenses || [],
-            parsed.expenseCategories || []
+            rawDebts,
+            rawIncomes,
+            rawAlarms,
+            rawNotifs,
+            rawInstallments,
+            rawPayments,
+            rawExpenses,
+            rawCategories
           );
-          triggerToast("Bütçe Tabanı Yüklendi!");
+          
+          const rawContacts = parsed.contacts || parsed.contacts_directory || parsed.contactsDirectory || [];
+          const rawContactTxs = parsed.contactTransactions || parsed.contacts_transactions || parsed.contactTransactionsList || [];
+          
+          localStorage.setItem(`${spaceKey}_contacts_directory`, JSON.stringify(rawContacts));
+          localStorage.setItem(`${spaceKey}_contacts_transactions`, JSON.stringify(rawContactTxs));
+          
+          triggerToast("Veri Yedek Dosyası Başarıyla İçe Aktarıldı... Sayfa Güncelleniyor! 📊");
+          
+          setTimeout(() => {
+            window.location.reload();
+          }, 1500);
         } catch (err: any) {
           alert(`Yedek yüklenirken hata oluştu: ${err.message}`);
         }
@@ -3195,6 +3250,7 @@ export default function App() {
             selectedYear={selectedYear}
             setSelectedMonth={setSelectedMonth}
             setSelectedYear={setSelectedYear}
+            stats={statsBag}
           />
         )}
 
