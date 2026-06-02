@@ -3,8 +3,11 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React from "react";
+import React, { useState } from "react";
+import { motion } from "motion/react";
+import * as d3 from "d3";
 import { useCurrency } from "../utils/CurrencyContext";
+import { InstallmentDebt } from "../types";
 
 // Helper to convert polar coordinates to Cartesian for SVG circles/doughnuts
 function polarToCartesian(centerX: number, centerY: number, radius: number, angleInDegrees: number) {
@@ -31,6 +34,8 @@ interface DoughnutChartProps {
 
 export const DoughnutChart: React.FC<DoughnutChartProps> = ({ data }) => {
   const { format } = useCurrency();
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+
   const total = data.reduce((sum, item) => sum + item.value, 0);
   if (total === 0) {
     return (
@@ -40,69 +45,133 @@ export const DoughnutChart: React.FC<DoughnutChartProps> = ({ data }) => {
     );
   }
 
-  let accumulatedAngle = 0;
+  // D3 Pie layout definition
+  const pieGenerator = d3.pie<{ label: string; value: number; color: string }>()
+    .value(d => d.value)
+    .sort(null); // Retain original category order and colors
+
+  const arcs = pieGenerator(data);
+
+  // Determine active item to display in the centerpiece
+  const activeItem = hoveredIndex !== null ? data[hoveredIndex] : null;
+  const activePercent = activeItem ? ((activeItem.value / total) * 100).toFixed(1) : "";
 
   return (
-    <div className="flex flex-col items-center justify-center p-3 sm:flex-row gap-6">
-      <div className="relative w-40 h-40">
-        <svg viewBox="0 0 100 100" className="w-full h-full transform -rotate-90">
-          <circle cx="50" cy="50" r="38" fill="none" stroke="#e2e8f0" strokeWidth="12" className="opacity-20" />
-          {data.map((item, idx) => {
-            const percentage = item.value / total;
-            const angleLength = percentage * 360;
-            if (angleLength <= 0) return null;
+    <div className="flex flex-col items-center justify-center p-3 sm:flex-row gap-8">
+      {/* Interactive D3 Pie SVG Container */}
+      <div className="relative w-44 h-44 shrink-0">
+        <svg viewBox="0 0 140 140" className="w-full h-full transform -rotate-90 select-none">
+          {/* Base Background Track shadow ring */}
+          <circle cx="70" cy="70" r="38" fill="none" stroke="#e2e8f0" strokeWidth="10" className="opacity-10 dark:opacity-5" />
+          
+          {arcs.map((arc, idx) => {
+            const isHovered = hoveredIndex === idx;
+            
+            // Calculate slice dynamic paths using D3 Arc
+            // When hovered, the segment expands outwards and thickens slightly for an beautiful 3D focus look
+            const arcPath = d3.arc<any, any>()({
+              innerRadius: isHovered ? 26 : 34,
+              outerRadius: isHovered ? 56 : 48,
+              startAngle: arc.startAngle,
+              endAngle: arc.endAngle,
+              padAngle: 0.02,
+              cornerRadius: 4, // smooth out corners for premium software design aesthetic
+            }) || "";
 
-            const startAngle = accumulatedAngle;
-            const endAngle = accumulatedAngle + angleLength;
-            accumulatedAngle = endAngle;
-
-            // Handle full circle edge case
-            if (percentage >= 0.999) {
-              return (
-                <circle
-                  key={idx}
-                  cx="50"
-                  cy="50"
-                  r="38"
-                  fill="none"
-                  stroke={item.color}
-                  strokeWidth="12"
-                />
-              );
-            }
-
-            const pathData = describeArc(50, 50, 38, startAngle, endAngle);
             return (
               <path
                 key={idx}
-                d={pathData}
-                fill="none"
-                stroke={item.color}
-                strokeWidth="12"
-                strokeLinecap="round"
-                style={{ transition: "stroke-dasharray 0.5s ease" }}
+                d={arcPath}
+                fill={arc.data.color}
+                className="transition-all duration-300 ease-out cursor-pointer hover:brightness-105"
+                onMouseEnter={() => setHoveredIndex(idx)}
+                onMouseLeave={() => setHoveredIndex(null)}
+                style={{
+                  filter: isHovered 
+                    ? `drop-shadow(0px 4px 10px ${arc.data.color}33)` 
+                    : "none",
+                }}
               />
             );
           })}
         </svg>
-        <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-xs text-slate-400 font-semibold uppercase">Toplam</span>
-          <span className="text-sm font-bold text-slate-800 dark:text-slate-100 font-mono text-center px-1">
-            {format(total)}
-          </span>
+
+        {/* Interactive Dynamic Center Text Element */}
+        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none p-4 text-center">
+          {activeItem ? (
+            <div className="animate-fade-in space-y-0.5 max-w-full">
+              <span 
+                className="text-[10px] font-black uppercase tracking-wider block truncate max-w-[110px]"
+                style={{ color: activeItem.color }}
+              >
+                {activeItem.label}
+              </span>
+              <span className="text-sm font-black text-slate-800 dark:text-slate-100 font-mono block leading-none">
+                {format(activeItem.value)}
+              </span>
+              <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 block leading-none">
+                %{activePercent} pay
+              </span>
+            </div>
+          ) : (
+            <div className="space-y-0.5">
+              <span className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider block">
+                Toplam
+              </span>
+              <span className="text-sm font-black text-slate-800 dark:text-slate-100 font-mono block leading-none">
+                {format(total)}
+              </span>
+              <span className="text-[9px] font-semibold text-slate-400 block dark:text-slate-500">
+                {data.length} kategori
+              </span>
+            </div>
+          )}
         </div>
       </div>
 
-      <div className="flex flex-col gap-2">
-        {data.map((item, idx) => (
-          <div key={idx} className="flex items-center gap-2 text-xs md:text-sm font-medium">
-            <span className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
-            <span className="text-slate-500 dark:text-slate-400">{item.label}:</span>
-            <span className="font-bold text-slate-700 dark:text-slate-200 font-mono">
-              {format(item.value)} ({total > 0 ? ((item.value / total) * 100).toFixed(0) : 0}%)
-            </span>
-          </div>
-        ))}
+      {/* Bi-directional Interactive Legend Area */}
+      <div className="flex-1 w-full min-w-[140px] space-y-2">
+        {data.map((item, idx) => {
+          const isHovered = hoveredIndex === idx;
+          const percentage = ((item.value / total) * 100).toFixed(0);
+          
+          return (
+            <div
+              key={idx}
+              className={`flex items-center justify-between p-1.5 rounded-xl transition-all duration-200 cursor-pointer ${
+                isHovered 
+                  ? "bg-slate-50 dark:bg-slate-800/80 scale-[1.02] shadow-3xs" 
+                  : "hover:bg-slate-50/50 dark:hover:bg-slate-800/30"
+              }`}
+              onMouseEnter={() => setHoveredIndex(idx)}
+              onMouseLeave={() => setHoveredIndex(null)}
+            >
+              <div className="flex items-center gap-2 max-w-[65%]">
+                <span 
+                  className={`w-3 h-3 rounded-full shrink-0 transition-transform duration-200 ${isHovered ? "scale-125" : ""}`} 
+                  style={{ backgroundColor: item.color }} 
+                />
+                <span className={`text-xs truncate transition-all duration-200 ${
+                  isHovered 
+                    ? "font-extrabold text-slate-900 dark:text-slate-100" 
+                    : "text-slate-500 dark:text-slate-400 font-semibold"
+                }`}>
+                  {item.label}
+                </span>
+              </div>
+              <div className="text-right shrink-0">
+                <span className={`text-xs font-mono font-bold transition-all duration-200 block ${
+                  isHovered ? "text-slate-900 dark:text-slate-50" : "text-slate-700 dark:text-slate-300"
+                }`}>
+                  {format(item.value)}
+                </span>
+                <span className="text-[9px] font-mono text-slate-400 dark:text-slate-500 block">
+                  %{percentage} pay
+                </span>
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -263,3 +332,456 @@ export const LineChart: React.FC<LineChartProps> = ({ labels, values, lineColor 
     </div>
   );
 };
+
+
+interface InstallmentsPortalChartProps {
+  installmentDebts: InstallmentDebt[];
+}
+
+export const InstallmentsPortalChart: React.FC<InstallmentsPortalChartProps> = ({ installmentDebts }) => {
+  const { format } = useCurrency();
+  const [hoveredRingIndex, setHoveredRingIndex] = useState<number | null>(null);
+  const [selectedMonthOffset, setSelectedMonthOffset] = useState<number>(0);
+  const [hoveredPointIndex, setHoveredPointIndex] = useState<number | null>(null);
+
+  if (!installmentDebts || installmentDebts.length === 0) {
+    return (
+      <div className="p-8 text-center text-xs text-slate-400 dark:text-slate-500 font-medium bg-slate-50/20 dark:bg-slate-800/20 rounded-3xl border border-dashed border-slate-200 dark:border-slate-700">
+        📈 Grafik ve Zaman Projeksiyonu için yukarıdaki "Taksit Planı Ekle" butonuyla yeni bir plan kaydedebilirsiniz.
+      </div>
+    );
+  }
+
+  // Pre-configured bright neon colors for distinct debts
+  const ringColors = [
+    "#6366f1", // Indigo
+    "#06b6d4", // Cyan
+    "#10b981", // Emerald
+    "#f59e0b", // Amber
+    "#ec4899", // Pink
+    "#8b5cf6", // Purple
+    "#ef4444", // Red
+  ];
+
+  // Limit rings to the top 6 largest active debts for visual clarity, otherwise it gets too dense
+  const activeDebts = installmentDebts.filter(d => d.paidInstallmentCount < d.installmentCount);
+  const debtsToPlot = activeDebts.length > 0 
+    ? [...activeDebts].sort((a, b) => b.totalAmount - a.totalAmount).slice(0, 5) 
+    : [...installmentDebts].slice(0, 5);
+
+  // Helper date function in Turkish for the future projection
+  const getFutureMonthLabel = (offset: number) => {
+    const d = new Date();
+    d.setMonth(d.getMonth() + offset);
+    return d.toLocaleDateString("tr-TR", { month: "long", year: "numeric" });
+  };
+
+  const getFutureMonthShort = (offset: number) => {
+    const d = new Date();
+    d.setMonth(d.getMonth() + offset);
+    return d.toLocaleDateString("tr-TR", { month: "short" });
+  };
+
+  // Calculates the simulated state of all installments at a given month offset
+  const getSimulatedRemainingTotal = (offset: number) => {
+    return installmentDebts.reduce((sum, inst) => {
+      const monthlyVal = inst.totalAmount / inst.installmentCount;
+      const simulatedPaid = Math.min(inst.installmentCount, inst.paidInstallmentCount + offset);
+      const simulatedRemaining = (inst.installmentCount - simulatedPaid) * monthlyVal;
+      return sum + simulatedRemaining;
+    }, 0);
+  };
+
+  const currentRemainingTotal = getSimulatedRemainingTotal(0);
+  const simulatedRemainingTotal = getSimulatedRemainingTotal(selectedMonthOffset);
+
+  // Calculates 12-Month repayment projection curve coordinates
+  const projectionRange = Array.from({ length: 12 }, (_, i) => i);
+  const curvePoints = projectionRange.map(m => {
+    return {
+      offset: m,
+      label: getFutureMonthShort(m),
+      fullLabel: getFutureMonthLabel(m),
+      value: getSimulatedRemainingTotal(m),
+    };
+  });
+
+  const maxVal = Math.max(...curvePoints.map(p => p.value), 100);
+
+  // Grid / Curve Dimensions for standard responsive SVG
+  const curveW = 340;
+  const curveH = 120;
+  const padX = 25;
+  const padY = 15;
+
+  const svgCoordinates = curvePoints.map((pt, i) => {
+    const x = padX + (i / 11) * (curveW - 2 * padX);
+    const y = curveH - padY - (pt.value / maxVal) * (curveH - 2 * padY);
+    return { x, y, pt };
+  });
+
+  // Calculate curve SVG path
+  let pathString = "";
+  let gradientPathString = "";
+
+  if (svgCoordinates.length > 0) {
+    pathString = `M ${svgCoordinates[0].x} ${svgCoordinates[0].y}`;
+    gradientPathString = `M ${svgCoordinates[0].x} ${curveH - padY} L ${svgCoordinates[0].x} ${svgCoordinates[0].y}`;
+
+    for (let i = 1; i < svgCoordinates.length; i++) {
+      const prev = svgCoordinates[i - 1];
+      const curr = svgCoordinates[i];
+      const cpX1 = prev.x + (curr.x - prev.x) / 2;
+      const cpY1 = prev.y;
+      const cpX2 = prev.x + (curr.x - prev.x) / 2;
+      const cpY2 = curr.y;
+
+      pathString += ` C ${cpX1} ${cpY1}, ${cpX2} ${cpY2}, ${curr.x} ${curr.y}`;
+      gradientPathString += ` C ${cpX1} ${cpY1}, ${cpX2} ${cpY2}, ${curr.x} ${curr.y}`;
+    }
+
+    gradientPathString += ` L ${svgCoordinates[svgCoordinates.length - 1].x} ${curveH - padY} Z`;
+  }
+
+  // Active highlighted item details during ring hover
+  const activeHoveredDebt = hoveredRingIndex !== null ? debtsToPlot[hoveredRingIndex] : null;
+
+  return (
+    <div className="bg-slate-900/95 dark:bg-slate-950/40 text-white rounded-3xl p-5 shadow-xl border border-slate-800 space-y-5 animate-fade-in relative overflow-hidden backdrop-blur-xs">
+      {/* Absolute futuristic decorative radial grids in background */}
+      <div className="absolute -right-16 -top-16 w-44 h-44 bg-indigo-500/10 rounded-full blur-2xl pointer-events-none" />
+      <div className="absolute -left-16 -bottom-16 w-44 h-44 bg-emerald-500/5 rounded-full blur-2xl pointer-events-none" />
+
+      {/* Header Info */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-slate-800 pb-3">
+        <div>
+          <h3 className="text-xs font-black uppercase text-indigo-400 tracking-widest flex items-center gap-1.5 leading-none">
+            ⚡ TAKSİT ZAMAN MAKİNESİ
+          </h3>
+          <p className="text-[10px] text-slate-400 mt-0.5 leading-tight font-medium">
+            Taksitlerinizin zaman içindeki gelecekteki erime durumunu interaktif olarak simüle edin!
+          </p>
+        </div>
+
+        {/* Time machine controller slider tabs */}
+        <div className="flex items-center gap-1 bg-slate-800/80 p-1 rounded-xl self-start md:self-auto shadow-inner border border-slate-700/50">
+          {[0, 1, 3, 6, 12].map((m) => (
+            <button
+              key={m}
+              onClick={() => setSelectedMonthOffset(m)}
+              className={`px-2 py-1 text-[9px] font-black tracking-wider uppercase rounded-lg transition-all cursor-pointer ${
+                selectedMonthOffset === m
+                  ? "bg-indigo-600 text-white shadow-sm"
+                  : "text-slate-400 hover:text-slate-200"
+              }`}
+            >
+              {m === 0 ? "Şimdi" : `+${m} Ay`}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="grid gap-6 md:grid-cols-12 items-center">
+        {/* Left Column: Concentric Portal Interactive Orbit */}
+        <div className="md:col-span-5 flex flex-col items-center justify-center relative">
+          <div className="relative w-40 h-40 shrink-0">
+            <svg viewBox="0 0 150 150" className="w-full h-full select-none transform -rotate-90">
+              <defs>
+                <filter id="neon-tracer" x="-20%" y="-20%" width="140%" height="140%">
+                  <feGaussianBlur stdDeviation="1.5" result="glow" />
+                  <feMerge>
+                    <feMergeNode in="glow" />
+                    <feMergeNode in="SourceGraphic" />
+                  </feMerge>
+                </filter>
+              </defs>
+
+              {/* Outer boundary security decorative ring */}
+              <circle cx="75" cy="75" r="72" fill="none" stroke="#334155" strokeWidth="0.5" strokeDasharray="3, 3" className="opacity-40" />
+
+              {/* Loop and draw nested colorful tracks for each installment */}
+              {debtsToPlot.map((inst, idx) => {
+                const r = 26 + idx * 8.5; // concentric radii
+                const circumference = 2 * Math.PI * r;
+                
+                const currentPaid = inst.paidInstallmentCount;
+                const simulatedPaid = Math.min(inst.installmentCount, currentPaid + selectedMonthOffset);
+                const progressPercentage = (simulatedPaid / inst.installmentCount) * 100;
+
+                const color = ringColors[idx % ringColors.length];
+                const isHovered = hoveredRingIndex === idx;
+
+                const strokeOffset = circumference * (1 - progressPercentage / 100);
+
+                return (
+                  <g 
+                    key={inst.id} 
+                    className="cursor-pointer transition-all duration-300"
+                    onMouseEnter={() => setHoveredRingIndex(idx)}
+                    onMouseLeave={() => setHoveredRingIndex(null)}
+                  >
+                    {/* Shadow track */}
+                    <circle
+                      cx="75"
+                      cy="75"
+                      r={r}
+                      fill="none"
+                      stroke="#1e293b"
+                      strokeWidth={isHovered ? 6 : 4}
+                      className="transition-all duration-200 opacity-60"
+                    />
+
+                    {/* Faint color track for aesthetic depth */}
+                    <circle
+                      cx="75"
+                      cy="75"
+                      r={r}
+                      fill="none"
+                      stroke={color}
+                      strokeWidth={isHovered ? 6 : 4}
+                      className="opacity-10 transition-all duration-200"
+                    />
+
+                    {/* Animated Filled Progress arc */}
+                    <circle
+                      cx="75"
+                      cy="75"
+                      r={r}
+                      fill="none"
+                      stroke={color}
+                      strokeWidth={isHovered ? 7.5 : 4.5}
+                      strokeDasharray={circumference}
+                      strokeDashoffset={strokeOffset}
+                      strokeLinecap="round"
+                      className="transition-all duration-700 ease-out"
+                      style={{
+                        filter: isHovered ? "url(#neon-tracer)" : "none",
+                      }}
+                    />
+
+                    {/* Orbit Head Spark Particle */}
+                    {progressPercentage > 0 && progressPercentage < 100 && (
+                      <circle
+                        cx={75 + r * Math.cos((progressPercentage / 100) * 2 * Math.PI)}
+                        cy={75 + r * Math.sin((progressPercentage / 100) * 2 * Math.PI)}
+                        r="3"
+                        fill="#ffffff"
+                        style={{
+                          filter: "drop-shadow(0px 0px 4px #ffffff)",
+                          opacity: isHovered ? 1 : 0.7
+                        }}
+                      />
+                    )}
+                  </g>
+                );
+              })}
+            </svg>
+
+            {/* Portal Inside HUD Panel display */}
+            <div className="absolute inset-0 flex flex-col items-center justify-center p-3 text-center pointer-events-none">
+              {activeHoveredDebt ? (
+                <div className="animate-fade-in space-y-0.5">
+                  <span className="text-[9px] font-black uppercase text-slate-400 block tracking-wider leading-none">
+                    SEÇİLEN
+                  </span>
+                  <span 
+                    className="text-[11px] font-black truncate max-w-[100px] block"
+                    style={{ color: ringColors[debtsToPlot.indexOf(activeHoveredDebt) % ringColors.length] }}
+                  >
+                    {activeHoveredDebt.name}
+                  </span>
+                  <span className="text-[12px] font-black font-mono block leading-none">
+                    {format(activeHoveredDebt.totalAmount / activeHoveredDebt.installmentCount)}/ay
+                  </span>
+                  <span className="text-[9px] font-bold text-slate-400 block leading-none">
+                    {Math.min(activeHoveredDebt.installmentCount, activeHoveredDebt.paidInstallmentCount + selectedMonthOffset)}/{activeHoveredDebt.installmentCount} Ay
+                  </span>
+                </div>
+              ) : (
+                <div className="space-y-0.5">
+                  {selectedMonthOffset > 0 ? (
+                    <>
+                      <span className="text-[9px] font-black text-rose-400 block tracking-wider uppercase leading-none">
+                        +{selectedMonthOffset} AY SONRA
+                      </span>
+                      <span className="text-xs text-rose-500 font-black font-mono block animate-pulse">
+                        {format(simulatedRemainingTotal)}
+                      </span>
+                      <span className="text-[8px] font-bold text-slate-400 block leading-none">
+                        Azalma: %{currentRemainingTotal > 0 ? (((currentRemainingTotal - simulatedRemainingTotal) / currentRemainingTotal) * 100).toFixed(0) : 0}
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="text-[9px] font-black text-indigo-400 block tracking-wider uppercase leading-none">
+                        BUGÜN
+                      </span>
+                      <span className="text-xs text-indigo-300 font-black font-mono block">
+                        {format(currentRemainingTotal)}
+                      </span>
+                      <span className="text-[8px] font-bold text-slate-400 block leading-none">
+                        Kalan Toplam Borç
+                      </span>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="text-[9px] text-slate-400 font-extrabold tracking-wide mt-2">
+            * İnteraktif halkalar üzerine gelip detay inceleyin
+          </div>
+        </div>
+
+        {/* Right Column: Beautiful Repayment Wave Slope & Stats breakdown */}
+        <div className="md:col-span-7 space-y-4">
+          {/* Dynamic Info alert block */}
+          <div className="p-3 bg-slate-800/60 border border-slate-800 rounded-2xl flex items-center justify-between gap-2">
+            <div className="space-y-0.5">
+              <span className="text-[9px] text-indigo-400 uppercase font-black block">Projeksiyon Zamanı</span>
+              <span className="text-xs font-black text-white block">
+                🚀 {getFutureMonthLabel(selectedMonthOffset)} Gelecek Hedefi
+              </span>
+            </div>
+            <div className="text-right">
+              <span className="text-[9px] text-emerald-400 uppercase font-black block leading-none">Simüle Edilen Ödeme</span>
+              <span className="text-xs font-bold text-emerald-400 font-mono block mt-0.5">
+                + {format(currentRemainingTotal - simulatedRemainingTotal)} Ödenecek
+              </span>
+            </div>
+          </div>
+
+          {/* D3 Styled Repayment Wave Chart */}
+          <div className="relative p-2.5 bg-slate-950/70 border border-slate-800/80 rounded-2xl">
+            <div className="flex items-center justify-between text-[10px] font-black text-indigo-400 uppercase pb-1.5 px-1 bg-none">
+              <span>📉 Taksit Borç Erime Eğrisi (12 Ay)</span>
+              {hoveredPointIndex !== null && (
+                <span className="text-emerald-400 normal-case font-bold animate-fade-in">
+                  {curvePoints[hoveredPointIndex].label}: {format(curvePoints[hoveredPointIndex].value)}
+                </span>
+              )}
+            </div>
+
+            <svg viewBox={`0 0 ${curveW} ${curveH}`} className="w-full h-auto">
+              <defs>
+                <linearGradient id="waveFill" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#4f46e5" stopOpacity="0.4" />
+                  <stop offset="100%" stopColor="#4f46e5" stopOpacity="0.0" />
+                </linearGradient>
+              </defs>
+
+              {/* Gridlines */}
+              <line x1={padX} y1={curveH - padY} x2={curveW - padX} y2={curveH - padY} stroke="#1e293b" strokeWidth="1" />
+              <line x1={padX} y1={padY} x2={curveW - padX} y2={padY} stroke="#1e293b" strokeWidth="1" strokeDasharray="2, 2" />
+
+              {/* Gradient filled area */}
+              {curvePoints.length > 1 && (
+                <path d={gradientPathString} fill="url(#waveFill)" className="transition-all duration-300 pointer-events-none" />
+              )}
+
+              {/* Glowing Line */}
+              {curvePoints.length > 1 && (
+                <path
+                  d={pathString}
+                  fill="none"
+                  stroke="#6366f1"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  className="transition-all duration-300 pointer-events-none"
+                />
+              )}
+
+              {/* Render interactive dots with touch/click areas */}
+              {svgCoordinates.map((coord, i) => {
+                const isSelected = selectedMonthOffset === coord.pt.offset;
+                const isPointHovered = hoveredPointIndex === i;
+
+                return (
+                  <g 
+                    key={i} 
+                    className="cursor-pointer"
+                    onMouseEnter={() => setHoveredPointIndex(i)}
+                    onMouseLeave={() => setHoveredPointIndex(null)}
+                    onClick={() => setSelectedMonthOffset(coord.pt.offset)}
+                  >
+                    {/* Visual dot tracer */}
+                    <circle
+                      cx={coord.x}
+                      cy={coord.y}
+                      r={isSelected ? 4.5 : isPointHovered ? 4 : 2}
+                      fill={isSelected ? "#10b981" : isPointHovered ? "#6366f1" : "#475569"}
+                      stroke="#0f172a"
+                      strokeWidth={isSelected || isPointHovered ? 2 : 0}
+                      className="transition-all duration-150"
+                    />
+
+                    {/* Dynamic pulse outer bubble */}
+                    {isSelected && (
+                      <circle
+                        cx={coord.x}
+                        cy={coord.y}
+                        r="8"
+                        fill="none"
+                        stroke="#10b981"
+                        strokeWidth="1"
+                        className="animate-ping"
+                      />
+                    )}
+
+                    {/* Labels at standard interval points for clean readability */}
+                    {(i === 0 || i === 3 || i === 6 || i === 9 || i === 11) && (
+                      <text
+                        x={coord.x}
+                        y={curveH - 4}
+                        textAnchor="middle"
+                        className="text-[8px] fill-slate-400 font-bold"
+                      >
+                        {coord.pt.label}
+                      </text>
+                    )}
+
+                    {/* Invisible fat mouse interaction target */}
+                    <circle
+                      cx={coord.x}
+                      cy={coord.y}
+                      r="12"
+                      fill="transparent"
+                    />
+                  </g>
+                );
+              })}
+            </svg>
+          </div>
+
+          {/* Color Indicators Legend Lists */}
+          <div className="grid grid-cols-2 gap-1.5 max-h-[85px] overflow-y-auto pr-1">
+            {debtsToPlot.map((inst, idx) => {
+              const color = ringColors[idx % ringColors.length];
+              const isHovered = hoveredRingIndex === idx;
+              return (
+                <div
+                  key={inst.id}
+                  className={`flex items-center gap-2 p-1 rounded-lg transition-all duration-150 cursor-pointer ${
+                    isHovered ? "bg-slate-800" : "hover:bg-slate-850"
+                  }`}
+                  onMouseEnter={() => setHoveredRingIndex(idx)}
+                  onMouseLeave={() => setHoveredRingIndex(null)}
+                >
+                  <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
+                  <span className="text-[10px] font-semibold truncate flex-1 text-slate-300">
+                    {inst.name}
+                  </span>
+                  <span className="text-[9px] font-bold font-mono text-slate-400 shrink-0">
+                    {inst.paidInstallmentCount}/{inst.installmentCount}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+

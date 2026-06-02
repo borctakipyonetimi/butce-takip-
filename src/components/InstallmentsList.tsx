@@ -9,6 +9,7 @@ import { motion } from "motion/react";
 import { InstallmentDebt } from "../types";
 import { useCurrency } from "../utils/CurrencyContext";
 import { AdMobBanner } from "./AdMobBanner";
+import { InstallmentsPortalChart } from "./BudgetCharts";
 
 interface InstallmentsListProps {
   installmentDebts: InstallmentDebt[];
@@ -229,6 +230,8 @@ export const InstallmentsList: React.FC<InstallmentsListProps> = ({
           })
         )}
       </div>
+
+      <InstallmentsPortalChart installmentDebts={installmentDebts} />
 
       {!isPremium && (
         <AdMobBanner unitType="banner" className="opacity-95 py-1" />

@@ -105,7 +105,7 @@ export const AIChat: React.FC<AIChatProps> = ({ debts, incomes, expenses, instal
   const [loading, setLoading] = useState(false);
   const [apiKeyInput, setApiKeyInput] = useState(() => localStorage.getItem("user_gemini_api_key") || "");
   const [showApiKeyField, setShowApiKeyField] = useState(false);
-  const [isApiKeySaved, setIsApiKeySaved] = useState(false);
+  const [isApiKeySaved, setIsApiKeySaved] = useState(() => !!localStorage.getItem("user_gemini_api_key"));
   
   // Custom scroll refs to target ONLY the scrollable chat container, preventing parent window scroll jump
   const chatContainerRef = useRef<HTMLDivElement>(null);
@@ -323,7 +323,7 @@ export const AIChat: React.FC<AIChatProps> = ({ debts, incomes, expenses, instal
     const userApiKey = localStorage.getItem("user_gemini_api_key") || undefined;
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 6000);
+    const timeoutId = setTimeout(() => controller.abort(), 25000);
 
     try {
       const response = await fetch("/api/chat", {

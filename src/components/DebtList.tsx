@@ -940,49 +940,6 @@ export const DebtList: React.FC<DebtListProps> = ({
         />
       </div>
 
-      {/* Stats Summary Panel with Doughnut & Bar Visualizers at the absolute bottom */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 p-6 bg-white dark:bg-slate-800 rounded-3xl border border-slate-200/50 dark:border-slate-700/60 shadow-xs">
-        {/* Left Side: Comparison Bar Chart of 4 Dimensions of Debts */}
-        <div className="flex flex-col justify-center space-y-3.5">
-          <h3 className="text-xs font-black tracking-wider text-slate-400 dark:text-slate-500 uppercase flex items-center gap-1.5">
-            <span>📊 BORÇ ANALİZ GRAFİĞİ</span>
-          </h3>
-          <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider">
-            Toplam Borç • Bu Ay Ödenecek • Kalan • Ödenen Karşılaştırması
-          </p>
-          <div className="bg-slate-50/50 dark:bg-slate-900/10 p-4 rounded-2xl border border-slate-100 dark:border-slate-700/30">
-            <BarChart
-              data={[
-                { label: "Toplam Borç", value: totalAmount, color: "#4f46e5" },
-                { label: "Bu Ay Ödenecek", value: dueThisMonthAmount, color: "#f59e0b" },
-                { label: "Ödenen Borç", value: totalPaid, color: "#10b981" },
-                { label: "Kalan Borç", value: totalRemaining, color: "#ef4444" },
-              ]}
-            />
-          </div>
-        </div>
-
-        {/* Right Side: DoughnutChart Ratio widget */}
-        <div className="flex flex-col justify-center space-y-3.5">
-          <h3 className="text-xs font-black tracking-wider text-slate-400 dark:text-slate-500 uppercase text-center md:text-left flex items-center gap-1.5">
-            <span>🔒 BORÇ GERİ ÖDEME ORANI</span>
-          </h3>
-          <p className="text-[10px] text-slate-400 dark:text-slate-550 font-bold uppercase tracking-wider text-center md:text-left">
-            Ödenen ve Kalan Borç Oransal Dağılım Analizi
-          </p>
-          <div className="flex items-center justify-center p-3 bg-slate-50/50 dark:bg-slate-900/10 rounded-2xl border border-slate-100 dark:border-slate-700/30">
-            <div className="w-full max-w-xs scale-95">
-              <DoughnutChart
-                data={[
-                  { label: "Ödenen Borç", value: totalPaid, color: "#10b981" },
-                  { label: "Kalan Borç", value: totalRemaining, color: "#ef4444" },
-                ]}
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* Debt Add/Edit Dialog Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">

@@ -290,8 +290,8 @@ app.post("/api/chat", async (req, res) => {
     const totalExpense = stats?.totalExpense || 0;
     const netIncome = stats?.netIncome || 0;
 
-    const systemPrompt = `Sen "Borç Takip Sistemi" Android/Web uygulamasının dahili yapay zeka finans asistanısın. Türkçe konuşacaksın.
-Kullanıcının bütçe durumuna ilişkin güncel veriler aşağıdadır:
+    const systemPrompt = `Sen "Bütçem Pro" bireysel finans yönetim ve borç takip uygulamasının gelişmiş, ChatGPT kalitesinde akıllı yapay zeka finans asistanısın. Türkçe konuşacaksın.
+Kullanıcının güncel bütçe durumu ve mali parametreleri şunlardır:
 - Toplam Borç: ₺${totalDebt}
 - Ödenmiş Miktar: ₺${totalPaid}
 - Kalan Borç: ₺${remaining}
@@ -302,11 +302,12 @@ Kullanıcının bütçe durumuna ilişkin güncel veriler aşağıdadır:
 - Borç Listesi Detayı: ${JSON.stringify(context?.debts || [])}
 - Giderler Listesi Detayı: ${JSON.stringify(context?.expenses || [])}
 
-Görevlerin:
-1. Gelir/gider og kalan borç analizini yaparak kullanıcının risk seviyesini (Yüksek, Orta, Düşük) belirle.
-2. Tasarruf, borç kapatma stratejileri (Kartopu / Çığ yöntemleri vb.) hakkında pratik öneriler ver.
-3. Kullanıcının yazdığı soruları finansal verileri baz alarak dost canlısı, rasyonel ve cesaretlendirici bir tonla somutlaştırarak cevapla.
-4. Cevaplarının okunabilirliği için markdown, başlıklar ve maddeler kullan.`;
+Görevlerin ve Davranış Kuralların:
+1. Gelir/gider dengesini ve kalan borç durumunu analiz et, kullanıcının risk seviyesini (Yüksek Risk, Orta Seviye, Güvenli) belirle ve rasyonel yorumlar yap.
+2. Tasarruf yöntemleri, borç kapatma stratejileri (Kartopu / Çığ yöntemleri vb.) hakkında son derece açıklayıcı, somut, adım adım finansal öneriler sun.
+3. Kullanıcının sorduğu soruları bu finansal verileri göz ardı etmeden detaylı ve cesaretlendirici bir dille cevapla.
+4. ÇEVRİMİÇİ (ONLINE) SORGULAR VE GÜNCEL BİLGİLER: Kullanıcı döviz kurları (örneğin: dolar bugün ne kadar?, euro kaç TL?), güncel altın fiyatları, enflasyon oranları ya da bütçe dışındaki genel dünya bilgileri, güncel haberler veya finansal veriler sorduğunda, entegre Google Arama (googleSearch) aracını kullan ve her zaman en güncel doğru fiyat/veri bilgilerini aktar. Kullanıcıya "Bilmiyorum" demek yerine bu güncel arama sonuçlarını kullanarak kesin ve şeffaf yanıt ver.
+5. Cevaplarında başlıklar, markdown tabloları, kalın kelimeler ve emojiler kullanarak okunabilirliği en üst düzeye çıkar. Tamamen profesyonel ve sıcakkanlı bir finans koçu gibi davran.`;
 
     const rawTurns = [];
     if (chatHistory && Array.isArray(chatHistory)) {
@@ -360,9 +361,9 @@ Görevlerin:
       }
     }
 
-    // Enforce an active 5-second timeout to prevent API hangs or slow responses in Cloud environments
+    // Enforce an active 20-second timeout to allow rich reasoning and search grounding results
     const timeoutPromise = new Promise<never>((_, reject) => {
-      setTimeout(() => reject(new Error("Timeout after 5000ms: Gemini API calls are taking too long due to rate limits or connection restrictions.")), 5000);
+      setTimeout(() => reject(new Error("Timeout after 20000ms: Gemini API calls took too long, switching temporarily to offline analysis.")), 20000);
     });
 
     const geminiPromise = aiClient.models.generateContent({
@@ -371,6 +372,7 @@ Görevlerin:
       config: {
         systemInstruction: systemPrompt,
         temperature: 0.7,
+        tools: [{ googleSearch: {} }],
       },
     });
 
