@@ -206,6 +206,10 @@ export default function App() {
   const [oneSignalInput, setOneSignalInput] = useState(oneSignalAppId);
   const [oneSignalSubscribed, setOneSignalSubscribed] = useState(false);
 
+  // Newsletter Subscription State
+  const [newsletterEmail, setNewsletterEmail] = useState("");
+  const [isNewsletterSubscribed, setIsNewsletterSubscribed] = useState(false);
+
   // Initialize and register OneSignal dynamically
   useEffect(() => {
     if (typeof window !== "undefined" && oneSignalAppId) {
@@ -3208,109 +3212,150 @@ export default function App() {
       {/* Central View Dashboard Grid content container */}
       <main className="max-w-3xl mx-auto px-4 py-6 pb-24">
         {/* Global Month/Period Scoper Widget */}
-        {["overview", "debts", "income", "expenses", "installments"].includes(activeTab) && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mb-5 p-3.5 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/60 dark:border-slate-700/60 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3 text-xs"
-          >
-            <div className="flex items-center gap-2">
-              <span className="p-1.5 bg-indigo-50 dark:bg-slate-900 text-indigo-500 rounded-lg shrink-0">
-                <Calendar className="w-4 h-4" />
-              </span>
-              <div>
-                <span className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 block leading-none tracking-wider mb-1">FİLTRELENEN DÖNEM</span>
-                <span className="font-extrabold text-slate-800 dark:text-slate-100 uppercase tracking-wide">
-                  {selectedMonth !== null && selectedYear !== null 
-                    ? `${["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"][selectedMonth]} ${selectedYear}`
-                    : "🔒 TÜM ZAMANLAR BİRİKİMLİ"}
-                </span>
+        {["overview", "debts", "income", "expenses", "installments"].includes(activeTab) && (() => {
+          let themeCardBg = "bg-white dark:bg-slate-800";
+          let themeBorder = "border-slate-200/60 dark:border-slate-700/60";
+          let themeIconBg = "bg-indigo-50 dark:bg-slate-900";
+          let themeIconText = "text-indigo-500";
+          let themeFocusRing = "focus:ring-indigo-500";
+          let themeBtnHover = "hover:bg-indigo-50 hover:text-indigo-600 dark:hover:bg-indigo-950/30 dark:hover:text-indigo-400";
+          
+          if (colorTheme === "green") {
+            themeCardBg = "bg-emerald-500/[0.04] dark:bg-emerald-950/10";
+            themeBorder = "border-emerald-500/20 dark:border-emerald-800/40";
+            themeIconBg = "bg-emerald-500/20 dark:bg-emerald-950/60";
+            themeIconText = "text-emerald-600 dark:text-emerald-400";
+            themeFocusRing = "focus:ring-emerald-500";
+            themeBtnHover = "hover:bg-emerald-500/10 dark:hover:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400";
+          } else if (colorTheme === "purple") {
+            themeCardBg = "bg-purple-500/[0.04] dark:bg-purple-950/10";
+            themeBorder = "border-purple-500/20 dark:border-purple-800/40";
+            themeIconBg = "bg-purple-500/20 dark:bg-purple-950/60";
+            themeIconText = "text-purple-600 dark:text-purple-400";
+            themeFocusRing = "focus:ring-purple-500";
+            themeBtnHover = "hover:bg-purple-500/10 dark:hover:bg-purple-950/30 text-purple-600 dark:text-purple-400";
+          } else if (colorTheme === "orange") {
+            themeCardBg = "bg-amber-500/[0.04] dark:bg-amber-950/10";
+            themeBorder = "border-amber-500/20 dark:border-amber-800/40";
+            themeIconBg = "bg-amber-500/20 dark:bg-amber-950/60";
+            themeIconText = "text-amber-600 dark:text-amber-400";
+            themeFocusRing = "focus:ring-amber-500";
+            themeBtnHover = "hover:bg-amber-500/10 dark:hover:bg-amber-950/30 text-amber-600 dark:text-amber-400";
+          } else {
+            themeCardBg = "bg-indigo-500/[0.04] dark:bg-indigo-950/10";
+            themeBorder = "border-indigo-500/20 dark:border-indigo-805/40";
+            themeIconBg = "bg-indigo-500/20 dark:bg-indigo-950/60";
+            themeIconText = "text-indigo-600 dark:text-indigo-400";
+          }
+
+          return (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.98 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className={`mb-5 p-4 rounded-3xl border ${themeCardBg} ${themeBorder} shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3 text-xs transition-all duration-300 relative overflow-hidden`}
+            >
+              {/* Decorative dynamic neon fluid bubble backing */}
+              <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 dark:bg-indigo-500/10 rounded-full blur-2xl pointer-events-none" />
+
+              <div className="flex items-center gap-3 relative z-10">
+                <div className={`p-2.5 rounded-2xl shrink-0 transition-colors duration-300 ${themeIconBg} ${themeIconText}`}>
+                  <Calendar className="w-5 h-5 animate-pulse" />
+                </div>
+                <div>
+                  <span className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 block leading-none tracking-widest mb-1">FİLTRELENEN DÖNEM</span>
+                  <span className="font-extrabold text-slate-800 dark:text-slate-100 uppercase tracking-wide flex items-center gap-2">
+                    {selectedMonth !== null && selectedYear !== null 
+                      ? `${["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"][selectedMonth]} ${selectedYear}`
+                      : "🔒 TÜM ZAMANLAR BİRİKİMLİ"}
+                    <span className="inline-flex w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+                  </span>
+                </div>
               </div>
-            </div>
 
-            <div className="flex flex-wrap items-center gap-1.5 w-full sm:w-auto justify-end">
-              <button
-                type="button"
-                onClick={() => {
-                  if (selectedMonth === null || selectedYear === null) {
-                    const now = new Date();
-                    setSelectedMonth(now.getMonth());
-                    setSelectedYear(now.getFullYear());
-                  } else if (selectedMonth === 0) {
-                    setSelectedMonth(11);
-                    setSelectedYear(selectedYear - 1);
-                  } else {
-                    setSelectedMonth(selectedMonth - 1);
-                  }
-                }}
-                disabled={selectedMonth === null}
-                className="px-2.5 py-1.5 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-xl cursor-pointer disabled:opacity-40 select-none text-[10.5px] font-bold"
-              >
-                ← Önceki
-              </button>
+              <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-end relative z-10">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (selectedMonth === null || selectedYear === null) {
+                      const now = new Date();
+                      setSelectedMonth(now.getMonth());
+                      setSelectedYear(now.getFullYear());
+                    } else if (selectedMonth === 0) {
+                      setSelectedMonth(11);
+                      setSelectedYear(selectedYear - 1);
+                    } else {
+                      setSelectedMonth(selectedMonth - 1);
+                    }
+                  }}
+                  disabled={selectedMonth === null}
+                  className={`px-3 py-1.5 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 rounded-xl cursor-pointer disabled:opacity-40 select-none text-[10.5px] font-extrabold transition-all duration-300 ${themeBtnHover}`}
+                >
+                  ← Önceki
+                </button>
 
-              <select
-                value={selectedMonth === null ? "all" : selectedMonth}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  if (val === "all") {
-                    setSelectedMonth(null);
-                  } else {
-                    setSelectedMonth(parseInt(val));
-                    if (selectedYear === null) setSelectedYear(new Date().getFullYear());
-                  }
-                }}
-                className="px-2.5 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl font-bold text-slate-700 dark:text-slate-200 cursor-pointer text-[10.5px]"
-              >
-                <option value="all">Tüm Dönemler</option>
-                {["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"].map((m, idx) => (
-                  <option key={idx} value={idx}>{m}</option>
-                ))}
-              </select>
+                <select
+                  value={selectedMonth === null ? "all" : selectedMonth}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === "all") {
+                      setSelectedMonth(null);
+                    } else {
+                      setSelectedMonth(parseInt(val));
+                      if (selectedYear === null) setSelectedYear(new Date().getFullYear());
+                    }
+                  }}
+                  className={`px-3 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/80 rounded-xl font-extrabold text-slate-700 dark:text-slate-200 cursor-pointer text-[10.5px] focus:outline-none focus:ring-1 ${themeFocusRing}`}
+                >
+                  <option value="all">Tüm Dönemler</option>
+                  {["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"].map((m, idx) => (
+                    <option key={idx} value={idx}>{m}</option>
+                  ))}
+                </select>
 
-              <select
-                value={selectedYear === null ? "all" : selectedYear}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  if (val === "all") {
-                    setSelectedYear(null);
-                    setSelectedMonth(null);
-                  } else {
-                    setSelectedYear(parseInt(val));
-                    if (selectedMonth === null) setSelectedMonth(new Date().getMonth());
-                  }
-                }}
-                disabled={selectedMonth === null}
-                className="px-2.5 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl font-bold text-slate-700 dark:text-slate-200 disabled:opacity-40 cursor-pointer text-[10.5px]"
-              >
-                <option value="all">Yıl</option>
-                {[2025, 2026, 2027, 2028].map((y) => (
-                  <option key={y} value={y}>{y}</option>
-                ))}
-              </select>
+                <select
+                  value={selectedYear === null ? "all" : selectedYear}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === "all") {
+                      setSelectedYear(null);
+                      setSelectedMonth(null);
+                    } else {
+                      setSelectedYear(parseInt(val));
+                      if (selectedMonth === null) setSelectedMonth(new Date().getMonth());
+                    }
+                  }}
+                  disabled={selectedMonth === null}
+                  className={`px-3 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/85 rounded-xl font-extrabold text-slate-700 dark:text-slate-200 disabled:opacity-40 cursor-pointer text-[10.5px] focus:outline-none focus:ring-1 ${themeFocusRing}`}
+                >
+                  <option value="all">Yıl</option>
+                  {[2025, 2026, 2027, 2028].map((y) => (
+                    <option key={y} value={y}>{y}</option>
+                  ))}
+                </select>
 
-              <button
-                type="button"
-                onClick={() => {
-                  if (selectedMonth === null || selectedYear === null) {
-                    const now = new Date();
-                    setSelectedMonth(now.getMonth());
-                    setSelectedYear(now.getFullYear());
-                  } else if (selectedMonth === 11) {
-                    setSelectedMonth(0);
-                    setSelectedYear(selectedYear + 1);
-                  } else {
-                    setSelectedMonth(selectedMonth + 1);
-                  }
-                }}
-                disabled={selectedMonth === null}
-                className="px-2.5 py-1.5 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-xl cursor-pointer disabled:opacity-40 select-none text-[10.5px] font-bold"
-              >
-                Sonraki →
-              </button>
-            </div>
-          </motion.div>
-        )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (selectedMonth === null || selectedYear === null) {
+                      const now = new Date();
+                      setSelectedMonth(now.getMonth());
+                      setSelectedYear(now.getFullYear());
+                    } else if (selectedMonth === 11) {
+                      setSelectedMonth(0);
+                      setSelectedYear(selectedYear + 1);
+                    } else {
+                      setSelectedMonth(selectedMonth + 1);
+                    }
+                  }}
+                  disabled={selectedMonth === null}
+                  className={`px-3 py-1.5 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-655 dark:text-slate-300 rounded-xl cursor-pointer disabled:opacity-40 select-none text-[10.5px] font-extrabold transition-all duration-300 ${themeBtnHover}`}
+                >
+                  Sonraki →
+                </button>
+              </div>
+            </motion.div>
+          );
+        })()}
 
         {activeTab === "overview" && (
           <DashboardOverview
@@ -3702,16 +3747,20 @@ export default function App() {
 
         {/* Enerjik ve Optimize Edilmiş Web Sayfası Footer Kartı (SEO & Sosyal Paylaşım & Kanallar) */}
         <footer className="mt-16 pt-8 pb-6 border-t border-slate-200/60 dark:border-slate-800/80 space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
-            {/* Sol Blok: Sosyal Medya Takip Alanı */}
-            <div className="flex flex-col items-center md:items-start space-y-3">
-              <h4 className="text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">
-                Resmi Kanallarımız'ı Takip Edin
-              </h4>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium text-center md:text-left max-w-sm">
-                Finansal tüyolar, akıllı bütçe stratejileri ve sistem güncellemelerinden anında haberdar olmak için topluluklarımıza katılın.
-              </p>
-              <div className="flex items-center gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+            {/* Sol Blok: Sosyal Medya Takip Alanı & Haberdar Ol Bülteni */}
+            <div className="flex flex-col items-center justify-center text-center space-y-4">
+              <div className="space-y-1.5 w-full flex flex-col items-center text-center">
+                <h4 className="text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest text-center">
+                  Resmi Kanallarımız'ı Takip Edin
+                </h4>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium text-center max-w-sm leading-relaxed">
+                  Finansal tüyolar, akıllı bütçe stratejileri ve sistem güncellemelerinden anında haberdar olmak için topluluklarımıza katılın.
+                </p>
+              </div>
+              
+              {/* Dairesel Takip Linkleri */}
+              <div className="flex items-center justify-center gap-3.5">
                 <motion.a
                   href="https://youtube.com"
                   target="_blank"
@@ -3725,7 +3774,7 @@ export default function App() {
                     boxShadow: "0 10px 15px -3px rgba(255, 0, 0, 0.3)" 
                   }}
                   whileTap={{ scale: 0.92 }}
-                  className="w-9 h-9 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 flex items-center justify-center text-rose-500 shadow-xs transition-colors duration-300 cursor-pointer"
+                  className="w-10 h-10 rounded-full bg-slate-50 dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 flex items-center justify-center text-rose-500 shadow-xs transition-colors duration-300 cursor-pointer"
                   title="YouTube"
                 >
                   <Youtube className="w-4 h-4" />
@@ -3744,7 +3793,7 @@ export default function App() {
                     boxShadow: "0 10px 15px -3px rgba(225, 48, 108, 0.3)" 
                   }}
                   whileTap={{ scale: 0.92 }}
-                  className="w-9 h-9 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 flex items-center justify-center text-pink-500 shadow-xs transition-colors duration-300 cursor-pointer"
+                  className="w-10 h-10 rounded-full bg-slate-50 dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 flex items-center justify-center text-pink-500 shadow-xs transition-colors duration-300 cursor-pointer"
                   title="Instagram"
                 >
                   <Instagram className="w-4 h-4" />
@@ -3763,7 +3812,7 @@ export default function App() {
                     boxShadow: "0 10px 15px -3px rgba(0, 136, 204, 0.3)" 
                   }}
                   whileTap={{ scale: 0.92 }}
-                  className="w-9 h-9 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 flex items-center justify-center text-sky-500 shadow-xs transition-colors duration-300 cursor-pointer"
+                  className="w-10 h-10 rounded-full bg-slate-50 dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 flex items-center justify-center text-sky-500 shadow-xs transition-colors duration-300 cursor-pointer"
                   title="Telegram"
                 >
                   <Send className="w-4 h-4" />
@@ -3780,33 +3829,91 @@ export default function App() {
                     boxShadow: "0 10px 15px -3px rgba(99, 102, 241, 0.3)" 
                   }}
                   whileTap={{ scale: 0.92 }}
-                  className="w-9 h-9 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 flex items-center justify-center text-indigo-500 shadow-xs transition-colors duration-300 cursor-pointer"
+                  className="w-10 h-10 rounded-full bg-slate-50 dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 flex items-center justify-center text-indigo-500 shadow-xs transition-colors duration-300 cursor-pointer"
                   title="E-Posta Gönder"
                 >
                   <Mail className="w-4 h-4" />
                 </motion.a>
               </div>
+
+              {/* 'Haberdar Ol' Bülten Kayıt Alanı */}
+              <div className="w-full max-w-sm pt-2">
+                <span className="text-[10px] font-extrabold text-indigo-500 dark:text-indigo-400 uppercase tracking-wider block mb-2 text-center">
+                  🔔 HABERDAR OL (BÜLTEN)
+                </span>
+                <form 
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    if (!newsletterEmail.trim()) return;
+                    setIsNewsletterSubscribed(true);
+                    triggerToast("Bültene başarıyla abone oldunuz! Kampanyalar ve yeni finansal tüyolar anında e-postanıza gelecek. 🔔");
+                    setNewsletterEmail("");
+                    setTimeout(() => setIsNewsletterSubscribed(false), 5500);
+                  }}
+                  className="relative flex items-center bg-white/70 dark:bg-slate-900/60 border border-slate-250 dark:border-slate-800 rounded-full p-1 focus-within:ring-4 focus-within:ring-indigo-500/15 focus-within:border-indigo-550 transition-all shadow-2xs header-glass"
+                >
+                  <input
+                    type="email"
+                    required
+                    value={newsletterEmail}
+                    onChange={(e) => setNewsletterEmail(e.target.value)}
+                    placeholder="E-posta adresiniz..."
+                    className="w-full pl-4 pr-24 py-2 bg-transparent text-xs text-slate-800 dark:text-slate-200 focus:outline-none placeholder-slate-400 dark:placeholder-slate-500 font-medium"
+                  />
+                  <motion.button
+                    type="submit"
+                    whileHover={{ scale: 1.05, filter: "brightness(1.1)" }}
+                    whileTap={{ scale: 0.94 }}
+                    className="absolute right-1 px-4 py-1.5 bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 text-white text-[10px] font-black uppercase tracking-wider rounded-full shadow-xs transition-all cursor-pointer flex items-center gap-1"
+                  >
+                    Katıl <Bell className="w-3 h-3 text-white" />
+                  </motion.button>
+                </form>
+                {isNewsletterSubscribed && (
+                  <motion.p 
+                    initial={{ opacity: 0, y: -4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="text-[11px] text-emerald-600 dark:text-emerald-400 font-black mt-2 text-center"
+                  >
+                    ✓ Bültene başarıyla kaydoldunuz! Topluluğumuza hoş geldiniz. 🎉
+                  </motion.p>
+                )}
+              </div>
             </div>
 
             {/* Sağ Blok: Sosyal Medya Paylaşım Alanı */}
-            <div className="flex flex-col items-center md:items-end space-y-3">
-              <h4 className="text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest flex items-center gap-1.5 justify-center md:justify-end">
-                <Share2 className="w-3.5 h-3.5 text-indigo-500" /> Sistemi Arkadaşlarınla Paylaş
-              </h4>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium text-center md:text-right max-w-sm">
-                Finansal özgürlüğe giden bu harika bütçe ve borç takip aracını tek tıkla sevdiklerinizle paylaşarak onlara destek olun.
-              </p>
-              <div className="flex items-center gap-2">
+            <div className="flex flex-col items-center justify-center text-center space-y-4">
+              <div className="space-y-1.5 w-full flex flex-col items-center text-center">
+                <h4 className="text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest flex items-center gap-1.5 justify-center text-center">
+                  <Share2 className="w-3.5 h-3.5 text-indigo-500" /> Sistemi Arkadaşlarınla Paylaş
+                </h4>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium text-center max-w-sm leading-relaxed">
+                  Finansal özgürlüğe giden bu harika bütçe ve borç takip aracını tek tıkla sevdilerinizle paylaşarak onlara destek olun.
+                </p>
+              </div>
+
+              {/* Dairesel Paylaşım Linkleri */}
+              <div className="flex items-center gap-3.5">
                 {/* WhatsApp Share */}
                 <motion.a
                   href={`https://api.whatsapp.com/send?text=${encodeURIComponent("Bütçe yönetimi, borç takibi, yapay zeka destekli bütçe analizleri ve akıllı hesap asistanı! Hemen dene: " + window.location.href)}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  whileHover={{ scale: 1.15, rotate: 3, backgroundColor: "#25d366", color: "#ffffff", boxShadow: "0 8px 12px -3px rgba(37, 211, 102, 0.3)" }}
-                  className="w-8 h-8 rounded-lg bg-teal-500/10 border border-teal-500/20 flex items-center justify-center text-teal-600 dark:text-teal-400 cursor-pointer transition-colors duration-300"
+                  whileHover={{ 
+                    scale: 1.18, 
+                    rotate: 3, 
+                    backgroundColor: "#25d366", 
+                    color: "#ffffff", 
+                    borderColor: "#25d366",
+                    boxShadow: "0 10px 15px -3px rgba(37, 211, 102, 0.3)" 
+                  }}
+                  whileTap={{ scale: 0.90 }}
+                  className="w-10 h-10 rounded-full bg-teal-500/10 border border-teal-500/20 flex items-center justify-center text-teal-600 dark:text-teal-400 cursor-pointer transition-all duration-300"
                   title="WhatsApp'ta Paylaş"
                 >
-                  <span className="text-[10px] font-bold">WA</span>
+                  <svg className="w-4.5 h-4.5" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L0 24l6.335-1.662c1.746.953 3.71 1.456 5.705 1.456h.008c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
+                  </svg>
                 </motion.a>
 
                 {/* Twitter Share */}
@@ -3814,11 +3921,19 @@ export default function App() {
                   href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(window.location.href)}&text=${encodeURIComponent("Kişisel finans bütçemi yapay zeka destekli Bütçem Pro ile tam kontrol altına aldım! Mutlaka inceleyin:")}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  whileHover={{ scale: 1.15, rotate: -3, backgroundColor: "#1da1f2", color: "#ffffff", boxShadow: "0 8px 12px -3px rgba(29, 161, 242, 0.3)" }}
-                  className="w-8 h-8 rounded-lg bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-600 dark:text-sky-450 cursor-pointer transition-colors duration-300"
+                  whileHover={{ 
+                    scale: 1.18, 
+                    rotate: -3, 
+                    backgroundColor: "#1da1f2", 
+                    color: "#ffffff", 
+                    borderColor: "#1da1f2",
+                    boxShadow: "0 10px 15px -3px rgba(29, 161, 242, 0.3)" 
+                  }}
+                  whileTap={{ scale: 0.90 }}
+                  className="w-10 h-10 rounded-full bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-600 dark:text-sky-450 cursor-pointer transition-all duration-300"
                   title="Twitter (X)'da Paylaş"
                 >
-                  <Twitter className="w-3.5 h-3.5" />
+                  <Twitter className="w-4 h-4" />
                 </motion.a>
 
                 {/* Telegram Share */}
@@ -3826,11 +3941,19 @@ export default function App() {
                   href={`https://t.me/share/url?url=${encodeURIComponent(window.location.href)}&text=${encodeURIComponent("Bütçem Pro ile bütçeni ve borçlarını kolayca kontrol altına al!")}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  whileHover={{ scale: 1.15, rotate: 3, backgroundColor: "#0088cc", color: "#ffffff", boxShadow: "0 8px 12px -3px rgba(0, 136, 204, 0.3)" }}
-                  className="w-8 h-8 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-600 dark:text-blue-400 cursor-pointer transition-colors duration-300"
+                  whileHover={{ 
+                    scale: 1.18, 
+                    rotate: 3, 
+                    backgroundColor: "#0088cc", 
+                    color: "#ffffff", 
+                    borderColor: "#0088cc",
+                    boxShadow: "0 10px 15px -3px rgba(0, 136, 204, 0.3)" 
+                  }}
+                  whileTap={{ scale: 0.90 }}
+                  className="w-10 h-10 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-600 dark:text-blue-400 cursor-pointer transition-all duration-300"
                   title="Telegram'da Paylaş"
                 >
-                  <Send className="w-3.5 h-3.5 rotate-45" />
+                  <Send className="w-4 h-4 rotate-45" />
                 </motion.a>
 
                 {/* Facebook Share */}
@@ -3838,11 +3961,19 @@ export default function App() {
                   href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.href)}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  whileHover={{ scale: 1.15, rotate: -3, backgroundColor: "#1877f2", color: "#ffffff", boxShadow: "0 8px 12px -3px rgba(24, 119, 242, 0.3)" }}
-                  className="w-8 h-8 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-600 dark:text-indigo-400 cursor-pointer transition-colors duration-300"
+                  whileHover={{ 
+                    scale: 1.18, 
+                    rotate: -3, 
+                    backgroundColor: "#1877f2", 
+                    color: "#ffffff", 
+                    borderColor: "#1877f2",
+                    boxShadow: "0 10px 15px -3px rgba(24, 119, 242, 0.3)" 
+                  }}
+                  whileTap={{ scale: 0.90 }}
+                  className="w-10 h-10 rounded-full bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-600 dark:text-indigo-400 cursor-pointer transition-all duration-300"
                   title="Facebook'ta Paylaş"
                 >
-                  <Facebook className="w-3.5 h-3.5" />
+                  <Facebook className="w-4 h-4" />
                 </motion.a>
 
                 {/* Copy Link Share */}
@@ -3851,11 +3982,19 @@ export default function App() {
                     navigator.clipboard.writeText(window.location.href);
                     triggerToast("Bütçem Pro web site bağlantısı panoya kopyalandı! 🔗");
                   }}
-                  whileHover={{ scale: 1.15, rotate: 3, backgroundColor: "#6366f1", color: "#ffffff", boxShadow: "0 8px 12px -3px rgba(99, 102, 241, 0.3)" }}
-                  className="w-8 h-8 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-600 dark:text-indigo-400 cursor-pointer transition-colors duration-300"
+                  whileHover={{ 
+                    scale: 1.18, 
+                    rotate: 3, 
+                    backgroundColor: "#6366f1", 
+                    color: "#ffffff", 
+                    borderColor: "#6366f1",
+                    boxShadow: "0 10px 15px -3px rgba(99, 102, 241, 0.3)" 
+                  }}
+                  whileTap={{ scale: 0.90 }}
+                  className="w-10 h-10 rounded-full bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-600 dark:text-indigo-400 cursor-pointer transition-all duration-300"
                   title="Bağlantıyı Kopyala"
                 >
-                  <Link className="w-3.5 h-3.5" />
+                  <Link className="w-4 h-4" />
                 </motion.button>
               </div>
             </div>
@@ -3866,11 +4005,32 @@ export default function App() {
               © 2026 BÜTÇEM PRO • TÜM HAKLARI SAKLIDIR
             </div>
             <div className="flex gap-4 text-[10px] font-bold text-slate-400 dark:text-slate-500">
-              <span className="hover:text-indigo-500 transition cursor-pointer" onClick={() => handleNavClick("about")}>Hakkımızda</span>
+              <motion.span 
+                whileHover={{ scale: 1.05, color: "#6366f1" }} 
+                whileTap={{ scale: 0.95 }}
+                className="transition-colors cursor-pointer select-none" 
+                onClick={() => handleNavClick("about")}
+              >
+                Hakkımızda
+              </motion.span>
               <span>•</span>
-              <span className="hover:text-indigo-500 transition cursor-pointer" onClick={() => handleNavClick("privacy")}>Gizlilik Sözleşmesi</span>
+              <motion.span 
+                whileHover={{ scale: 1.05, color: "#6366f1" }} 
+                whileTap={{ scale: 0.95 }}
+                className="transition-colors cursor-pointer select-none" 
+                onClick={() => handleNavClick("privacy")}
+              >
+                Gizlilik Sözleşmesi
+              </motion.span>
               <span>•</span>
-              <span className="hover:text-indigo-500 transition cursor-pointer" onClick={() => handleNavClick("feedback")}>Geri Bildirim</span>
+              <motion.span 
+                whileHover={{ scale: 1.05, color: "#6366f1" }} 
+                whileTap={{ scale: 0.95 }}
+                className="transition-colors cursor-pointer select-none" 
+                onClick={() => handleNavClick("feedback")}
+              >
+                Geri Bildirim
+              </motion.span>
             </div>
           </div>
         </footer>

@@ -375,9 +375,9 @@ export const AIChat: React.FC<AIChatProps> = ({ debts, incomes, expenses, instal
   return (
     <div className="space-y-6 animate-fade-in">
       
-      {/* Dynamic Animated Header Section */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200/60 dark:border-slate-800/85">
-        <div className="flex items-center gap-3">
+      {/* Dynamic Animated Header Section with Centered layout text */}
+      <div className="flex flex-col items-center justify-center text-center pb-5 border-b border-slate-200/60 dark:border-slate-800/85 w-full">
+        <div className="flex flex-col items-center justify-center gap-3.5 w-full">
           <div className="relative">
             {/* Pulsing ambient glowing background halo */}
             <motion.div
@@ -402,12 +402,13 @@ export const AIChat: React.FC<AIChatProps> = ({ debts, incomes, expenses, instal
               <Sparkles className="w-5 h-5 animate-pulse" />
             </div>
           </div>
-          <div>
-            <div className="flex flex-wrap items-center gap-2">
+          
+          <div className="flex flex-col items-center justify-center text-center space-y-1.5">
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-2">
               <motion.h2
                 animate={{ y: [0, -1.2, 0] }}
                 transition={{ repeat: Infinity, duration: 4.5, ease: "easeInOut" }}
-                className="text-md sm:text-lg font-black tracking-tight text-slate-800 dark:text-slate-100 uppercase"
+                className="text-md sm:text-lg font-black tracking-tight text-slate-800 dark:text-slate-100 uppercase text-center"
               >
                 FİNANSAL DANIŞMANLIK & AKILLI ANALİZ PORTALI
               </motion.h2>
@@ -426,7 +427,7 @@ export const AIChat: React.FC<AIChatProps> = ({ debts, incomes, expenses, instal
                 AKTİF DESTEK ⚡
               </motion.span>
             </div>
-            <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold tracking-wider uppercase mt-0.5">
+            <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold tracking-wider uppercase text-center">
               Yapay Zekâ Destekli Borç Eritme ve Bütçe Planlama Motoru
             </p>
           </div>
@@ -434,7 +435,7 @@ export const AIChat: React.FC<AIChatProps> = ({ debts, incomes, expenses, instal
       </div>
 
       {/* Security and Info Banner */}
-      <div className="p-4 bg-gradient-to-r from-indigo-500/5 to-purple-500/5 dark:from-indigo-500/10 dark:to-purple-500/10 rounded-2xl flex items-start gap-3.5 border border-indigo-100/30 dark:border-indigo-900/20 relative overflow-hidden">
+      <div className="p-4 bg-gradient-to-r from-indigo-500/5 to-purple-500/5 dark:from-indigo-500/10 dark:to-purple-500/10 rounded-2xl flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left gap-3.5 border border-indigo-100/30 dark:border-indigo-900/20 relative overflow-hidden">
         <div className="absolute right-0 top-0 translate-x-4 -translate-y-4 text-indigo-500/5 pointer-events-none">
           <Brain className="w-24 h-24" />
         </div>
@@ -442,12 +443,15 @@ export const AIChat: React.FC<AIChatProps> = ({ debts, incomes, expenses, instal
           <Brain className="w-5 h-5 animate-pulse" />
         </div>
         <div className="text-xs">
-          <p className="font-bold text-slate-800 dark:text-slate-100">Bütçe Verileriniz %100 Güvende</p>
-          <p className="text-slate-500 dark:text-slate-400 font-medium mt-0.5 leading-relaxed">
+          <p className="font-extrabold text-slate-800 dark:text-slate-100 text-center sm:text-left">
+            Bütçe Verileriniz %100 Güvende
+          </p>
+          <p className="text-slate-500 dark:text-slate-400 font-medium mt-1 leading-relaxed text-center sm:text-left">
             Finansal kayıtlarınız sunucuya kaydedilmez. Yapay zekâmız verilerinizi anlık ve şifreli olarak analiz edip size özel kişiselleştirilmiş borç kapatma önerileri hazırlar.
           </p>
         </div>
       </div>
+
       {/* Chat Messages Area */}
       <div className="p-1 border border-slate-200/50 dark:border-slate-800/80 bg-slate-50/30 dark:bg-slate-900/30 rounded-3xl shadow-xs">
         <div
@@ -548,77 +552,12 @@ export const AIChat: React.FC<AIChatProps> = ({ debts, incomes, expenses, instal
         </div>
       </div>
 
-      {/* Collapsible API Key settings panel */}
-      <div className="bg-slate-50 dark:bg-slate-800/45 rounded-2xl border border-slate-200/50 dark:border-slate-700/60 p-4 transition-all shadow-3xs">
-        <button
-          onClick={() => setShowApiKeyField(!showApiKeyField)}
-          className="w-full flex items-center justify-between text-left cursor-pointer focus:outline-none"
-        >
-          <div className="flex items-center gap-2">
-            <Settings className="w-4 h-4 text-indigo-500 animate-[spin_10s_linear_infinite]" />
-            <span className="text-xs font-black tracking-wide uppercase text-slate-700 dark:text-slate-300">
-              Yapay Zekâ Motor Ayarları (İsteğe Bağlı)
-            </span>
-          </div>
-          <span className="text-[10px] text-slate-400 font-extrabold font-mono hover:text-indigo-500 transition">
-            {showApiKeyField ? "Gizle ▲" : "Göster (Anahtar Ekle) ▼"}
-          </span>
-        </button>
-
-        <AnimatePresence>
-          {showApiKeyField && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.25 }}
-              className="overflow-hidden mt-3 pt-3 border-t border-slate-250/20 dark:border-slate-700/30 space-y-3"
-            >
-              <p className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 leading-relaxed font-semibold">
-                Sistem varsayılan olarak bütçe analizlerini <strong className="text-indigo-500 dark:text-indigo-400">Çevrimdışı Yapay Zekâ Analiz Motoru</strong> ile süper hızlı ve güvenli yapar. Dilerseniz kendi kişisel <strong className="text-indigo-500 dark:text-indigo-400">Gemini API Key</strong> anahtarınızı kaydederek doğrudan geniş modelleri sorgulayabilirsiniz:
-              </p>
-              <div className="flex flex-col sm:flex-row gap-2">
-                <input
-                  type="password"
-                  value={apiKeyInput}
-                  onChange={(e) => {
-                    setApiKeyInput(e.target.value);
-                    setIsApiKeySaved(false);
-                  }}
-                  placeholder="AIzaSy... ile başlayan Gemini API anahtarınızı girin"
-                  className="flex-1 px-3 py-2 text-xs bg-white dark:bg-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-1 focus:ring-indigo-500 placeholder-slate-400"
-                />
-                <button
-                  type="button"
-                  onClick={() => {
-                    localStorage.setItem("user_gemini_api_key", apiKeyInput);
-                    setIsApiKeySaved(true);
-                  }}
-                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 font-black text-xs text-white rounded-xl transition cursor-pointer self-start sm:self-auto shrink-0"
-                >
-                  Kaydet 💾
-                </button>
-              </div>
-              {isApiKeySaved && (
-                <motion.div
-                  initial={{ opacity: 0, y: -5 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="p-2.5 bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-xl text-[10px] sm:text-xs font-bold border border-emerald-500/10 flex items-center gap-1.5"
-                >
-                  🟢 Gemini API Anahtarı başarıyla tarayıcıya kaydedildi! Üst düzey akıllı mod aktif.
-                </motion.div>
-              )}
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-
-      {/* Suggested Quick Questions Panel with beautiful tag stylings */}
-      <div className="space-y-2">
-        <span className="text-[10px] font-black tracking-widest text-slate-400 dark:text-slate-500 uppercase flex items-center gap-1.5">
+      {/* Suggested Quick Questions Panel with beautiful tag stylings - Headings & Layout Centered */}
+      <div className="space-y-2 text-center">
+        <span className="text-[10px] font-black tracking-widest text-slate-400 dark:text-slate-500 uppercase flex items-center justify-center gap-1.5 w-full">
           <MessageSquareCode className="w-3.5 h-3.5 text-indigo-500" /> Önerilen Hızlı Sorular
         </span>
-        <div className="flex flex-wrap gap-2.5">
+        <div className="flex flex-wrap gap-2.5 justify-center">
           {[
             {
               text: "Mevcut bütçemin genel risk durumu nedir?",
@@ -672,6 +611,84 @@ export const AIChat: React.FC<AIChatProps> = ({ debts, incomes, expenses, instal
         >
           <Send className="w-4.5 h-4.5" />
         </motion.button>
+      </div>
+
+      {/* REPOSITIONED: Collapsible API Key settings panel is placed underneath with gorgeous, modern card style */}
+      <div className="relative overflow-hidden bg-gradient-to-tr from-indigo-500/[0.04] via-purple-500/[0.01] to-transparent dark:from-indigo-950/20 dark:via-purple-950/10 dark:to-transparent border border-indigo-500/20 dark:border-indigo-500/25 p-5 rounded-3xl shadow-xs hover:shadow-sm transition-all duration-300 mt-4">
+        {/* Background ambient light */}
+        <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-tr from-indigo-500/10 to-pink-500/5 rounded-full blur-xl pointer-events-none" />
+        
+        <button
+          onClick={() => setShowApiKeyField(!showApiKeyField)}
+          className="w-full flex flex-col sm:flex-row items-center justify-between text-center sm:text-left gap-3.5 cursor-pointer focus:outline-none"
+        >
+          <div className="flex flex-col sm:flex-row items-center gap-3">
+            <span className="p-2.5 bg-indigo-500/10 dark:bg-indigo-500/15 text-indigo-500 dark:text-indigo-400 rounded-xl shrink-0">
+              <Settings className="w-4.5 h-4.5 animate-[spin_12s_linear_infinite]" />
+            </span>
+            <div className="space-y-0.5">
+              <span className="text-xs font-black tracking-wider uppercase text-slate-800 dark:text-slate-200 block text-center sm:text-left">
+                YAPAY ZEKA MOTOR AYARLARI <span className="text-indigo-500 dark:text-indigo-400">(PRO BULUT MODU)</span>
+              </span>
+              <p className="text-[10px] text-slate-400 dark:text-slate-505 font-bold block text-center sm:text-left uppercase tracking-wide">
+                Gelişmiş bütçe analiz motorunun çalışma profilini yapılandırın
+              </p>
+            </div>
+          </div>
+          <span className="text-[10px] bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-650 dark:text-indigo-300 px-3.5 py-1.5 rounded-xl font-extrabold transition uppercase tracking-wider select-none">
+            {showApiKeyField ? "Gizle ▲" : "Göster / Değiştir ▼"}
+          </span>
+        </button>
+
+        <AnimatePresence>
+          {showApiKeyField && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.28, ease: "easeInOut" }}
+              className="overflow-hidden mt-4 pt-4 border-t border-indigo-500/10 dark:border-indigo-500/20 space-y-4"
+            >
+              <p className="text-[10.5px] sm:text-xs text-slate-500 dark:text-slate-450 leading-relaxed font-semibold text-center max-w-lg mx-auto">
+                Sistemimiz varsayılan olarak tüm gelişmiş bütçe analiz raporlarını <strong className="text-indigo-650 dark:text-indigo-400 bg-indigo-500/5 px-1 py-0.5 rounded">Çevrimdışı Analiz Motoru</strong> ile süper hızlı hesaplar. Dilerseniz kendi <strong className="text-indigo-600 dark:text-indigo-400">Gemini API Key</strong> anahtarınızı bağlayarak yapay zekayı anlık etkinleştirebilirsiniz.
+              </p>
+              
+              <div className="flex flex-col sm:flex-row gap-2 max-w-md mx-auto items-stretch">
+                <input
+                  type="password"
+                  value={apiKeyInput}
+                  onChange={(e) => {
+                    setApiKeyInput(e.target.value);
+                    setIsApiKeySaved(false);
+                  }}
+                  placeholder="AIzaSy... ile başlayan API anahtarınızı yapıştırın"
+                  className="flex-1 px-4 py-2.5 text-xs bg-white/70 dark:bg-slate-900/60 dark:text-white border border-slate-250 dark:border-slate-700 focus:border-indigo-550 rounded-2xl focus:outline-none focus:ring-4 focus:ring-indigo-500/15 placeholder-slate-400 dark:placeholder-slate-500 transition-all font-medium text-center shadow-inner"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    localStorage.setItem("user_gemini_api_key", apiKeyInput);
+                    setIsApiKeySaved(true);
+                  }}
+                  className="px-5 py-2.5 bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 font-extrabold text-xs text-white rounded-2xl shadow-sm hover:shadow-md transition active:scale-95 cursor-pointer shrink-0"
+                >
+                  Anahtarı Kaydet 💾
+                </button>
+              </div>
+              
+              {isApiKeySaved && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.98 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="p-3 bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-2xl text-[10.5px] sm:text-xs font-extrabold border border-emerald-500/20 flex items-center justify-center gap-1.5 max-w-md mx-auto shadow-xs"
+                >
+                  <span className="flex w-2 h-2 rounded-full bg-emerald-500 animate-ping shrink-0" />
+                  <span>Gemini premium akıllı mod başarıyla aktifleştirildi! 🚀</span>
+                </motion.div>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
     </div>

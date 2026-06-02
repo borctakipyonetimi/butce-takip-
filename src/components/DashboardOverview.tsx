@@ -234,7 +234,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1 pb-1">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1 pb-1 items-start">
         {/* Card 1: Bu Ay Ödenecek Taksit */}
         <motion.div
           whileHover={{ 
@@ -244,7 +244,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
             borderColor: "rgba(139, 92, 246, 0.4)" 
           }}
           transition={{ type: "spring", stiffness: 300, damping: 20 }}
-          className="relative overflow-hidden flex items-center gap-4 p-5 rounded-3xl bg-gradient-to-br from-violet-500/10 to-indigo-500/5 dark:from-violet-950/20 dark:to-indigo-950/10 border border-violet-500/20 dark:border-violet-500/30 shadow-xs transition-colors duration-300"
+          className="relative overflow-hidden flex items-center gap-4 p-5 rounded-3xl bg-gradient-to-br from-violet-500/10 to-indigo-500/5 dark:from-violet-950/20 dark:to-indigo-950/10 border border-violet-500/20 dark:border-violet-500/30 shadow-xs h-full transition-colors duration-300"
         >
           {/* Background Decorative Blur Orb */}
           <div className="absolute top-0 right-0 w-24 h-24 bg-violet-500/10 rounded-full blur-2xl pointer-events-none" />
@@ -268,38 +268,73 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
           </div>
         </motion.div>
 
-        {/* Card 2: Bu Ay Yapılan Ödeme Adedi */}
-        <motion.div
-          whileHover={{ 
-            scale: 1.02, 
-            y: -3, 
-            boxShadow: "0 15px 30px -10px rgba(245, 158, 11, 0.25)",
-            borderColor: "rgba(245, 158, 11, 0.4)" 
-          }}
-          transition={{ type: "spring", stiffness: 300, damping: 20 }}
-          className="relative overflow-hidden flex items-center gap-4 p-5 rounded-3xl bg-gradient-to-br from-amber-500/10 to-yellow-500/5 dark:from-amber-950/20 dark:to-yellow-950/10 border border-amber-500/20 dark:border-amber-500/30 shadow-xs transition-colors duration-300"
-        >
-          {/* Background Decorative Blur Orb */}
-          <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/10 rounded-full blur-2xl pointer-events-none" />
-          
-          <div className="p-3.5 bg-amber-500/15 text-amber-600 dark:text-amber-400 rounded-2xl flex items-center justify-center shrink-0 shadow-inner">
-            <ClipboardCheck className="w-5.5 h-5.5 animate-bounce duration-[3000ms]" />
-          </div>
-          
-          <div className="flex-1 min-w-0">
-            <span className="text-[10px] sm:text-[11px] font-black tracking-widest text-amber-600 dark:text-amber-400 uppercase block mb-1">
-              Bu Ay Yapılan Ödemeler
-            </span>
-            <div className="flex items-baseline gap-1.5 flex-wrap">
-              <span className="text-xl sm:text-2xl font-black font-mono text-amber-800 dark:text-amber-200 tracking-tight leading-none">
-                {monthlyPaymentsCount} <span className="text-xs sm:text-sm font-bold text-amber-600/80">Adet</span>
+        {/* Right Stack: Card 2 & Progress Card */}
+        <div className="space-y-4">
+          {/* Card 2: Bu Ay Yapılan Ödeme Adedi */}
+          <motion.div
+            whileHover={{ 
+              scale: 1.02, 
+              y: -3, 
+              boxShadow: "0 15px 30px -10px rgba(245, 158, 11, 0.25)",
+              borderColor: "rgba(245, 158, 11, 0.4)" 
+            }}
+            transition={{ type: "spring", stiffness: 300, damping: 20 }}
+            className="relative overflow-hidden flex items-center gap-4 p-5 rounded-3xl bg-gradient-to-br from-amber-500/10 to-yellow-500/5 dark:from-amber-950/20 dark:to-yellow-950/10 border border-amber-500/20 dark:border-amber-500/30 shadow-xs transition-colors duration-300"
+          >
+            {/* Background Decorative Blur Orb */}
+            <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/10 rounded-full blur-2xl pointer-events-none" />
+            
+            <div className="p-3.5 bg-amber-500/15 text-amber-600 dark:text-amber-400 rounded-2xl flex items-center justify-center shrink-0 shadow-inner">
+              <ClipboardCheck className="w-5.5 h-5.5 animate-bounce duration-[3000ms]" />
+            </div>
+            
+            <div className="flex-1 min-w-0">
+              <span className="text-[10px] sm:text-[11px] font-black tracking-widest text-amber-600 dark:text-amber-400 uppercase block mb-1">
+                Bu Ay Yapılan Ödemeler
+              </span>
+              <div className="flex items-baseline gap-1.5 flex-wrap">
+                <span className="text-xl sm:text-2xl font-black font-mono text-amber-800 dark:text-amber-200 tracking-tight leading-none">
+                  {monthlyPaymentsCount} <span className="text-xs sm:text-sm font-bold text-amber-600/80">Adet</span>
+                </span>
+              </div>
+              <p className="text-[10px] font-semibold text-slate-600 dark:text-slate-300 mt-1">
+                Sisteminizde bu ay başarıyla belgelenen ödeme sayısı
+              </p>
+            </div>
+          </motion.div>
+
+          {/* Progress Card */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            whileHover={{ scale: 1.01 }}
+            className="p-5 bg-white dark:bg-slate-800 rounded-3xl border border-slate-200/65 dark:border-slate-700/60 shadow-sm space-y-4 relative overflow-hidden"
+          >
+            {/* Background dynamic blur orb */}
+            <div className="absolute top-0 right-0 w-16 h-16 bg-emerald-500/5 rounded-full blur-xl pointer-events-none" />
+
+            <div className="flex items-center justify-between">
+              <h4 className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-wide">Ödeme İlerlemesi</h4>
+              <span className="px-2.5 py-1 bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-bold rounded-xl font-mono">
+                %{paymentProgress.toFixed(1)} Ödendi
               </span>
             </div>
-            <p className="text-[10px] font-semibold text-slate-600 dark:text-slate-300 mt-1">
-              Sisteminizde bu ay başarıyla belgelenen ödeme sayısı
+            
+            <div className="w-full bg-slate-100 dark:bg-slate-700 h-4 rounded-full overflow-hidden flex shadow-inner relative">
+              <motion.div
+                className="h-full bg-linear-to-r from-emerald-500 to-teal-400 rounded-full"
+                initial={{ width: 0 }}
+                animate={{ width: `${Math.min(paymentProgress, 100)}%` }}
+                transition={{ duration: 1.5, ease: "easeOut" }}
+              />
+            </div>
+            
+            <p className="text-[10.5px] text-slate-500 dark:text-slate-400 font-medium leading-relaxed">
+              Toplam {format(stats.totalDebt)} borcun {format(stats.totalPaid)} kadarı ödendi. Sabırla ve planlı ödemelerle borçlarını sıfırlayabilirsin!
             </p>
-          </div>
-        </motion.div>
+          </motion.div>
+        </div>
       </div>
 
       {/* Sponsor / Google AdMob Banner section for free tier - Placed above AI & Alarms section */}
@@ -755,41 +790,20 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
 
       {/* Visual Analytics Sections Grid */}
       <div className="grid gap-6 md:grid-cols-2">
-        {/* Progress Card */}
-        <div className="p-5 bg-white dark:bg-slate-800 rounded-3xl border border-slate-200/40 dark:border-slate-700/50 shadow-sm space-y-4">
-          <div className="flex items-center justify-between">
-            <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wide">Ödeme İlerlemesi</h4>
-            <span className="px-2.5 py-1 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 text-xs font-bold rounded-xl">
-              %{paymentProgress.toFixed(1)} Ödendi
-            </span>
-          </div>
-          <div className="w-full bg-slate-100 dark:bg-slate-700 h-4 rounded-full overflow-hidden flex shadow-inner">
-            <div
-              className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full transition-all duration-1000"
-              style={{ width: `${Math.min(paymentProgress, 100)}%` }}
-            />
-          </div>
-          <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-            Toplam {format(stats.totalDebt)} borcun {format(stats.totalPaid)} kadarı ödendi. Sabırla ve planlı ödemelerle borçlarını sıfırlayabilirsin!
-          </p>
-        </div>
-
         {/* Paid vs Remaining doughnut */}
-        <div className="p-4 bg-white dark:bg-slate-800 rounded-3xl border border-slate-200/40 dark:border-slate-700/50 shadow-sm">
+        <div className="p-4 bg-white dark:bg-slate-800 rounded-3xl border border-slate-200/40 dark:border-slate-700/50 shadow-sm flex flex-col justify-between">
           <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wide text-center mb-2">Ödenen / Kalan Borç Dağılımı</h4>
-          <DoughnutChart data={paidRemainingData} />
-        </div>
-
-        {/* Bar chart compare */}
-        <div className="p-5 bg-white dark:bg-slate-800 rounded-3xl border border-slate-200/40 dark:border-slate-700/50 shadow-sm space-y-4">
-          <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wide">Mali Karşılaştırma Analizi</h4>
-          <BarChart data={comparativeChartData} />
+          <div className="flex-1 flex items-center justify-center">
+            <DoughnutChart data={paidRemainingData} />
+          </div>
         </div>
 
         {/* Line curves chart trend */}
-        <div className="p-5 bg-white dark:bg-slate-800 rounded-3xl border border-slate-200/40 dark:border-slate-700/50 shadow-sm space-y-4">
+        <div className="p-5 bg-white dark:bg-slate-800 rounded-3xl border border-slate-200/40 dark:border-slate-700/50 shadow-sm space-y-4 flex flex-col justify-between">
           <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wide">6 Aylık Tahmini Borç Eğilimi</h4>
-          <LineChart labels={trendLabels} values={trendValues} lineColor="#3b82f6" />
+          <div className="flex-grow">
+            <LineChart labels={trendLabels} values={trendValues} lineColor="#3b82f6" />
+          </div>
         </div>
       </div>
 
