@@ -1207,6 +1207,59 @@ export default function App() {
     return items.length ? Math.max(...items.map((x) => x.id)) + 1 : 1;
   };
 
+  const syncInstallmentPayments = (
+    debtId: number,
+    targetPaidCount: number,
+    perMonth: number,
+    firstDueDate: string,
+    currentPayments: PaymentLog[]
+  ): PaymentLog[] => {
+    const debtPayments = currentPayments.filter((p) => p.debtId === debtId && p.type === "installment");
+    // Sort ascending by date or identifier
+    debtPayments.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    const otherPayments = currentPayments.filter((p) => !(p.debtId === debtId && p.type === "installment"));
+
+    // Sync individual payment amounts in case installment total/count edited
+    const updatedDebtPayments = debtPayments.map((p) => ({
+      ...p,
+      amount: perMonth
+    }));
+
+    if (updatedDebtPayments.length === targetPaidCount) {
+      return [...otherPayments, ...updatedDebtPayments];
+    }
+
+    if (updatedDebtPayments.length > targetPaidCount) {
+      const keptDebtPayments = updatedDebtPayments.slice(0, targetPaidCount);
+      return [...otherPayments, ...keptDebtPayments];
+    } else {
+      const neededCount = targetPaidCount - updatedDebtPayments.length;
+      const newDebtPayments = [...updatedDebtPayments];
+
+      for (let i = 0; i < neededCount; i++) {
+        const installmentIndex = newDebtPayments.length;
+        let payDate = new Date();
+        if (firstDueDate) {
+          try {
+            const baseDate = new Date(firstDueDate);
+            baseDate.setMonth(baseDate.getMonth() + installmentIndex);
+            payDate = baseDate;
+          } catch {}
+        }
+
+        const newId = Math.max(0, ...otherPayments.map((p) => p.id), ...newDebtPayments.map((p) => p.id)) + 1;
+        newDebtPayments.push({
+          id: newId,
+          debtId: debtId,
+          amount: perMonth,
+          date: payDate.toISOString(),
+          type: "installment"
+        });
+      }
+      return [...otherPayments, ...newDebtPayments];
+    }
+  };
+
   // ---------------- Financial Calculations ----------------
   const activeMonthIdx = selectedMonth !== null ? selectedMonth : new Date().getMonth();
   const activeYearVal = selectedYear !== null ? selectedYear : new Date().getFullYear();
@@ -1838,11 +1891,26 @@ export default function App() {
 
   const handleSaveInstallment = (instData: Partial<InstallmentDebt>) => {
     let updated: InstallmentDebt[] = [];
+    let updatedPayments = [...payments];
+
     if (instData.id) {
       updated = installmentDebts.map((i) => (i.id === instData.id ? (instData as InstallmentDebt) : i));
+      
+      const inst = updated.find((i) => i.id === instData.id);
+      if (inst) {
+        const perMonth = inst.totalAmount / (inst.installmentCount || 1);
+        updatedPayments = syncInstallmentPayments(
+          inst.id,
+          inst.paidInstallmentCount,
+          perMonth,
+          inst.firstDueDate,
+          updatedPayments
+        );
+      }
     } else {
+      const newId = generateId(installmentDebts);
       const newInst: InstallmentDebt = {
-        id: generateId(installmentDebts),
+        id: newId,
         name: instData.name || "Yeni Taksit Planı",
         totalAmount: instData.totalAmount || 0,
         installmentCount: instData.installmentCount || 1,
@@ -1850,9 +1918,21 @@ export default function App() {
         firstDueDate: instData.firstDueDate || new Date().toISOString().slice(0, 10)
       };
       updated = [...installmentDebts, newInst];
+
+      if (newInst.paidInstallmentCount > 0) {
+        const perMonth = newInst.totalAmount / (newInst.installmentCount || 1);
+        updatedPayments = syncInstallmentPayments(
+          newId,
+          newInst.paidInstallmentCount,
+          perMonth,
+          newInst.firstDueDate,
+          updatedPayments
+        );
+      }
     }
     setInstallmentDebts(updated);
-    saveAllToUser(debts, incomes, alarms, notifications, updated, payments, expenses, expenseCategories);
+    setPayments(updatedPayments);
+    saveAllToUser(debts, incomes, alarms, notifications, updated, updatedPayments, expenses, expenseCategories);
   };
 
   const handleDeleteInstallment = (id: number) => {
@@ -1861,8 +1941,10 @@ export default function App() {
       "Taksit planı tamamen silinecektir, devam edilsin mi?",
       () => {
         const updated = installmentDebts.filter((i) => i.id !== id);
+        const updatedPayments = payments.filter((p) => !(p.debtId === id && p.type === "installment"));
         setInstallmentDebts(updated);
-        saveAllToUser(debts, incomes, alarms, notifications, updated, payments, expenses, expenseCategories);
+        setPayments(updatedPayments);
+        saveAllToUser(debts, incomes, alarms, notifications, updated, updatedPayments, expenses, expenseCategories);
       }
     );
   };
@@ -1895,6 +1977,34 @@ export default function App() {
     setPayments(updatedPayments);
     saveAllToUser(debts, incomes, alarms, notifications, updated, updatedPayments, expenses, expenseCategories);
     triggerToast("Taksit Ödemesi Kaydedildi");
+  };
+
+  const handleRevertInstallmentPayment = (id: number) => {
+    let updatedPayments = [...payments];
+    const updated = installmentDebts.map((inst) => {
+      if (inst.id === id && inst.paidInstallmentCount > 0) {
+        const updatedPaidCount = inst.paidInstallmentCount - 1;
+        const perMonth = inst.totalAmount / inst.installmentCount;
+        
+        updatedPayments = syncInstallmentPayments(
+          id,
+          updatedPaidCount,
+          perMonth,
+          inst.firstDueDate,
+          updatedPayments
+        );
+        
+        return {
+          ...inst,
+          paidInstallmentCount: updatedPaidCount
+        };
+      }
+      return inst;
+    });
+    setInstallmentDebts(updated);
+    setPayments(updatedPayments);
+    saveAllToUser(debts, incomes, alarms, notifications, updated, updatedPayments, expenses, expenseCategories);
+    triggerToast("Son Ödeme Geri Alındı");
   };
 
   const handleAddAlarm = (titleString: string, dateString: string) => {
@@ -3295,6 +3405,7 @@ export default function App() {
             onSaveInstallment={handleSaveInstallment}
             onDeleteInstallment={handleDeleteInstallment}
             onPayInstallment={handlePayInstallment}
+            onRevertPayment={handleRevertInstallmentPayment}
             isPremium={isPremium}
           />
         )}

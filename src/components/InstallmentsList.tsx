@@ -4,7 +4,7 @@
  */
 
 import React, { useState } from "react";
-import { PlusCircle, CalendarDays, Wallet, Edit, Trash2, Calendar } from "lucide-react";
+import { PlusCircle, CalendarDays, Wallet, Edit, Trash2, Calendar, RotateCcw } from "lucide-react";
 import { motion } from "motion/react";
 import { InstallmentDebt } from "../types";
 import { useCurrency } from "../utils/CurrencyContext";
@@ -15,6 +15,7 @@ interface InstallmentsListProps {
   onSaveInstallment: (inst: Partial<InstallmentDebt>) => void;
   onDeleteInstallment: (id: number) => void;
   onPayInstallment: (id: number) => void;
+  onRevertPayment?: (id: number) => void;
   isPremium?: boolean;
 }
 
@@ -23,6 +24,7 @@ export const InstallmentsList: React.FC<InstallmentsListProps> = ({
   onSaveInstallment,
   onDeleteInstallment,
   onPayInstallment,
+  onRevertPayment,
   isPremium,
 }) => {
   const { format } = useCurrency();
@@ -188,15 +190,26 @@ export const InstallmentsList: React.FC<InstallmentsListProps> = ({
                   <button
                     onClick={() => handleOpenEdit(inst)}
                     className="p-2 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100 rounded-lg transition"
+                    title="Düzenle"
                   >
                     <Edit className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => onDeleteInstallment(inst.id)}
                     className="p-2 text-rose-500 hover:text-rose-600 dark:text-rose-400 dark:hover:text-rose-300 rounded-lg transition"
+                    title="Sil"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
+                  {inst.paidInstallmentCount > 0 && onRevertPayment && (
+                    <button
+                      onClick={() => onRevertPayment(inst.id)}
+                      title="Son taksit ödemesini geri al"
+                      className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200/50 dark:border-slate-700 font-extrabold text-xs rounded-xl flex items-center gap-1 transition active:scale-95 shadow-xs"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5 animate-spin-once" /> Geri Al
+                    </button>
+                  )}
                   {!isCompleted && (
                     <button
                       onClick={() => onPayInstallment(inst.id)}
