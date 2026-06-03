@@ -198,6 +198,9 @@ export default function App() {
   const [useSystemSound, setUseSystemSound] = useState<boolean>(() => {
     return localStorage.getItem("useSystemSound") === "1";
   });
+  const [alarmSoundType, setAlarmSoundType] = useState<string>(() => {
+    return localStorage.getItem("alarmSoundType") || (localStorage.getItem("useSystemSound") === "1" ? "system" : "digital");
+  });
   const [voiceAssistantEnabled, setVoiceAssistantEnabled] = useState<boolean>(() => {
     return localStorage.getItem("voiceAssistantEnabled") !== "0";
   });
@@ -442,9 +445,15 @@ export default function App() {
 
     // 2. Synthesize or play premium audio chime only if sound is enabled
     if (soundEnabled) {
-      const audioUrl = useSystemSound
-        ? "https://assets.mixkit.co/active_storage/sfx/2568/2568-84.wav" // Soft professional system chime
-        : "https://assets.mixkit.co/active_storage/sfx/2869/2869-84.wav"; // Bright digital watch beep alarm
+      const soundUrls: Record<string, string> = {
+        digital: "https://assets.mixkit.co/active_storage/sfx/2869/2869-84.wav",
+        system: "https://assets.mixkit.co/active_storage/sfx/2568/2568-84.wav",
+        crystal: "https://assets.mixkit.co/active_storage/sfx/2019/2019-84.wav",
+        victory: "https://assets.mixkit.co/active_storage/sfx/2018/2018-84.wav",
+        arcade: "https://assets.mixkit.co/active_storage/sfx/1012/1012-84.wav"
+      };
+
+      const audioUrl = soundUrls[alarmSoundType] || soundUrls.digital;
 
       let isAudioPlayed = false;
       const runSynthFallback = () => {
@@ -462,9 +471,10 @@ export default function App() {
             osc.connect(gainNode);
             gainNode.connect(audioCtx.destination);
             
-            if (useSystemSound) {
+            const nowTime = audioCtx.currentTime;
+
+            if (alarmSoundType === "system") {
               osc.type = "sine";
-              const nowTime = audioCtx.currentTime;
               osc.frequency.setValueAtTime(523.25, nowTime);
               gainNode.gain.setValueAtTime(0.20, nowTime);
               gainNode.gain.setValueAtTime(0, nowTime + 0.15);
@@ -479,9 +489,51 @@ export default function App() {
               
               osc.start(nowTime);
               osc.stop(nowTime + 0.70);
+            } else if (alarmSoundType === "crystal") {
+              osc.type = "sine";
+              osc.frequency.setValueAtTime(987.77, nowTime);
+              gainNode.gain.setValueAtTime(0.15, nowTime);
+              gainNode.gain.exponentialRampToValueAtTime(0.01, nowTime + 0.12);
+
+              const osc2 = audioCtx.createOscillator();
+              const gainNode2 = audioCtx.createGain();
+              osc2.type = "sine";
+              osc2.frequency.setValueAtTime(1318.51, nowTime + 0.05);
+              osc2.connect(gainNode2);
+              gainNode2.connect(audioCtx.destination);
+              gainNode2.gain.setValueAtTime(0.20, nowTime + 0.05);
+              gainNode2.gain.exponentialRampToValueAtTime(0.01, nowTime + 1.20);
+
+              osc.start(nowTime);
+              osc.stop(nowTime + 1.20);
+              osc2.start(nowTime + 0.05);
+              osc2.stop(nowTime + 1.20);
+            } else if (alarmSoundType === "victory") {
+              osc.type = "triangle";
+              gainNode.gain.setValueAtTime(0.15, nowTime);
+              
+              const freqs = [523.25, 659.25, 783.99, 1046.50];
+              freqs.forEach((f, idx) => {
+                const stepTime = nowTime + (idx * 0.12);
+                osc.frequency.setValueAtTime(f, stepTime);
+                gainNode.gain.setValueAtTime(0.15, stepTime);
+                gainNode.gain.setValueAtTime(idx === freqs.length - 1 ? 0.15 : 0.06, stepTime + 0.10);
+              });
+              
+              gainNode.gain.exponentialRampToValueAtTime(0.01, nowTime + 0.80);
+              osc.start(nowTime);
+              osc.stop(nowTime + 0.90);
+            } else if (alarmSoundType === "arcade") {
+              osc.type = "sawtooth";
+              osc.frequency.setValueAtTime(1200, nowTime);
+              osc.frequency.exponentialRampToValueAtTime(150, nowTime + 0.50);
+              gainNode.gain.setValueAtTime(0.20, nowTime);
+              gainNode.gain.exponentialRampToValueAtTime(0.01, nowTime + 0.55);
+              
+              osc.start(nowTime);
+              osc.stop(nowTime + 0.60);
             } else {
               osc.type = "sawtooth";
-              const nowTime = audioCtx.currentTime;
               osc.frequency.setValueAtTime(987.77, nowTime);
               gainNode.gain.setValueAtTime(0.35, nowTime);
               gainNode.gain.setValueAtTime(0, nowTime + 0.15);
@@ -3616,21 +3668,40 @@ export default function App() {
 
                 <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 flex items-center justify-between">
                   <div>
-                    <span className="text-xs font-bold text-slate-700 dark:text-slate-200 block">Melodi Türü</span>
+                    <span className="text-xs font-bold text-slate-700 dark:text-slate-200 block">Melodi Türü (5 Alternatif)</span>
                     <span className="text-[10px] text-slate-400 font-medium leading-none block mt-0.5">Zil sesi melodi alternatifi</span>
                   </div>
                   <select
-                    value={useSystemSound ? "system" : "digital"}
+                    value={alarmSoundType}
                     onChange={(e) => {
-                      const next = e.target.value === "system";
-                      setUseSystemSound(next);
-                      localStorage.setItem("useSystemSound", next ? "1" : "0");
-                      triggerToast(next ? "Sistem Melodisi Seçildi" : "Dijital Saat Sinyali Seçildi");
+                      const selected = e.target.value;
+                      setAlarmSoundType(selected);
+                      localStorage.setItem("alarmSoundType", selected);
+                      // Set useSystemSound as well to maintain backward compatibility in case other parts of the system read it
+                      localStorage.setItem("useSystemSound", selected === "system" ? "1" : "0");
+                      setUseSystemSound(selected === "system");
+                      
+                      const names: Record<string, string> = {
+                        digital: "Dijital Saat Sinyali ⏰",
+                        system: "Yumuşak Sistem Tınısı ⚙️",
+                        crystal: "Kristal Çan Melodisi 💎",
+                        victory: "Başarı & Ödeme Efekti 🏆",
+                        arcade: "Retro Atari Sesi 👾"
+                      };
+                      triggerToast(`${names[selected] || selected} Seçildi ve Test Ediliyor...`);
+                      
+                      // Immediately trigger a test playback so the user can preview the selected melody
+                      setTimeout(() => {
+                        sendSystemNotification("Zil Sesi Test Edildi! 🔔", `Seçilen Melodi: ${names[selected]}`, false);
+                      }, 200);
                     }}
                     className="px-2.5 py-1.5 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold cursor-pointer transition focus:outline-none"
                   >
-                    <option value="digital">Dijital Saat Bipi</option>
-                    <option value="system">Sistem Melodisi (Simüle)</option>
+                    <option value="digital">Dijital Saat Bipi ⏰</option>
+                    <option value="system">Yumuşak Sistem Tınısı ⚙️</option>
+                    <option value="crystal">Kristal Çan Melodisi 💎</option>
+                    <option value="victory">Başarı ve Ödeme Zili 🏆</option>
+                    <option value="arcade">Retro Atari Melodisi 👾</option>
                   </select>
                 </div>
 
