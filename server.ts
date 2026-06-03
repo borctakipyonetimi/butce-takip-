@@ -9,7 +9,18 @@ dotenv.config();
 const app = express();
 const PORT = 3000;
 
-
+// Custom CORS middleware to handle requests from any origin (Crucial for hybrid mobile APKs using file:// or capacitor origins to talk to this API backend)
+app.use((req, res, next) => {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With");
+  
+  if (req.method === "OPTIONS") {
+    res.sendStatus(200);
+    return;
+  }
+  next();
+});
 
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));

@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { Bot, Send, User, Sparkles, Brain, Flame, Target, MessageSquareCode, Settings, TrendingUp } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { Debt, Income, Expense, InstallmentDebt, FinancialStats } from "../types";
+import { getApiUrl } from "../utils/api";
 
 interface ChatMessage {
   sender: "user" | "bot";
@@ -326,7 +327,7 @@ export const AIChat: React.FC<AIChatProps> = ({ debts, incomes, expenses, instal
     const timeoutId = setTimeout(() => controller.abort(), 25000);
 
     try {
-      const response = await fetch("/api/chat", {
+      const response = await fetch(getApiUrl("/api/chat"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         signal: controller.signal,

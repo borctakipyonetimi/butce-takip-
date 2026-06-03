@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 
 import { Debt } from "../types";
+import { getApiUrl } from "../utils/api";
 
 interface VoiceAssistantProps {
   debts?: Debt[];
@@ -50,6 +51,8 @@ export default function VoiceAssistant({
   const [isSupported, setIsSupported] = useState(true);
   const [audioEnabled, setAudioEnabled] = useState(true);
   const [micVolume, setMicVolume] = useState<number>(0);
+  const [showServerSettings, setShowServerSettings] = useState(false);
+  const [customUrlInput, setCustomUrlInput] = useState(() => localStorage.getItem("customServerUrl") || "");
 
   const recognitionRef = useRef<any>(null);
   const isActiveRef = useRef(false);
@@ -328,7 +331,7 @@ export default function VoiceAssistant({
     setErrorMsg("");
 
     try {
-      const res = await fetch("/api/voice-command", {
+      const res = await fetch(getApiUrl("/api/voice-command"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text: textToProcess, userApiKey }),
@@ -478,6 +481,20 @@ export default function VoiceAssistant({
     setManualInput(sampleCmd);
     setTranscript(sampleCmd);
     handleProcessText(sampleCmd);
+  };
+
+  const handleSaveCustomServer = (e: React.FormEvent) => {
+    e.preventDefault();
+    const val = customUrlInput.trim();
+    if (val) {
+      localStorage.setItem("customServerUrl", val);
+      triggerToast("Sunucu API Adresi kaydedildi ve aktif edildi.");
+    } else {
+      localStorage.removeItem("customServerUrl");
+      triggerToast("Sunucu API adresi varsayılana sıfırlandı.");
+    }
+    setErrorMsg("");
+    setStatus("idle");
   };
 
   const toggleOpen = () => {
@@ -677,12 +694,70 @@ export default function VoiceAssistant({
                       <p className="text-xs font-semibold text-rose-300 max-w-sm">
                         {errorMsg}
                       </p>
-                      <button
-                        onClick={startListening}
-                        className="py-1 px-3.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs text-white rounded-lg transition active:scale-95 cursor-pointer mt-1"
-                      >
-                        Tekrar Dene
-                      </button>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={startListening}
+                          className="py-1 px-3.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs text-white rounded-lg transition active:scale-95 cursor-pointer mt-1"
+                        >
+                          Tekrar Dene
+                        </button>
+                        {errorMsg.includes("Sunucu bağlantısı") && !showServerSettings && (
+                          <button
+                            onClick={() => setShowServerSettings(true)}
+                            className="py-1 px-3.5 bg-indigo-950/40 hover:bg-indigo-900/40 border border-indigo-500/20 text-xs text-indigo-300 rounded-lg transition active:scale-95 cursor-pointer mt-1"
+                          >
+                            Sunucu Ayarı Yap
+                          </button>
+                        )}
+                      </div>
+
+                      {showServerSettings && (
+                        <div className="w-full mt-3 pt-3 border-t border-slate-800/60 max-w-sm">
+                          <form onSubmit={handleSaveCustomServer} className="text-left space-y-2 bg-slate-950/40 p-3 rounded-xl border border-slate-900">
+                            <p className="text-[10px] text-slate-400 leading-relaxed font-medium">
+                              APK uygulamasında veya mobil cihazınızda bütçe sunucusu bulunamadıysa, sesli asistanın bağlanacağı adresi güncelleyebilirsiniz:
+                            </p>
+                            <div>
+                              <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider block mb-1">
+                                Sunucu API Adresi (Base URL)
+                              </label>
+                              <div className="flex gap-1.5">
+                                <input
+                                  type="url"
+                                  value={customUrlInput}
+                                  onChange={(e) => setCustomUrlInput(e.target.value)}
+                                  placeholder="Varsayılan: https://ais-pre-... (veya özel)"
+                                  className="flex-1 bg-slate-950 border border-slate-800 focus:border-indigo-500 rounded-lg px-2.5 py-1.5 text-[10px] font-bold text-slate-200 placeholder-slate-700 focus:outline-hidden"
+                                />
+                                <button
+                                  type="submit"
+                                  className="px-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-[10px] font-bold transition whitespace-nowrap cursor-pointer"
+                                >
+                                  Kaydet
+                                </button>
+                              </div>
+                            </div>
+                            <div className="flex justify-between items-center text-[9px] text-slate-500">
+                              <span>Aktif: {localStorage.getItem("customServerUrl") ? "Özel Adres" : "Varsayılan Bulut"}</span>
+                              {localStorage.getItem("customServerUrl") && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setCustomUrlInput("");
+                                    localStorage.removeItem("customServerUrl");
+                                    triggerToast("Varsayılan adrese sıfırlandı.");
+                                    setErrorMsg("");
+                                    setStatus("idle");
+                                  }}
+                                  className="text-rose-400 hover:text-rose-300 underline cursor-pointer"
+                                >
+                                  Sıfırla
+                                </button>
+                              )}
+                            </div>
+                          </form>
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <div className="flex flex-col items-center space-y-3">

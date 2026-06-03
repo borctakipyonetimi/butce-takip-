@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
+import { getApiUrl } from "./api";
 
 export type CurrencyType = "TRY" | "USD" | "EUR" | "GBP";
 
@@ -51,7 +52,7 @@ export const CurrencyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
     // Phase 1: Try server-side proxy route to completely bypass browser client-side CORS and adblockers
     try {
-      const serverRes = await fetch(`/api/rates?t=${Date.now()}`);
+      const serverRes = await fetch(getApiUrl(`/api/rates?t=${Date.now()}`));
       if (serverRes.ok) {
         const serverData = await serverRes.json();
         if (serverData && serverData.success && serverData.rates) {
