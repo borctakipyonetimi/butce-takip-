@@ -1122,15 +1122,15 @@ export default function App() {
           setInstallmentDebts(parsed.installmentDebts || []);
           setPayments(parsed.payments || []);
           setExpenses(parsed.expenses || []);
-          setExpenseCategories(
-            parsed.expenseCategories || [
-              { id: 1, name: "Kira", color: "#3b82f6", icon: "🏠" },
-              { id: 2, name: "Market", color: "#10b981", icon: "🛒" },
-              { id: 3, name: "Ulaşım", color: "#f59e0b", icon: "🚗" },
-              { id: 4, name: "Yeme İçme", color: "#ec4899", icon: "🍔" },
-              { id: 5, name: "Faturalar", color: "#ef4444", icon: "⚡" }
-            ]
-          );
+          const defaultCategories = [
+            { id: 1, name: "Kira", color: "#3b82f6", icon: "🏠" },
+            { id: 2, name: "Market", color: "#10b981", icon: "🛒" },
+            { id: 3, name: "Ulaşım", color: "#f59e0b", icon: "🚗" },
+            { id: 4, name: "Yeme İçme", color: "#ec4899", icon: "🍔" },
+            { id: 5, name: "Faturalar", color: "#ef4444", icon: "⚡" }
+          ];
+          const hasCategories = parsed.expenseCategories && Array.isArray(parsed.expenseCategories) && parsed.expenseCategories.length > 0;
+          setExpenseCategories(hasCategories ? parsed.expenseCategories : defaultCategories);
         } catch (e) {
           console.error("Local data parsing warning:", e);
         }
@@ -1185,15 +1185,15 @@ export default function App() {
               setInstallmentDebts(data.installmentDebts || []);
               setPayments(data.payments || []);
               setExpenses(data.expenses || []);
-              setExpenseCategories(
-                data.expenseCategories || [
-                  { id: 1, name: "Kira", color: "#3b82f6", icon: "🏠" },
-                  { id: 2, name: "Market", color: "#10b981", icon: "🛒" },
-                  { id: 3, name: "Ulaşım", color: "#f59e0b", icon: "🚗" },
-                  { id: 4, name: "Yeme İçme", color: "#ec4899", icon: "🍔" },
-                  { id: 5, name: "Faturalar", color: "#ef4444", icon: "⚡" }
-                ]
-              );
+              const defaultCategories = [
+                { id: 1, name: "Kira", color: "#3b82f6", icon: "🏠" },
+                { id: 2, name: "Market", color: "#10b981", icon: "🛒" },
+                { id: 3, name: "Ulaşım", color: "#f59e0b", icon: "🚗" },
+                { id: 4, name: "Yeme İçme", color: "#ec4899", icon: "🍔" },
+                { id: 5, name: "Faturalar", color: "#ef4444", icon: "⚡" }
+              ];
+              const hasCats = data.expenseCategories && Array.isArray(data.expenseCategories) && data.expenseCategories.length > 0;
+              setExpenseCategories(hasCats ? data.expenseCategories : defaultCategories);
             } else {
               loadFromLocalStorage();
             }
@@ -2327,7 +2327,15 @@ export default function App() {
           const rawInstallments = parsed.installmentDebts || parsed.installments || parsed.installmentList || [];
           const rawPayments = parsed.payments || parsed.payments_logs || parsed.paymentList || [];
           const rawExpenses = parsed.expenses || parsed.allExpenses || parsed.expenseList || [];
-          const rawCategories = parsed.expenseCategories || parsed.categories || parsed.categoryList || [];
+          const rawCategoriesTemp = parsed.expenseCategories || parsed.categories || parsed.categoryList || [];
+          const defaultCategories = [
+            { id: 1, name: "Kira", color: "#3b82f6", icon: "🏠" },
+            { id: 2, name: "Market", color: "#10b981", icon: "🛒" },
+            { id: 3, name: "Ulaşım", color: "#f59e0b", icon: "🚗" },
+            { id: 4, name: "Yeme İçme", color: "#ec4899", icon: "🍔" },
+            { id: 5, name: "Faturalar", color: "#ef4444", icon: "⚡" }
+          ];
+          const rawCategories = (rawCategoriesTemp && rawCategoriesTemp.length > 0) ? rawCategoriesTemp : defaultCategories;
           
           setDebts(rawDebts);
           setIncomes(rawIncomes);

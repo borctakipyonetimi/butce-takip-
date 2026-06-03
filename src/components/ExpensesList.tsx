@@ -41,13 +41,14 @@ interface ExpensesListProps {
 }
 
 const getSavingTipForCategory = (name: string, icon: string): string => {
-  const norm = name.toLowerCase();
+  const norm = name.toLowerCase().trim();
 
-  // Keyword mapping
+  // 1. Market & Gıda & Mutfak
   if (
     norm.includes("market") ||
     norm.includes("mutfak") ||
     norm.includes("gıda") ||
+    norm.includes("gida") ||
     norm.includes("bakkal") ||
     norm.includes("manav") ||
     icon === "🛒"
@@ -164,7 +165,24 @@ const getSavingTipForCategory = (name: string, icon: string): string => {
     return "Hediyeleşmelerde satın almak yerine el yapımı alternatifleri deneyin. Özel günler için bütçenizde her ay önceden küçük bir pay ayırıp sürpriz harcamaların önüne geçin.";
   }
 
-  return `"${name}" harcamalarınızı azaltmak için öncelikle bu kaleme ayrılan bütçeyi haftalık olarak sınırlandırın. İhtiyaç ile istek analizini yaparak sadece zorunlu harcamaları önceliklendirmek bu kategorideki yükünüzü hızla hafifletecektir.`;
+  // Dynamic Diversified fallback algorithm using a deterministic character-sum hash
+  // This ensures that different custom categories always get unique, tailored, smart advice
+  // rather than showing the exact same text!
+  let charSum = 0;
+  for (let i = 0; i < name.length; i++) {
+    charSum += name.charCodeAt(i);
+  }
+  const fallbackId = charSum % 5;
+
+  const fallbackTips = [
+    `"${name}" kalemi için bu ay sınır koyun. Her pazartesi kendinize haftalık harcama limiti belirleyin. Limit dolduğunda harcamayı durdurmak, oto-kontrol kasınızı anında güçlendirir.`,
+    `Aylık "${name}" harcamalarınızı %15 oranında düşürmek için harcamadan önce 48 saat kuralını uygulayın. İstek mi yoksa acil bir ihtiyaç mı olduğunu kendinize sorarak dürtüsel harcamaların önüne geçin.`,
+    `"${name}" ödemelerinde nakit kullanmaya çalışın. Nakit para ile vedalaşmak, kredi kartıyla temassız ödeme yapmaya kıyasla zihnimizde gerçek bir harcama algısı yaratır ve tasarruf yaptırır.`,
+    `Gelecek ayki "${name}" giderini düşürmek için alternatif fiyat araştırması yapın. Farklı marka veya hizmet sağlayıcılarının kampanyalarını karşılaştırmak, size şaşırtıcı bir kazanç sağlayacaktır.`,
+    `Mevcut bütçenizde "${name}" harcamalarını finanse etmek için "Gider Eşleme" yapın. Yani bu kategoride yaptığınız her ekstra harcama kadar tutarı acil durum birikim hesabınıza da aktarın.`
+  ];
+
+  return fallbackTips[fallbackId];
 };
 
 export const ExpensesList: React.FC<ExpensesListProps> = ({
@@ -1433,42 +1451,139 @@ export const ExpensesList: React.FC<ExpensesListProps> = ({
 
       {/* Category Add/Edit Modal Dial */}
       {isCatModalOpen && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 rounded-3xl p-6 w-full max-w-sm space-y-4 shadow-xl">
-            <h4 className="text-base font-bold flex items-center gap-1.5 border-b pb-2 dark:border-slate-700">
-              <Folder className="w-5 h-5 text-indigo-500" /> {catModalTitle}
-            </h4>
-            <div className="space-y-3">
+        <div className="fixed inset-0 bg-black/75 backdrop-blur-md flex items-center justify-center p-4 z-50">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            className="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 rounded-3xl p-6 w-full max-w-md space-y-5 shadow-2xl border border-slate-200/50 dark:border-slate-800/80 relative"
+          >
+            {/* Header info */}
+            <div className="flex items-center justify-between border-b pb-3 dark:border-slate-800">
+              <h4 className="text-sm font-black flex items-center gap-2 text-indigo-600 dark:text-indigo-400">
+                <Folder className="w-5 h-5" /> {catModalTitle}
+              </h4>
+              <button 
+                onClick={() => setIsCatModalOpen(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Live Card Preview Box */}
+            <div className="space-y-1">
+              <span className="text-[9px] font-black text-slate-400 dark:text-slate-550 uppercase tracking-widest block">
+                🔴 Canlı Kategori Kart Önizlemesi
+              </span>
+              <motion.div 
+                animate={{ scale: [1, 1.015, 1], boxShadow: [`0 2px 8px ${categoryColor}15`, `0 6px 16px ${categoryColor}25`, `0 2px 8px ${categoryColor}15`] }}
+                transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                className="p-3.5 bg-slate-50 dark:bg-slate-950 border border-slate-200/60 dark:border-slate-800 rounded-2xl flex items-center justify-between select-none"
+                style={{ borderLeft: `5px solid ${categoryColor}` }}
+              >
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div 
+                    className="w-9 h-9 rounded-xl flex items-center justify-center text-lg shadow-xs shrink-0 transition-transform duration-300"
+                    style={{ backgroundColor: `${categoryColor}20`, color: categoryColor, textShadow: `0 0 10px ${categoryColor}30` }}
+                  >
+                    {categoryIcon}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs font-black text-slate-900 dark:text-white truncate">
+                      {categoryName.trim() || "Kategori Adı Belirtin"}
+                    </p>
+                    <p className="text-[9px] text-slate-450 font-bold uppercase tracking-wider">
+                      Örnek Harcama Grubu
+                    </p>
+                  </div>
+                </div>
+                <div className="text-right flex flex-col items-end shrink-0">
+                  <span className="text-xs font-black font-mono" style={{ color: categoryColor }}>
+                    0,00 ₺
+                  </span>
+                  <span className="text-[8px] font-mono font-bold text-slate-400">
+                    {categoryColor}
+                  </span>
+                </div>
+              </motion.div>
+            </div>
+
+            {/* Quick Interactive Templates Section */}
+            <div className="space-y-1.5">
+              <span className="text-[9px] font-black text-slate-400 dark:text-slate-550 uppercase tracking-widest block">
+                ⚡ HIZLI VE RENKLİ HAZIR ŞABLONLAR (LİMİTSİZ)
+              </span>
+              <div className="grid grid-cols-4 gap-2 bg-slate-50 dark:bg-slate-950 p-2 rounded-2xl border border-slate-100 dark:border-slate-850 max-h-36 overflow-y-auto pr-1">
+                {[
+                  { name: "Market", icon: "🛒", color: "#10b981", d: "Gıda" },
+                  { name: "Kira", icon: "🏠", color: "#3b82f6", d: "Ev" },
+                  { name: "Ulaşım", icon: "🚗", color: "#f59e0b", d: "Yol" },
+                  { name: "Yemek", icon: "🍔", color: "#ec4899", d: "Kafe" },
+                  { name: "Faturalar", icon: "⚡", color: "#ef4444", d: "Enerji" },
+                  { name: "Eğlence", icon: "🍿", color: "#8b5cf6", d: "Sosyal" },
+                  { name: "Eğitim", icon: "🎓", color: "#6366f1", d: "Okul" },
+                  { name: "Sağlık", icon: "💊", color: "#f43f5e", d: "İlaç" },
+                  { name: "Kişisel", icon: "💇", color: "#14b8a6", d: "Bakım" },
+                  { name: "Spor", icon: "⚽", color: "#22c55e", d: "Hobi" },
+                  { name: "Borçlar", icon: "💰", color: "#eab308", d: "Banka" },
+                  { name: "Hediyeler", icon: "🎁", color: "#d946ef", d: "Özel" },
+                ].map((item) => {
+                  const isMatch = categoryName.toLowerCase() === item.name.toLowerCase();
+                  return (
+                    <motion.button
+                      key={item.name}
+                      type="button"
+                      whileHover={{ scale: 1.05, y: -2 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => {
+                        setCategoryName(item.name);
+                        setCategoryColor(item.color);
+                        setCategoryIcon(item.icon);
+                      }}
+                      className="p-1.5 rounded-xl border flex flex-col items-center justify-center text-center gap-1 min-h-[58px] cursor-pointer transition-colors"
+                      style={{
+                        backgroundColor: isMatch ? `${item.color}15` : "transparent",
+                        borderColor: isMatch ? item.color : "transparent"
+                      }}
+                    >
+                      <span className="text-base select-none leading-none">{item.icon}</span>
+                      <span className="text-[8px] font-black tracking-wide truncate max-w-full text-slate-700 dark:text-slate-350">{item.name}</span>
+                      <span className="text-[7px] text-slate-400 opacity-80 leading-none truncate">{item.d}</span>
+                    </motion.button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Custom Input Form fields */}
+            <div className="space-y-3.5">
               <div>
-                <label className="text-[10px] font-bold text-slate-400 block mb-1">
-                  KATEGORİ ADI
+                <label className="text-[10px] font-bold text-slate-450 block mb-1">
+                  KATEGORİ ADI (MANUEL DEĞİŞTİR)
                 </label>
                 <input
                   type="text"
                   value={categoryName}
                   onChange={(e) => setCategoryName(e.target.value)}
                   placeholder="Kira, faturalar, eğlence vb."
-                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs dark:text-white outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20"
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs dark:text-white outline-none focus:ring-1 focus:ring-indigo-550 focus:border-indigo-500 font-bold"
                 />
               </div>
 
-              <div>
-                <label className="text-[10px] font-bold text-slate-400 block mb-1">
-                  KATEGORİ RENGİ
-                </label>
-                <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-2.5">
-                  <div className="relative w-8 h-8 rounded-full border border-slate-300 dark:border-slate-600 overflow-hidden flex items-center justify-center cursor-pointer shadow-inner hover:scale-105 active:scale-95 transition-all">
-                    <input
-                      type="color"
-                      value={categoryColor}
-                      onChange={(e) => setCategoryColor(e.target.value)}
-                      className="absolute inset-0 w-[200%] h-[200%] -translate-x-1/4 -translate-y-1/4 cursor-pointer p-0 m-0 border-0 opacity-100"
-                    />
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-[8px] sm:text-[9px] font-black text-slate-400 font-mono tracking-wider uppercase">
-                      Seçilen Renk Kodu
-                    </span>
+              <div className="grid grid-cols-2 gap-3.5">
+                <div>
+                  <label className="text-[10px] font-bold text-slate-450 block mb-1">
+                    KATEGORİ RENGİ
+                  </label>
+                  <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-1.5">
+                    <div className="relative w-7 h-7 rounded-full border border-slate-300 dark:border-slate-700 overflow-hidden flex items-center justify-center cursor-pointer shadow-inner shrink-0 hover:scale-105 active:scale-95 transition-all">
+                      <input
+                        type="color"
+                        value={categoryColor}
+                        onChange={(e) => setCategoryColor(e.target.value)}
+                        className="absolute inset-0 w-[200%] h-[200%] -translate-x-1/4 -translate-y-1/4 cursor-pointer p-0 m-0 border-0 opacity-100"
+                      />
+                    </div>
                     <input
                       type="text"
                       maxLength={7}
@@ -1481,42 +1596,32 @@ export const ExpensesList: React.FC<ExpensesListProps> = ({
                           setCategoryColor("#" + val);
                         }
                       }}
-                      className="text-xs font-semibold font-mono text-slate-700 dark:text-slate-300 bg-transparent border-none outline-none focus:ring-0 p-0"
+                      className="text-[10px] font-bold font-mono text-slate-700 dark:text-slate-300 bg-transparent border-none outline-none focus:ring-0 p-0 w-full min-w-0"
                     />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-bold text-slate-450 block mb-1">
+                    SEÇİLİ SİMGE
+                  </label>
+                  <div className="flex items-center justify-center h-10 w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-lg font-bold">
+                    <motion.span animate={{ scale: [0.9, 1.1, 1] }} key={categoryIcon}>
+                      {categoryIcon}
+                    </motion.span>
                   </div>
                 </div>
               </div>
 
               <div>
-                <label className="text-[10px] font-bold text-slate-400 block mb-1">
-                  KATEGORİ SİMGESİ
+                <label className="text-[10px] font-bold text-slate-450 block mb-1">
+                  KULLANILABİLİR SİMGELER
                 </label>
-                <div className="grid grid-cols-6 gap-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 max-h-32 overflow-y-auto">
+                <div className="grid grid-cols-6 gap-1 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2 max-h-[105px] overflow-y-auto">
                   {[
-                    "🛒",
-                    "🏠",
-                    "🚗",
-                    "🍔",
-                    "⚡",
-                    "🎒",
-                    "💊",
-                    "🍿",
-                    "✈️",
-                    "🎓",
-                    "🧸",
-                    "💼",
-                    "💰",
-                    "🎁",
-                    "🐾",
-                    "💇",
-                    "⚽",
-                    "🔧",
-                    "❓",
-                    "🥩",
-                    "🍷",
-                    "📱",
-                    "💻",
-                    "🎸",
+                    "🛒", "🏠", "🚗", "🍔", "⚡", "🎒", "💊", "🍿", "✈️", "🎓", "🧸", "💼", 
+                    "💰", "🎁", "🐾", "💇", "⚽", "🔧", "❓", "🥩", "🍷", "📱", "💻", "🎸",
+                    "🔥", "❤️", "💎", "🩺", "🎭", "📈", "🚌", "☕", "🍕", "🥦", "🛁", "🧴"
                   ].map((emoji) => {
                     const isSelected = categoryIcon === emoji;
                     return (
@@ -1524,10 +1629,10 @@ export const ExpensesList: React.FC<ExpensesListProps> = ({
                         key={emoji}
                         type="button"
                         onClick={() => setCategoryIcon(emoji)}
-                        className={`text-lg p-1.5 rounded-xl transition-all cursor-pointer flex items-center justify-center hover:scale-110 ${
+                        className={`text-base p-1 rounded-lg transition-all cursor-pointer flex items-center justify-center hover:scale-115 ${
                           isSelected
-                            ? "bg-indigo-500/20 border-2 border-indigo-500 scale-105"
-                            : "bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700/50 hover:bg-indigo-50 dark:hover:bg-slate-755"
+                            ? "bg-indigo-500/20 border border-indigo-500 scale-105"
+                            : "bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-800/80 hover:bg-indigo-50 dark:hover:bg-slate-700/50"
                         }`}
                       >
                         {emoji}
@@ -1538,21 +1643,22 @@ export const ExpensesList: React.FC<ExpensesListProps> = ({
               </div>
             </div>
 
-            <div className="flex gap-2 pt-2">
+            {/* Save Actions Buttons */}
+            <div className="flex gap-2.5 pt-2 border-t dark:border-slate-800">
               <button
                 onClick={() => setIsCatModalOpen(false)}
-                className="flex-1 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-slate-200 rounded-xl font-bold text-xs"
+                className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-300 rounded-xl font-bold text-xs transition active:scale-95 cursor-pointer"
               >
                 İptal
               </button>
               <button
                 onClick={handleSaveCategory}
-                className="flex-1 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-xs"
+                className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-xs shadow-md shadow-indigo-600/10 hover:shadow-indigo-600/25 transition active:scale-95 cursor-pointer"
               >
                 Kaydet
               </button>
             </div>
-          </div>
+          </motion.div>
         </div>
       )}
 

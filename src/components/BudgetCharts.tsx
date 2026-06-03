@@ -39,7 +39,7 @@ export const DoughnutChart: React.FC<DoughnutChartProps> = ({ data }) => {
   const total = data.reduce((sum, item) => sum + item.value, 0);
   if (total === 0) {
     return (
-      <div className="flex h-48 items-center justify-center text-sm font-medium text-slate-400">
+      <div className="flex h-52 items-center justify-center text-sm font-medium text-slate-400">
         Gösterilecek veri yok
       </div>
     );
@@ -48,7 +48,7 @@ export const DoughnutChart: React.FC<DoughnutChartProps> = ({ data }) => {
   // D3 Pie layout definition
   const pieGenerator = d3.pie<{ label: string; value: number; color: string }>()
     .value(d => d.value)
-    .sort(null); // Retain original category order and colors
+    .sort(null);
 
   const arcs = pieGenerator(data);
 
@@ -57,117 +57,230 @@ export const DoughnutChart: React.FC<DoughnutChartProps> = ({ data }) => {
   const activePercent = activeItem ? ((activeItem.value / total) * 100).toFixed(1) : "";
 
   return (
-    <div className="flex flex-col items-center justify-center p-3 sm:flex-row gap-8">
-      {/* Interactive D3 Pie SVG Container */}
-      <div className="relative w-44 h-44 shrink-0">
-        <svg viewBox="0 0 140 140" className="w-full h-full transform -rotate-90 select-none">
-          {/* Base Background Track shadow ring */}
-          <circle cx="70" cy="70" r="38" fill="none" stroke="#e2e8f0" strokeWidth="10" className="opacity-10 dark:opacity-5" />
-          
-          {arcs.map((arc, idx) => {
-            const isHovered = hoveredIndex === idx;
-            
-            // Calculate slice dynamic paths using D3 Arc
-            // When hovered, the segment expands outwards and thickens slightly for an beautiful 3D focus look
-            const arcPath = d3.arc<any, any>()({
-              innerRadius: isHovered ? 26 : 34,
-              outerRadius: isHovered ? 56 : 48,
-              startAngle: arc.startAngle,
-              endAngle: arc.endAngle,
-              padAngle: 0.02,
-              cornerRadius: 4, // smooth out corners for premium software design aesthetic
-            }) || "";
+    <div className="flex flex-col items-center justify-center p-2 xl:flex-row gap-4 xl:gap-6">
+      {/* Interactive Bento HUD SVG Box */}
+      <div className="relative w-48 h-48 shrink-0 flex items-center justify-center">
+        {/* Animated ambient decorative glow */}
+        <div 
+          className="absolute inset-4 rounded-full blur-2xl opacity-10 dark:opacity-20 transition-all duration-700 pointer-events-none"
+          style={{
+            backgroundColor: activeItem ? activeItem.color : "rgb(99, 102, 241)",
+          }}
+        />
 
-            return (
-              <path
-                key={idx}
-                d={arcPath}
-                fill={arc.data.color}
-                className="transition-all duration-300 ease-out cursor-pointer hover:brightness-105"
-                onMouseEnter={() => setHoveredIndex(idx)}
-                onMouseLeave={() => setHoveredIndex(null)}
-                style={{
-                  filter: isHovered 
-                    ? `drop-shadow(0px 4px 10px ${arc.data.color}33)` 
-                    : "none",
-                }}
-              />
-            );
-          })}
+        <svg viewBox="0 0 150 150" className="w-full h-full transform -rotate-90 select-none relative z-10 overflow-visible">
+          {/* SVG Definitions for 3D Translucent Slices */}
+          <defs>
+            {data.map((item, idx) => {
+              const gradId = `slice-grad-${idx}`;
+              return (
+                <linearGradient key={idx} id={gradId} x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor={item.color} stopOpacity={1} />
+                  <stop offset="50%" stopColor={item.color} stopOpacity={0.85} />
+                  <stop offset="100%" stopColor={item.color} stopOpacity={0.5} />
+                </linearGradient>
+              );
+            })}
+          </defs>
+
+          {/* Futuristic Slow Spinning Outer Starburst HUD Ring */}
+          <motion.circle
+            cx="75"
+            cy="75"
+            r="64"
+            fill="none"
+            stroke="rgba(148, 163, 184, 0.15)"
+            strokeWidth="1"
+            strokeDasharray="4 8"
+            animate={{ rotate: 360 }}
+            transition={{ duration: 32, repeat: Infinity, ease: "linear" }}
+            className="origin-center pointer-events-none"
+          />
+
+          {/* Micro Orbit Track Ring (Inner Core) */}
+          <motion.circle
+            cx="75"
+            cy="75"
+            r="23"
+            fill="none"
+            stroke="rgba(148, 163, 184, 0.18)"
+            strokeWidth="0.75"
+            strokeDasharray="2 3"
+            animate={{ rotate: -360 }}
+            transition={{ duration: 16, repeat: Infinity, ease: "linear" }}
+            className="origin-center pointer-events-none"
+          />
+
+          {/* Centered Slices rendering inside translated SVG Group */}
+          <g transform="translate(75, 75)">
+            {arcs.map((arc, idx) => {
+              const isHovered = hoveredIndex === idx;
+              
+              // Generate the SVG path utilizing D3's arc parameters
+              // Centered at translated (0,0) -> (75,75)
+              const arcPath = d3.arc<any, any>()({
+                innerRadius: isHovered ? 26 : 32,
+                outerRadius: isHovered ? 58 : 50,
+                startAngle: arc.startAngle,
+                endAngle: arc.endAngle,
+                padAngle: 0.025,
+                cornerRadius: 5,
+              }) || "";
+
+              return (
+                <g key={idx} className="cursor-pointer">
+                  {/* Visual underlay shadow slice */}
+                  {isHovered && (
+                    <path
+                      d={arcPath}
+                      fill={arc.data.color}
+                      opacity="0.25"
+                      className="origin-center"
+                      style={{
+                        transform: "scale(1.05)",
+                        filter: `blur(4px)`,
+                      }}
+                    />
+                  )}
+                  
+                  {/* Main Render Slice Segment */}
+                  <motion.path
+                    d={arcPath}
+                    fill={`url(#slice-grad-${idx})`}
+                    stroke={isHovered ? "#ffffff" : "transparent"}
+                    strokeWidth={isHovered ? 1.5 : 0}
+                    className="transition-all duration-300 ease-out origin-center"
+                    onMouseEnter={() => setHoveredIndex(idx)}
+                    onMouseLeave={() => setHoveredIndex(null)}
+                    whileHover={{ scale: 1.04 }}
+                    animate={{
+                      opacity: hoveredIndex === null || isHovered ? 1 : 0.45,
+                    }}
+                    style={{
+                      filter: isHovered 
+                        ? `drop-shadow(0px 8px 16px ${arc.data.color}50) brightness(1.15)` 
+                        : "drop-shadow(0px 1px 3px rgba(0,0,0,0.05))",
+                    }}
+                  />
+                </g>
+              );
+            })}
+          </g>
         </svg>
 
-        {/* Interactive Dynamic Center Text Element */}
-        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none p-4 text-center">
+        {/* Dynamic HUD Informative Center content */}
+        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none p-4 text-center z-20">
           {activeItem ? (
-            <div className="animate-fade-in space-y-0.5 max-w-full">
+            <motion.div 
+              key={`hud-active-${activeItem.label}`}
+              initial={{ opacity: 0, scale: 0.85 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="space-y-0.5 max-w-full"
+            >
               <span 
-                className="text-[10px] font-black uppercase tracking-wider block truncate max-w-[110px]"
-                style={{ color: activeItem.color }}
+                className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full inline-block truncate max-w-[110px]"
+                style={{ backgroundColor: `${activeItem.color}15`, color: activeItem.color }}
               >
                 {activeItem.label}
               </span>
-              <span className="text-sm font-black text-slate-800 dark:text-slate-100 font-mono block leading-none">
+              <span className="text-sm sm:text-base font-black text-slate-900 dark:text-slate-50 font-mono block leading-none pt-1">
                 {format(activeItem.value)}
               </span>
-              <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 block leading-none">
+              <span className="text-[10px] font-black text-slate-550 dark:text-slate-400 block leading-none">
                 %{activePercent} pay
               </span>
-            </div>
+            </motion.div>
           ) : (
-            <div className="space-y-0.5">
-              <span className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider block">
-                Toplam
+            <motion.div 
+              key="hud-default"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="space-y-0.5"
+            >
+              <span className="text-[9px] text-slate-450 dark:text-slate-500 font-black uppercase tracking-widest block">
+                TOPLAM GİDER
               </span>
-              <span className="text-sm font-black text-slate-800 dark:text-slate-100 font-mono block leading-none">
+              <span className="text-base font-black text-slate-900 dark:text-white font-mono block leading-none">
                 {format(total)}
               </span>
-              <span className="text-[9px] font-semibold text-slate-400 block dark:text-slate-500">
-                {data.length} kategori
+              <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 block">
+                {data.length} Kategori Masrafı
               </span>
-            </div>
+            </motion.div>
           )}
         </div>
       </div>
 
-      {/* Bi-directional Interactive Legend Area */}
-      <div className="flex-1 w-full min-w-[140px] space-y-2">
+      {/* Proportional Staggered Progress Legend Grid */}
+      <div className="flex-1 w-full min-w-[140px] space-y-2 relative z-10">
         {data.map((item, idx) => {
           const isHovered = hoveredIndex === idx;
-          const percentage = ((item.value / total) * 100).toFixed(0);
-          
+          const percentage = ((item.value / total) * 105).toFixed(0); // scale up indicator fill
+          const displayPercentage = ((item.value / total) * 100).toFixed(0);
+
           return (
             <div
               key={idx}
-              className={`flex items-center justify-between p-1.5 rounded-xl transition-all duration-200 cursor-pointer ${
+              className={`p-2.5 rounded-2xl transition-all duration-300 border cursor-pointer ${
                 isHovered 
-                  ? "bg-slate-50 dark:bg-slate-800/80 scale-[1.02] shadow-3xs" 
-                  : "hover:bg-slate-50/50 dark:hover:bg-slate-800/30"
+                  ? "bg-white dark:bg-slate-850 scale-[1.03] shadow-md border-slate-200 dark:border-slate-800" 
+                  : "bg-slate-50/40 dark:bg-slate-900/40 border-transparent hover:bg-slate-50 dark:hover:bg-slate-850/50"
               }`}
               onMouseEnter={() => setHoveredIndex(idx)}
               onMouseLeave={() => setHoveredIndex(null)}
+              style={{
+                borderColor: isHovered ? item.color : "transparent",
+                boxShadow: isHovered ? `0 4px 12px ${item.color}10` : "none"
+              }}
             >
-              <div className="flex items-center gap-2 max-w-[65%]">
-                <span 
-                  className={`w-3 h-3 rounded-full shrink-0 transition-transform duration-200 ${isHovered ? "scale-125" : ""}`} 
-                  style={{ backgroundColor: item.color }} 
+              <div className="flex items-center justify-between gap-2 mb-1.5">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span 
+                    className={`w-2.5 h-2.5 rounded-full shrink-0 transition-all duration-300 ${isHovered ? "scale-125" : ""}`} 
+                    style={{ 
+                      backgroundColor: item.color,
+                      boxShadow: isHovered ? `0 0 10px ${item.color}` : "none"
+                    }} 
+                  />
+                  <span className={`text-xs truncate transition-all duration-300 ${
+                    isHovered 
+                      ? "font-black text-slate-900 dark:text-white" 
+                      : "text-slate-650 dark:text-slate-350 font-bold"
+                  }`}>
+                    {item.label}
+                  </span>
+                </div>
+                <div className="text-right shrink-0">
+                  <span className={`text-xs font-mono font-black transition-all duration-305 ${
+                    isHovered ? "text-indigo-600 dark:text-indigo-400" : "text-slate-800 dark:text-slate-250"
+                  }`}>
+                    {format(item.value)}
+                  </span>
+                </div>
+              </div>
+
+              {/* Progress Bar Column Pill (Neon fill representing percentage share) */}
+              <div className="w-full bg-slate-200/50 dark:bg-slate-800/60 h-2 rounded-full overflow-hidden relative">
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: `${Math.min(100, Math.max(0, Number(displayPercentage)))}%` }}
+                  transition={{ duration: 0.85, ease: "easeOut" }}
+                  className="h-full rounded-full transition-colors"
+                  style={{ 
+                    backgroundColor: item.color,
+                    opacity: isHovered ? 1 : 0.75,
+                    boxShadow: isHovered ? `0 0 6px ${item.color}` : "none"
+                  }}
                 />
-                <span className={`text-xs truncate transition-all duration-200 ${
-                  isHovered 
-                    ? "font-extrabold text-slate-900 dark:text-slate-100" 
-                    : "text-slate-500 dark:text-slate-400 font-semibold"
-                }`}>
-                  {item.label}
+                
+                {/* Percentage Marker Badge */}
+                <span className="absolute right-1 text-[8px] font-bold text-slate-400 font-mono tracking-tighter leading-none top-1/2 -translate-y-1/2 select-none opacity-0 hover:opacity-100 transition-opacity duration-300">
+                  %{displayPercentage}
                 </span>
               </div>
-              <div className="text-right shrink-0">
-                <span className={`text-xs font-mono font-bold transition-all duration-200 block ${
-                  isHovered ? "text-slate-900 dark:text-slate-50" : "text-slate-700 dark:text-slate-300"
-                }`}>
-                  {format(item.value)}
-                </span>
-                <span className="text-[9px] font-mono text-slate-400 dark:text-slate-500 block">
-                  %{percentage} pay
-                </span>
+              <div className="flex items-center justify-between mt-1 text-[8.5px] font-bold text-slate-400 dark:text-slate-500 font-mono">
+                <span>PAY DEĞERİ</span>
+                <span className={isHovered ? "text-indigo-500 font-black" : ""}>%{displayPercentage} HARCAMA</span>
               </div>
             </div>
           );
@@ -175,7 +288,7 @@ export const DoughnutChart: React.FC<DoughnutChartProps> = ({ data }) => {
       </div>
     </div>
   );
-};
+};;
 
 interface BarChartProps {
   data: { label: string; value: number; color: string }[];
