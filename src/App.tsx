@@ -4489,6 +4489,7 @@ export default function App() {
       {/* Voice Assistant Speech-to-Text Module */}
       {isUnlocked && voiceAssistantEnabled && (
         <VoiceAssistant
+          debts={debts}
           onSaveDebt={handleSaveDebt}
           onSaveIncome={handleSaveIncome}
           onSaveExpense={handleSaveExpense}

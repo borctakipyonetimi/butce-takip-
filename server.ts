@@ -517,7 +517,35 @@ function parseVoiceCommandOffline(text: string): any {
     }
   }
 
-  // 4. Debt/Borç (borç, borc, verecek, borçlandım, aldım)
+  // 4. Debt update (e.g., 'Ahmet borcunun ödenen kısmını 500 TL yap' or 'Mehmet borcuna 200 TL ödedim')
+  if ((norm.includes("borç") || norm.includes("borc")) && (norm.includes("ödenen") || norm.includes("yap") || norm.includes("güncelle") || norm.includes("guncelle") || norm.includes("öde") || norm.includes("ode") || norm.includes("tutar") || norm.includes("miktar"))) {
+    const numMatch = norm.match(/(\d+[\d\s,.]*)\s*(tl|lira|₺)?/i);
+    if (numMatch) {
+      const paidAmount = parseFloat(numMatch[1].replace(/\s/g, "").replace(/,/g, "."));
+      const isAbsolute = norm.includes("yap") || norm.includes("olsun") || norm.includes("eşitle") || norm.includes("esitle");
+      
+      let debtName = "";
+      // Extract name from the beginning of text up to the "borç" / "borc"
+      const matchName = text.match(/^(.*?)(?:borç|borc|ödenen|ode|yap|güncelle|tutar|miktar)/i);
+      if (matchName && matchName[1].trim().length > 1) {
+        debtName = matchName[1].replace(/['"’]/g, "").trim();
+      }
+
+      if (debtName && paidAmount > 0) {
+        return {
+          action: "updateDebtPaid",
+          updateDebtData: {
+            name: debtName,
+            paidAmount,
+            isAbsolute
+          },
+          explanation: `🔊 Çevrimdışı Mod: "${debtName}" borcunun ödenen kısmı ₺${paidAmount} olarak ${isAbsolute ? 'güncellenecektir.' : 'artırılacaktır.'}`
+        };
+      }
+    }
+  }
+
+  // 5. Debt/Borç (borç, borc, verecek, borçlandım, aldım)
   if (norm.includes("borç") || norm.includes("borc") || norm.includes("borçlandım") || norm.includes("borclandim") || norm.includes("borçlandık") || norm.includes("borclandik")) {
     const numMatch = norm.match(/(\d+[\d\s,.]*)\s*(tl|lira|₺)?/i);
     let amount = 0;
@@ -575,8 +603,9 @@ app.post("/api/voice-command", async (req, res) => {
       "1. Borç ekleme (addDebt): 'Ahmet'e 5000 lira borç verdim/aldım', 'Banka kredisi borcu 100000 TL', vb.\n" +
       "2. Taksit/Taksitli borç ekleme (addInstallment): 'Koltuk takımı 12000 lira 6 taksit', 'Telefon için 24000 TL 12 taksit', vb.\n" +
       "3. Harcama/Gider ekleme (addExpense): 'Market harcaması 250 lira', 'Benzin aldım 800 TL', 'Yemek 350 lira', vb.\n" +
-      "4. Gelir ekleme (addIncome): 'Maaş yattı 35000 lira', 'Kira geliri aldım 15000 TL', vb.\n\n" +
-      "Senin görevin, söylenen ifadeyi bu 4 eylemden birine sığdırmak (action: 'addDebt' | 'addInstallment' | 'addExpense' | 'addIncome' | 'unknown') ve ilgili bilgileri çıkarmaktır. Gerekirse tarihleri bugünün tarihi varsay.\n" +
+      "4. Gelir ekleme (addIncome): 'Maaş yattı 35000 lira', 'Kira geliri aldım 15000 TL', vb.\n" +
+      "5. Borç güncelleme / Ödenen kısmı güncelleme (updateDebtPaid): 'Ahmet borcunun ödenen kısmını 500 TL yap', 'Banka kredisi borcunun ödenenini 1000 lira yap', 'Mehmet borcuna 200 TL ödedim' vb.\n\n" +
+      "Senin görevin, söylenen ifadeyi bu 5 eylemden birine sığdırmak (action: 'addDebt' | 'addInstallment' | 'addExpense' | 'addIncome' | 'updateDebtPaid' | 'unknown') ve ilgili bilgileri çıkarmaktır. Gerekirse tarihleri bugünün tarihi varsay.\n" +
       "Ayrıca, kullanıcının eylemi duyduğunu onaylayan sevimli, samimi bir yapay zeka Türkçe sesli asistan onay mesajı yaz (explanation). Örn: 'Anlaşıldı! Koltuk takımı bütçenize 12 taksitli toplam 12.000 ₺ olarak eklenmiştir.'";
 
     const response = await aiClient.models.generateContent({
@@ -592,7 +621,7 @@ app.post("/api/voice-command", async (req, res) => {
           properties: {
             action: {
               type: Type.STRING,
-              description: "Eylem tipi: 'addDebt', 'addInstallment', 'addExpense', 'addIncome' veya bilinmiyorsa 'unknown'."
+              description: "Eylem tipi: 'addDebt', 'addInstallment', 'addExpense', 'addIncome', 'updateDebtPaid' veya bilinmiyorsa 'unknown'."
             },
             debtData: {
               type: Type.OBJECT,
@@ -603,6 +632,15 @@ app.post("/api/voice-command", async (req, res) => {
                 paid: { type: Type.NUMBER, description: "Ödenmiş miktar (Varsayılan 0)" },
                 category: { type: Type.STRING, description: "Banka, Eş-Dost, Vergi, Kredi Kartı vb." },
                 dueDate: { type: Type.STRING, description: "Son ödeme tarihi (Format: YYYY-MM-DD)" }
+              }
+            },
+            updateDebtData: {
+              type: Type.OBJECT,
+              description: "updateDebtPaid eylemi için borç güncelleme verileri.",
+              properties: {
+                name: { type: Type.STRING, description: "Güncellenecek borcun ismi (Kullanıcının belirttiği borç adı, örn: 'Ahmet', 'Banka kredisi' vb.)" },
+                paidAmount: { type: Type.NUMBER, description: "Ödeme tutarı veya ödenen miktarın yeni değeri" },
+                isAbsolute: { type: Type.BOOLEAN, description: "Eğer ödenen tutar doğrudan bu değere EŞİTLENECEK ise true (örn: 'ödenen kısmını 500 TL yap'), eğer mevcut ödenenin üzerine EKLENECEK ise false (örn: '500 TL ödeme yaptım', 'mevcut ödemeye 300 TL ekle' veya 'X borcuna 200 TL ödedim')" }
               }
             },
             installmentData: {

@@ -19,7 +19,10 @@ import {
   UserCheck
 } from "lucide-react";
 
+import { Debt } from "../types";
+
 interface VoiceAssistantProps {
+  debts?: Debt[];
   onSaveDebt: (debtData: any, autoCreateAlarm?: boolean) => void;
   onSaveIncome: (incData: any) => void;
   onSaveExpense: (expData: any) => void;
@@ -29,6 +32,7 @@ interface VoiceAssistantProps {
 }
 
 export default function VoiceAssistant({
+  debts = [],
   onSaveDebt,
   onSaveIncome,
   onSaveExpense,
@@ -45,10 +49,92 @@ export default function VoiceAssistant({
   const [errorMsg, setErrorMsg] = useState("");
   const [isSupported, setIsSupported] = useState(true);
   const [audioEnabled, setAudioEnabled] = useState(true);
+  const [micVolume, setMicVolume] = useState<number>(0);
 
   const recognitionRef = useRef<any>(null);
   const isActiveRef = useRef(false);
   const shouldRestartRef = useRef(false);
+
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const mediaStreamRef = useRef<MediaStream | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
+  const accumulatedTranscriptRef = useRef<string>("");
+
+  const startMicVolumeMeter = async () => {
+    try {
+      // Clean previous stream if any
+      if (mediaStreamRef.current) {
+        mediaStreamRef.current.getTracks().forEach((track) => track.stop());
+      }
+      if (audioContextRef.current) {
+        try {
+          audioContextRef.current.close();
+        } catch (_) {}
+      }
+
+      // Check support for mediaDevices
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        console.warn("navigator.mediaDevices.getUserMedia is not supported in this container.");
+        return;
+      }
+
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaStreamRef.current = stream;
+
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioCtx) return;
+
+      const ctx = new AudioCtx();
+      audioContextRef.current = ctx;
+
+      const source = ctx.createMediaStreamSource(stream);
+      const analyser = ctx.createAnalyser();
+      analyser.fftSize = 64; // Small fftSize for fast tracking
+      source.connect(analyser);
+
+      const bufferLength = analyser.frequencyBinCount;
+      const dataArray = new Uint8Array(bufferLength);
+
+      const updateVolume = () => {
+        if (!isActiveRef.current && !shouldRestartRef.current) {
+          setMicVolume(0);
+          return;
+        }
+
+        analyser.getByteFrequencyData(dataArray);
+        let total = 0;
+        for (let i = 0; i < bufferLength; i++) {
+          total += dataArray[i];
+        }
+        const average = total / bufferLength;
+        // Map average volume smoothly (usually ranges 0-120 on voice input)
+        setMicVolume(average);
+
+        animationFrameRef.current = requestAnimationFrame(updateVolume);
+      };
+
+      animationFrameRef.current = requestAnimationFrame(updateVolume);
+    } catch (e) {
+      console.warn("Mic Volume Meter failed to initialize (continuing with speech recognition only):", e);
+    }
+  };
+
+  const stopMicVolumeMeter = () => {
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current);
+    }
+    if (mediaStreamRef.current) {
+      mediaStreamRef.current.getTracks().forEach((track) => track.stop());
+      mediaStreamRef.current = null;
+    }
+    if (audioContextRef.current) {
+      try {
+        audioContextRef.current.close();
+      } catch (_) {}
+      audioContextRef.current = null;
+    }
+    setMicVolume(0);
+  };
 
   useEffect(() => {
     try {
@@ -60,31 +146,50 @@ export default function VoiceAssistant({
         const rec = new SpeechRecognition();
         rec.continuous = false;
         rec.lang = "tr-TR";
-        rec.interimResults = false;
+        rec.interimResults = true; // Enabled interim results for live voice feedback!
 
         rec.onstart = () => {
           isActiveRef.current = true;
           setIsListening(true);
           setStatus("listening");
           setErrorMsg("");
+          accumulatedTranscriptRef.current = "";
         };
 
         rec.onresult = (event: any) => {
-          const text = event.results[0][0].transcript;
-          setTranscript(text);
-          setManualInput(text);
-          isActiveRef.current = false;
-          stopListening();
-          handleProcessText(text);
+          let interimTranscript = "";
+          let finalTranscript = "";
+
+          for (let i = event.resultIndex; i < event.results.length; ++i) {
+            if (event.results[i].isFinal) {
+              finalTranscript += event.results[i][0].transcript;
+            } else {
+              interimTranscript += event.results[i][0].transcript;
+            }
+          }
+
+          if (finalTranscript) {
+            setTranscript(finalTranscript);
+            setManualInput(finalTranscript);
+            accumulatedTranscriptRef.current = finalTranscript;
+          } else if (interimTranscript) {
+            setTranscript(interimTranscript);
+          }
         };
 
         rec.onerror = (event: any) => {
           console.warn("Speech recognition error:", event.error);
           isActiveRef.current = false;
+          stopMicVolumeMeter();
+          
           if (event.error === "not-allowed") {
-            setErrorMsg("Mikrofon erişimi engellendi. Tarayıcı izinlerini açın.");
+            setErrorMsg("Mikrofon izni verilmedi. Lütfen telefonunuzun Ayarlar > Uygulamalar > Bütçem > İzinler sayfasından mikrofon iznini etkinleştirin.");
+          } else if (event.error === "network") {
+            setErrorMsg("Ortamda internet bağlantısı bulunamadı veya kesik. Ses analizi için aktif internet bağlantısı zorunludur.");
+          } else if (event.error === "no-speech") {
+            setErrorMsg("Herhangi bir ses algılanamadı. Mikrofona biraz daha yakın durarak daha yüksek sesle konuşmayı deneyin.");
           } else {
-            setErrorMsg("Ses algılanamadı, lütfen tekrar deneyin.");
+            setErrorMsg(`Android ses servis hatası (${event.error || "bilinmiyor"}). Lütfen cihazınızda Google Asistan veya Speech Services by Google uygulamasının güncel olduğundan emin olun.`);
           }
           setStatus("error");
           setIsListening(false);
@@ -93,7 +198,13 @@ export default function VoiceAssistant({
         rec.onend = () => {
           isActiveRef.current = false;
           setIsListening(false);
+          stopMicVolumeMeter();
           
+          if (accumulatedTranscriptRef.current.trim()) {
+            handleProcessText(accumulatedTranscriptRef.current);
+            accumulatedTranscriptRef.current = "";
+          }
+
           // Safe, controlled async restart if requested
           if (shouldRestartRef.current) {
             shouldRestartRef.current = false;
@@ -113,6 +224,7 @@ export default function VoiceAssistant({
     // Component unmount cleanup
     return () => {
       shouldRestartRef.current = false;
+      stopMicVolumeMeter();
       if (recognitionRef.current) {
         try {
           recognitionRef.current.abort();
@@ -172,6 +284,9 @@ export default function VoiceAssistant({
 
     shouldRestartRef.current = false;
 
+    // Start Raw mic meter for instant visual wave feedback
+    startMicVolumeMeter();
+
     try {
       setIsListening(true);
       setStatus("listening");
@@ -203,6 +318,7 @@ export default function VoiceAssistant({
     }
     isActiveRef.current = false;
     setIsListening(false);
+    stopMicVolumeMeter();
   };
 
   const handleProcessText = async (textToProcess: string) => {
@@ -246,10 +362,59 @@ export default function VoiceAssistant({
   };
 
   const applyAction = (data: any) => {
-    const { action, debtData, installmentData, expenseData, incomeData } = data;
+    const { action, debtData, installmentData, expenseData, incomeData, updateDebtData } = data;
 
     try {
       switch (action) {
+        case "updateDebtPaid":
+          if (updateDebtData) {
+            const { name, paidAmount, isAbsolute } = updateDebtData;
+            const queryName = (name || "").toLowerCase().trim();
+            if (!queryName) {
+              triggerToast("Bulunacak borç adı belirtilmedi.");
+              break;
+            }
+
+            // Find matching debt case-insensitively using exact, substring, or reverse matching
+            let matchingDebt = debts.find(d => d.name.toLowerCase().trim() === queryName);
+            if (!matchingDebt) {
+              matchingDebt = debts.find(d => d.name.toLowerCase().includes(queryName));
+            }
+            if (!matchingDebt) {
+              matchingDebt = debts.find(d => queryName.includes(d.name.toLowerCase()));
+            }
+
+            if (matchingDebt) {
+              const previousPaid = matchingDebt.paid || 0;
+              let newPaidVal = 0;
+              if (isAbsolute) {
+                newPaidVal = Number(paidAmount);
+              } else {
+                newPaidVal = previousPaid + Number(paidAmount);
+              }
+
+              onSaveDebt({
+                ...matchingDebt,
+                paid: newPaidVal
+              });
+
+              const feedbackMsg = `"${matchingDebt.name}" borcunun ödenmiş miktarı ₺${newPaidVal} olarak güncellendi.`;
+              triggerToast(feedbackMsg);
+              if (audioEnabled) {
+                speakText(feedbackMsg);
+              }
+            } else {
+              const failMsg = `"${name}" unvanlı aktif bir borç kaydı bulunamadı. Lütfen adı kontrol edin.`;
+              triggerToast(failMsg);
+              if (audioEnabled) {
+                speakText(failMsg);
+              }
+              setStatus("error");
+              setErrorMsg(failMsg);
+            }
+          }
+          break;
+
         case "addDebt":
           if (debtData) {
             onSaveDebt({
@@ -437,17 +602,26 @@ export default function VoiceAssistant({
                       <div className="flex items-center gap-1.5 h-12">
                         {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((bar) => {
                           const delays = [0.1, 0.3, 0.5, 0.2, 0.4, 0.6, 0.15, 0.35, 0.45, 0.25];
+                          // Speak reactive scaling:
+                          const hasSignal = micVolume > 3;
+                          const calculatedHeight = hasSignal 
+                            ? Math.min(48, 10 + (micVolume * (delays[bar - 1] + 0.4)))
+                            : undefined;
+
                           return (
                             <motion.span
                               key={bar}
-                              animate={{ 
-                                height: ["12px", "44px", "12px"],
-                                backgroundColor: ["#6366f1", "#a855f7", "#ec4899", "#6366f1"]
+                              style={calculatedHeight ? { height: `${calculatedHeight}px`, transition: "height 0.08s ease" } : {}}
+                              animate={!calculatedHeight ? { 
+                                height: ["12px", "24px", "12px"],
+                                backgroundColor: ["#6366f1", "#4f46e5", "#6366f1"]
+                              } : {
+                                backgroundColor: ["#a855f7", "#ec4899", "#6366f1"]
                               }}
                               transition={{ 
                                 repeat: Infinity, 
                                 duration: 1.2, 
-                                delay: delays[bar-1],
+                                delay: delays[bar - 1],
                                 ease: "easeInOut"
                               }}
                               className="w-1.5 rounded-full"
@@ -455,9 +629,22 @@ export default function VoiceAssistant({
                           );
                         })}
                       </div>
-                      <p className="text-xs text-indigo-300 font-extrabold animate-pulse tracking-wide uppercase">
-                        Sizi dinliyorum, konuşun...
-                      </p>
+                      
+                      <div className="flex flex-col items-center gap-1">
+                        <p className="text-xs text-indigo-300 font-extrabold animate-pulse tracking-wide uppercase">
+                          Sizi dinliyorum, konuşun...
+                        </p>
+                        {micVolume > 3 ? (
+                          <span className="text-[9px] font-black tracking-widest text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20 flex items-center gap-1 animate-pulse">
+                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 inline-block animate-ping" />
+                            SES SİNYALİ ALINIYOR: %{Math.min(100, Math.round(micVolume * 1.5))}
+                          </span>
+                        ) : (
+                          <span className="text-[9px] font-black tracking-widest text-slate-400 bg-slate-800 px-2 py-0.5 rounded-full border border-slate-700">
+                            SES SİNYALİ BEKLENİYOR...
+                          </span>
+                        )}
+                      </div>
                     </div>
                   ) : status === "processing" ? (
                     <div className="space-y-3 flex flex-col items-center">
@@ -476,6 +663,7 @@ export default function VoiceAssistant({
                         {aiResponse.action === "addInstallment" && "KAYIT: TAKSİT PLANI"}
                         {aiResponse.action === "addExpense" && "KAYIT: HARCAMA"}
                         {aiResponse.action === "addIncome" && "KAYIT: GELİR KAYDI"}
+                        {aiResponse.action === "updateDebtPaid" && "GÜNCELLEME: BORÇ ÖDEMESİ"}
                       </span>
                       <p className="text-xs font-bold text-slate-200 leading-relaxed max-w-sm">
                         {aiResponse.explanation}
@@ -563,8 +751,20 @@ export default function VoiceAssistant({
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
                     <button
                       type="button"
+                      onClick={() => handleQuickCommand("Ahmet borcunun ödenen kısmını 500 TL yap")}
+                      className="p-2.5 bg-slate-950/20 hover:bg-indigo-950/20 border border-slate-800 hover:border-indigo-500/30 rounded-xl transition flex items-center gap-2 text-left text-slate-300 hover:text-white sm:col-span-2"
+                    >
+                      <UserCheck className="w-3.5 h-3.5 text-pink-400 shrink-0" />
+                      <div>
+                        <span className="font-bold block text-pink-200">Mevcut Borcu Güncelle</span>
+                        <span className="text-slate-500">"Ahmet borcunun ödenen kısmını 500 TL yap" / "Ahmet borcuna 200 TL ödedim"</span>
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
                       onClick={() => handleQuickCommand("Ahmet'e borç 4000 lira")}
-                      className="p-2.5 bg-slate-950/20 hover:bg-indigo-950/20 border border-slate-800 hover:border-indigo-500/30 rounded-xl transition flex items-center gap-2 text-left text-slate-300 hover:text-white"
+                      className="p-2.5 bg-slate-950/20 hover:bg-slate-950/40 border border-slate-800 hover:border-indigo-500/30 rounded-xl transition flex items-center gap-2 text-left text-slate-300 hover:text-white"
                     >
                       <UserCheck className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
                       <div>
