@@ -83,6 +83,7 @@ import { SecurityLockOverlay } from "./components/SecurityLockOverlay";
 import { SecuritySettingsPanel } from "./components/SecuritySettingsPanel";
 import { ContactsDebtPanel } from "./components/ContactsDebtPanel";
 import { AdMobBanner } from "./components/AdMobBanner";
+import VoiceAssistant from "./components/VoiceAssistant";
 
 export default function App() {
   const { activeCurrency, setActiveCurrency, rates, setRates, format, convert, currencySymbol } = useCurrency();
@@ -4388,6 +4389,18 @@ export default function App() {
           </div>
         )}
       </AnimatePresence>
+
+      {/* Voice Assistant Speech-to-Text Module */}
+      {isUnlocked && (
+        <VoiceAssistant
+          onSaveDebt={handleSaveDebt}
+          onSaveIncome={handleSaveIncome}
+          onSaveExpense={handleSaveExpense}
+          onSaveInstallment={handleSaveInstallment}
+          userApiKey={localStorage.getItem("user_gemini_api_key") || undefined}
+          triggerToast={triggerToast}
+        />
+      )}
 
       {/* Dynamic Security Screen Lock Barrier */}
       {!isUnlocked && (

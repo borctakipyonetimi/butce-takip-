@@ -418,6 +418,243 @@ Görevlerin ve Davranış Kuralların:
   }
 });
 
+// Resilient Offline Voice command parser for Turkish
+function parseVoiceCommandOffline(text: string): any {
+  const norm = text.toLowerCase().trim();
+  
+  // 1. Expense/Gider (gider, harcama, harcadım, ödedim, satın aldım)
+  if (norm.includes("gider") || norm.includes("harca") || norm.includes("öde") || norm.includes("ödeme") || norm.includes("aldım") || norm.includes("aldim")) {
+    const numMatch = norm.match(/(\d+[\d\s,.]*)\s*(tl|lira|₺)?/i);
+    let amount = 0;
+    if (numMatch) {
+      amount = parseFloat(numMatch[1].replace(/\s/g, "").replace(/,/g, "."));
+    }
+    
+    // category selection based on keyword
+    let categoryId = 1; // Default: Diğer/Kira
+    let desc = "Sesli Gider Kaydı";
+    if (norm.includes("market") || norm.includes("gıda") || norm.includes("gida") || norm.includes("yemek") || norm.includes("manav")) {
+      categoryId = 2; // Market
+      desc = "Sesli Market Gideri";
+    } else if (norm.includes("ulaşım") || norm.includes("ulasim") || norm.includes("yol") || norm.includes("taksi") || norm.includes("yakıt") || norm.includes("benzin")) {
+      categoryId = 3; // Ulaşım
+      desc = "Sesli Ulaşım Gideri";
+    } else if (norm.includes("yemek") || norm.includes("kafe") || norm.includes("cafe") || norm.includes("lokanta") || norm.includes("restoran")) {
+      categoryId = 4; // Yeme İçme
+      desc = "Sesli Yemek Gideri";
+    } else if (norm.includes("fatura") || norm.includes("elektrik") || norm.includes("su") || norm.includes("gaz") || norm.includes("telefon") || norm.includes("internet")) {
+      categoryId = 5; // Faturalar
+      desc = "Sesli Fatura Ödemesi";
+    }
+    
+    const cleanedDesc = text.replace(/\d+/g, "").replace(/(gider|harcama|tl|türk lirası|lira|₺|ekle|kaydet|için|icin|satın|aldım|aldim)/gi, "").trim();
+    if (cleanedDesc.length > 2) {
+      desc = cleanedDesc;
+    }
+    
+    if (amount > 0) {
+      return {
+        action: "addExpense",
+        expenseData: { amount, description: desc, categoryId },
+        explanation: `🔊 Çevrimdışı Mod: "${desc}" bütçenize ₺${amount} tutarında harcama olarak eklenmiştir.`
+      };
+    }
+  }
+
+  // 2. Income/Gelir (gelir, maaş, alacak, aldım, kazandım)
+  if (norm.includes("gelir") || norm.includes("maaş") || norm.includes("maas") || norm.includes("aldım") || norm.includes("aldim") || norm.includes("kazandım") || norm.includes("kazandim") || norm.includes("yattı") || norm.includes("yatti")) {
+    const numMatch = norm.match(/(\d+[\d\s,.]*)\s*(tl|lira|₺)?/i);
+    let amount = 0;
+    if (numMatch) {
+      amount = parseFloat(numMatch[1].replace(/\s/g, "").replace(/,/g, "."));
+    }
+    
+    let name = "Sesli Gelir Kaydı";
+    const cleanedName = text.replace(/\d+/g, "").replace(/(gelir|maaş|maas|tl|türk lirası|lira|₺|ekle|kaydet|aldım|aldim|kazandım|kazandim|yattı|yatti|için|icin)/gi, "").trim();
+    if (cleanedName.length > 2) {
+      name = cleanedName;
+    }
+
+    if (amount > 0) {
+      return {
+        action: "addIncome",
+        incomeData: { name, amount, date: new Date().toISOString().slice(0, 10) },
+        explanation: `🔊 Çevrimdışı Mod: "${name}" bütçenize ₺${amount} tutarında gelir olarak eklenmiştir.`
+      };
+    }
+  }
+
+  // 3. Taksit (taksit, ay taksit, taksitle)
+  if (norm.includes("taksit")) {
+    const numMatches = [...norm.matchAll(/(\d+[\d\s,.]*)/g)];
+    let totalAmount = 0;
+    let installmentCount = 12; // default
+    if (numMatches.length >= 1) {
+      totalAmount = parseFloat(numMatches[0][1].replace(/\s/g, "").replace(/,/g, "."));
+    }
+    if (numMatches.length >= 2) {
+      installmentCount = parseInt(numMatches[1][1].replace(/\s/g, ""));
+    }
+    
+    let name = "Taksitli Sesli Borç";
+    const cleanedName = text.replace(/\d+/g, "").replace(/(taksit|taksitli|tl|türk lirası|lira|₺|ekle|kaydet|borç|borc|için|icin)/gi, "").trim();
+    if (cleanedName.length > 2) {
+      name = cleanedName;
+    }
+
+    if (totalAmount > 0) {
+      return {
+        action: "addInstallment",
+        installmentData: {
+          name,
+          totalAmount,
+          installmentCount,
+          paidInstallmentCount: 0,
+          firstDueDate: new Date().toISOString().slice(0, 10)
+        },
+        explanation: `🔊 Çevrimdışı Mod: ${installmentCount} Ay taksitli "${name}" (Toplam: ₺${totalAmount}) planınız başarıyla tanımlandı.`
+      };
+    }
+  }
+
+  // 4. Debt/Borç (borç, borc, verecek, borçlandım, aldım)
+  if (norm.includes("borç") || norm.includes("borc") || norm.includes("borçlandım") || norm.includes("borclandim") || norm.includes("borçlandık") || norm.includes("borclandik")) {
+    const numMatch = norm.match(/(\d+[\d\s,.]*)\s*(tl|lira|₺)?/i);
+    let amount = 0;
+    if (numMatch) {
+      amount = parseFloat(numMatch[1].replace(/\s/g, "").replace(/,/g, "."));
+    }
+    
+    let name = "Sesli Borç Kaydı";
+    const cleanedName = text.replace(/\d+/g, "").replace(/(borç|borc|tl|türk lirası|lira|₺|ekle|kaydet|borçlandım|borclandim|için|icin)/gi, "").trim();
+    if (cleanedName.length > 2) {
+      name = cleanedName;
+    }
+
+    if (amount > 0) {
+      return {
+        action: "addDebt",
+        debtData: {
+          name,
+          amount,
+          paid: 0,
+          category: "Şahıs",
+          dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10) // 1 month from now
+        },
+        explanation: `🔊 Çevrimdışı Mod: "${name}" olarak ₺${amount} değerinde yeni bir borç eklenmiştir.`
+      };
+    }
+  }
+
+  return {
+    action: "unknown",
+    explanation: `🤔 Söylediğiniz ifadeyi tam olarak ayrıştıramadım: "${text}". Lütfen: "Market harcaması 150 lira", "Ahmet'e borç 4000 lira", "Gelir maaş 25000 lira" veya "Telefon taksiti 12000 lira 12 taksit" şeklinde net belirtin.`
+  };
+}
+
+// API Route for voice commands voice assistant parsing
+app.post("/api/voice-command", async (req, res) => {
+  const { text, userApiKey } = req.body;
+  
+  if (!text || text.trim() === "") {
+    return res.status(400).json({ error: "Boş komut algılandı." });
+  }
+
+  const aiClient = getGeminiClient(userApiKey);
+
+  if (!aiClient) {
+    console.log("[Voice Command API] Gemini API key not set or inactive. Falling back to offline fallback parser.");
+    const offlineResult = parseVoiceCommandOffline(text);
+    return res.json(offlineResult);
+  }
+
+  try {
+    const promptText = 
+      "Sen 'Bütçem Pro' finans asistanısın. Kullanıcının türkçe sesli bütçe kaydı / komutunu analiz edip bunu yapılandırılmış JSON verisine dönüştüreceksin.\n\n" +
+      "Kullanıcı şunları yapabilir:\n" +
+      "1. Borç ekleme (addDebt): 'Ahmet'e 5000 lira borç verdim/aldım', 'Banka kredisi borcu 100000 TL', vb.\n" +
+      "2. Taksit/Taksitli borç ekleme (addInstallment): 'Koltuk takımı 12000 lira 6 taksit', 'Telefon için 24000 TL 12 taksit', vb.\n" +
+      "3. Harcama/Gider ekleme (addExpense): 'Market harcaması 250 lira', 'Benzin aldım 800 TL', 'Yemek 350 lira', vb.\n" +
+      "4. Gelir ekleme (addIncome): 'Maaş yattı 35000 lira', 'Kira geliri aldım 15000 TL', vb.\n\n" +
+      "Senin görevin, söylenen ifadeyi bu 4 eylemden birine sığdırmak (action: 'addDebt' | 'addInstallment' | 'addExpense' | 'addIncome' | 'unknown') ve ilgili bilgileri çıkarmaktır. Gerekirse tarihleri bugünün tarihi varsay.\n" +
+      "Ayrıca, kullanıcının eylemi duyduğunu onaylayan sevimli, samimi bir yapay zeka Türkçe sesli asistan onay mesajı yaz (explanation). Örn: 'Anlaşıldı! Koltuk takımı bütçenize 12 taksitli toplam 12.000 ₺ olarak eklenmiştir.'";
+
+    const response = await aiClient.models.generateContent({
+      model: "gemini-3.5-flash",
+      contents: [
+        { text: promptText },
+        { text: `Kullanıcının Sözü: "${text}"` }
+      ],
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            action: {
+              type: Type.STRING,
+              description: "Eylem tipi: 'addDebt', 'addInstallment', 'addExpense', 'addIncome' veya bilinmiyorsa 'unknown'."
+            },
+            debtData: {
+              type: Type.OBJECT,
+              description: "addDebt eylemi için borç verileri.",
+              properties: {
+                name: { type: Type.STRING, description: "Borç veren/alan veya açıklama unvanı" },
+                amount: { type: Type.NUMBER, description: "Borç miktarı" },
+                paid: { type: Type.NUMBER, description: "Ödenmiş miktar (Varsayılan 0)" },
+                category: { type: Type.STRING, description: "Banka, Eş-Dost, Vergi, Kredi Kartı vb." },
+                dueDate: { type: Type.STRING, description: "Son ödeme tarihi (Format: YYYY-MM-DD)" }
+              }
+            },
+            installmentData: {
+              type: Type.OBJECT,
+              description: "addInstallment eylemi için taksit verileri.",
+              properties: {
+                name: { type: Type.STRING, description: "Taksit planı açıklaması" },
+                totalAmount: { type: Type.NUMBER, description: "Toplam borç miktarı" },
+                installmentCount: { type: Type.INTEGER, description: "Taksit sayısı" },
+                paidInstallmentCount: { type: Type.INTEGER, description: "Ödenen taksit sayısı (Varsayılan 0)" },
+                firstDueDate: { type: Type.STRING, description: "İlk taksit tarihi (Format: YYYY-MM-DD)" }
+              }
+            },
+            expenseData: {
+              type: Type.OBJECT,
+              description: "addExpense eylemi için gider verileri.",
+              properties: {
+                amount: { type: Type.NUMBER, description: "Tutar" },
+                description: { type: Type.STRING, description: "Açıklama" },
+                categoryId: { type: Type.INTEGER, description: "Kategori ID'si (1: Kira/Yurt, 2: Market, 3: Ulaşım, 4: Yeme İçme, 5: Faturalar)" }
+              }
+            },
+            incomeData: {
+              type: Type.OBJECT,
+              description: "addIncome eylemi için gelir verileri.",
+              properties: {
+                name: { type: Type.STRING, description: "Gelir unvanı/kaynağı" },
+                amount: { type: Type.NUMBER, description: "Tutar" },
+                date: { type: Type.STRING, description: "Gelir tarihi (Format: YYYY-MM-DD)" }
+              }
+            },
+            explanation: {
+              type: Type.STRING,
+              description: "Kullanıcıya söylenecek Türkçe sevimli onay cümlesi."
+            }
+          },
+          required: ["action", "explanation"]
+        },
+        temperature: 0.1,
+      },
+    });
+
+    const parsedData = JSON.parse(response.text || "{}");
+    return res.json(parsedData);
+  } catch (error: any) {
+    console.error("[Voice Command API Error]:", error);
+    // Silent bypass to offline fallback parser
+    const offlineResult = parseVoiceCommandOffline(text);
+    return res.json(offlineResult);
+  }
+});
+
 // API Route for receipt & bill OCR scanning using Gemini 3.5-Flash
 app.post("/api/scan-receipt", async (req, res) => {
   const { image, mimeType: userMimeType } = req.body;
