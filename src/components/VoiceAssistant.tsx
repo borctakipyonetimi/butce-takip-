@@ -48,56 +48,71 @@ export default function VoiceAssistant({
 
   const recognitionRef = useRef<any>(null);
   const isActiveRef = useRef(false);
+  const shouldRestartRef = useRef(false);
 
   useEffect(() => {
-    // Check SpeechRecognition cross-browser support
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechRecognition) {
+    try {
+      // Check SpeechRecognition cross-browser support
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      if (!SpeechRecognition) {
+        setIsSupported(false);
+      } else {
+        const rec = new SpeechRecognition();
+        rec.continuous = false;
+        rec.lang = "tr-TR";
+        rec.interimResults = false;
+
+        rec.onstart = () => {
+          isActiveRef.current = true;
+          setIsListening(true);
+          setStatus("listening");
+          setErrorMsg("");
+        };
+
+        rec.onresult = (event: any) => {
+          const text = event.results[0][0].transcript;
+          setTranscript(text);
+          setManualInput(text);
+          isActiveRef.current = false;
+          stopListening();
+          handleProcessText(text);
+        };
+
+        rec.onerror = (event: any) => {
+          console.warn("Speech recognition error:", event.error);
+          isActiveRef.current = false;
+          if (event.error === "not-allowed") {
+            setErrorMsg("Mikrofon erişimi engellendi. Tarayıcı izinlerini açın.");
+          } else {
+            setErrorMsg("Ses algılanamadı, lütfen tekrar deneyin.");
+          }
+          setStatus("error");
+          setIsListening(false);
+        };
+
+        rec.onend = () => {
+          isActiveRef.current = false;
+          setIsListening(false);
+          
+          // Safe, controlled async restart if requested
+          if (shouldRestartRef.current) {
+            shouldRestartRef.current = false;
+            setTimeout(() => {
+              startListening();
+            }, 30);
+          }
+        };
+
+        recognitionRef.current = rec;
+      }
+    } catch (e) {
+      console.warn("SpeechRecognition initialization failed or blocked in this webview-container:", e);
       setIsSupported(false);
-    } else {
-      const rec = new SpeechRecognition();
-      rec.continuous = false;
-      rec.lang = "tr-TR";
-      rec.interimResults = false;
-
-      rec.onstart = () => {
-        isActiveRef.current = true;
-        setIsListening(true);
-        setStatus("listening");
-        setErrorMsg("");
-      };
-
-      rec.onresult = (event: any) => {
-        const text = event.results[0][0].transcript;
-        setTranscript(text);
-        setManualInput(text);
-        isActiveRef.current = false;
-        stopListening();
-        handleProcessText(text);
-      };
-
-      rec.onerror = (event: any) => {
-        console.error("Speech recognition error", event);
-        isActiveRef.current = false;
-        if (event.error === "not-allowed") {
-          setErrorMsg("Mikrofon erişimi engellendi. Tarayıcı izinlerini açın.");
-        } else {
-          setErrorMsg("Ses algılanamadı, lütfen tekrar deneyin.");
-        }
-        setStatus("error");
-        setIsListening(false);
-      };
-
-      rec.onend = () => {
-        isActiveRef.current = false;
-        setIsListening(false);
-      };
-
-      recognitionRef.current = rec;
     }
 
     // Component unmount cleanup
     return () => {
+      shouldRestartRef.current = false;
       if (recognitionRef.current) {
         try {
           recognitionRef.current.abort();
@@ -143,45 +158,47 @@ export default function VoiceAssistant({
     setErrorMsg("");
     setAiResponse(null);
 
-    // If already active, abort immediately to reset the engine state
+    // If the browser recognition is already active, request an abort first
+    // and flag a restart once 'onend' has clean up resources.
     if (isActiveRef.current) {
+      shouldRestartRef.current = true;
       try {
         recognitionRef.current.abort();
       } catch (e) {
-        console.warn("Speech abort error ignored:", e);
+        console.warn("Speech abort error ignored during restart trigger:", e);
       }
-      isActiveRef.current = false;
+      return;
     }
 
-    // Give a short grace period for the engine to shutdown before starting again
-    setTimeout(() => {
-      try {
+    shouldRestartRef.current = false;
+
+    try {
+      setIsListening(true);
+      setStatus("listening");
+      recognitionRef.current.start();
+      isActiveRef.current = true;
+    } catch (e: any) {
+      if (e.message && e.message.includes("already started")) {
+        console.warn("Speech engine is already started state:", e.message);
+        isActiveRef.current = true;
         setIsListening(true);
         setStatus("listening");
-        recognitionRef.current.start();
-        isActiveRef.current = true;
-      } catch (e: any) {
-        console.error("Speech start error:", e);
-        if (e.message && e.message.includes("already started")) {
-          isActiveRef.current = true;
-          setIsListening(true);
-          setStatus("listening");
-        } else {
-          setErrorMsg("Mikrofon başlatılamadı.");
-          setStatus("error");
-          setIsListening(false);
-          isActiveRef.current = false;
-        }
+      } else {
+        setErrorMsg("Mikrofon başlatılamadı.");
+        setStatus("error");
+        setIsListening(false);
+        isActiveRef.current = false;
       }
-    }, 120);
+    }
   };
 
   const stopListening = () => {
+    shouldRestartRef.current = false;
     if (recognitionRef.current) {
       try {
         recognitionRef.current.abort(); // Use abort to force end instantly
       } catch (e) {
-        console.error("Speech stop error:", e);
+        console.warn("Speech stop warning ignored:", e);
       }
     }
     isActiveRef.current = false;
@@ -318,7 +335,7 @@ export default function VoiceAssistant({
   return (
     <>
       {/* Floating Microphone Trigger Pin Button */}
-      <div className="fixed bottom-6 right-6 z-40">
+      <div className="fixed bottom-20 sm:bottom-24 right-4 sm:right-6 z-40">
         <motion.button
           onClick={toggleOpen}
           whileHover={{ scale: 1.12 }}

@@ -198,6 +198,9 @@ export default function App() {
   const [useSystemSound, setUseSystemSound] = useState<boolean>(() => {
     return localStorage.getItem("useSystemSound") === "1";
   });
+  const [voiceAssistantEnabled, setVoiceAssistantEnabled] = useState<boolean>(() => {
+    return localStorage.getItem("voiceAssistantEnabled") !== "0";
+  });
   const [notifFilter, setNotifFilter] = useState<"all" | "alarm" | "system">("all");
 
   // OneSignal Environment & Active States
@@ -3630,6 +3633,28 @@ export default function App() {
                     <option value="system">Sistem Melodisi (Simüle)</option>
                   </select>
                 </div>
+
+                <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 flex items-center justify-between sm:col-span-2">
+                  <div>
+                    <span className="text-xs font-bold text-slate-700 dark:text-slate-200 block">Akıllı Sesli Asistan Servisi</span>
+                    <span className="text-[10px] text-slate-400 font-medium leading-none block mt-0.5">Ekrandaki mikrofon ikonu ile sesli ve yazılı asistanı yönetin</span>
+                  </div>
+                  <button
+                    onClick={() => {
+                      const next = !voiceAssistantEnabled;
+                      setVoiceAssistantEnabled(next);
+                      localStorage.setItem("voiceAssistantEnabled", next ? "1" : "0");
+                      triggerToast(next ? "Sesli Asistan Servisi Aktifleştirildi 🎙️" : "Sesli Asistan Servisi Devre Dışı Bırakıldı 🔕");
+                    }}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-black cursor-pointer transition select-none ${
+                      voiceAssistantEnabled
+                        ? "bg-gradient-to-tr from-indigo-500 to-purple-500 text-white shadow-md shadow-indigo-500/10"
+                        : "bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300"
+                    }`}
+                  >
+                    {voiceAssistantEnabled ? "AÇIK 🎙️" : "KAPALI 🔕"}
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -4391,7 +4416,7 @@ export default function App() {
       </AnimatePresence>
 
       {/* Voice Assistant Speech-to-Text Module */}
-      {isUnlocked && (
+      {isUnlocked && voiceAssistantEnabled && (
         <VoiceAssistant
           onSaveDebt={handleSaveDebt}
           onSaveIncome={handleSaveIncome}
