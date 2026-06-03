@@ -84,9 +84,41 @@ import { SecuritySettingsPanel } from "./components/SecuritySettingsPanel";
 import { ContactsDebtPanel } from "./components/ContactsDebtPanel";
 import { AdMobBanner } from "./components/AdMobBanner";
 import VoiceAssistant from "./components/VoiceAssistant";
+import confetti from "canvas-confetti";
 
 export default function App() {
   const { activeCurrency, setActiveCurrency, rates, setRates, format, convert, currencySymbol } = useCurrency();
+
+  const triggerConfetti = () => {
+    try {
+      confetti({
+        particleCount: 150,
+        spread: 80,
+        origin: { y: 0.6 },
+        colors: ["#6366f1", "#a855f7", "#ec4899", "#10b981", "#f59e0b"]
+      });
+      setTimeout(() => {
+        confetti({
+          particleCount: 60,
+          angle: 60,
+          spread: 55,
+          origin: { x: 0, y: 0.75 },
+          colors: ["#6366f1", "#a855f7", "#ec4899", "#10b981", "#f59e0b"]
+        });
+      }, 120);
+      setTimeout(() => {
+        confetti({
+          particleCount: 60,
+          angle: 120,
+          spread: 55,
+          origin: { x: 1, y: 0.75 },
+          colors: ["#6366f1", "#a855f7", "#ec4899", "#10b981", "#f59e0b"]
+        });
+      }, 180);
+    } catch (e) {
+      console.warn("Confetti animation failed to trigger:", e);
+    }
+  };
 
   // Avatar and profile picture state
   const [userAvatar, setUserAvatar] = useState<string>(() => {
@@ -1705,6 +1737,7 @@ export default function App() {
     let updatedPayments = [...payments];
     let updatedAlarms = [...alarms];
     let updatedNotifs = [...notifications];
+    let shouldCelebrate = false;
 
     const debtName = debtData.name || "İsimsiz Borç";
     const dueDate = debtData.dueDate || "";
@@ -1713,7 +1746,17 @@ export default function App() {
       // It's an update. Check if payment changed
       const oldDebt = debts.find((d) => d.id === debtData.id);
       const oldPaid = oldDebt ? oldDebt.paid : 0;
+      const oldAmount = oldDebt ? oldDebt.amount : 0;
       const newPaid = debtData.paid || 0;
+      const newAmount = debtData.amount || oldAmount;
+
+      const wasPaid = oldPaid >= oldAmount && oldAmount > 0;
+      const isPaidNow = newPaid >= newAmount && newAmount > 0;
+
+      if (!wasPaid && isPaidNow) {
+        shouldCelebrate = true;
+      }
+
       const diff = newPaid - oldPaid;
 
       if (diff > 0) {
@@ -1747,10 +1790,17 @@ export default function App() {
       // It's a new debt creation.
       const newId = generateId(debts);
       const newPaid = debtData.paid || 0;
+      const newAmount = debtData.amount || 0;
+      const isPaidNow = newPaid >= newAmount && newAmount > 0;
+
+      if (isPaidNow) {
+        shouldCelebrate = true;
+      }
+
       const newD: Debt = {
         id: newId,
         name: debtName,
-        amount: debtData.amount || 0,
+        amount: newAmount,
         paid: newPaid,
         category: debtData.category || "Diğer",
         dueDate: dueDate
@@ -1801,6 +1851,9 @@ export default function App() {
     setDebts(updated);
     setPayments(updatedPayments);
     saveAllToUser(updated, incomes, updatedAlarms, updatedNotifs, installmentDebts, updatedPayments, expenses, expenseCategories);
+    if (shouldCelebrate) {
+      triggerConfetti();
+    }
   };
 
   const handleDeleteDebt = (id: number) => {
@@ -1828,6 +1881,7 @@ export default function App() {
 
   const handleToggleDebtPaid = (id: number) => {
     let updatedPayments = [...payments];
+    let shouldCelebrate = false;
     const updated = debts.map((d) => {
       if (d.id === id) {
         const isPaid = d.paid >= d.amount;
@@ -1843,6 +1897,7 @@ export default function App() {
             type: "manual"
           };
           updatedPayments.push(newPayment);
+          shouldCelebrate = true;
         } else {
           // If toggled unpaid, remove manual payments for this debt
           updatedPayments = updatedPayments.filter((p) => !(p.debtId === id && p.type === "manual"));
@@ -1859,6 +1914,9 @@ export default function App() {
     setDebts(updated);
     setPayments(updatedPayments);
     saveAllToUser(updated, incomes, alarms, notifications, installmentDebts, updatedPayments, expenses, expenseCategories);
+    if (shouldCelebrate) {
+      triggerConfetti();
+    }
   };
 
   const handleSaveIncome = (incData: Partial<Income>) => {

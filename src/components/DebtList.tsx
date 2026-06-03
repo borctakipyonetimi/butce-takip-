@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from "react";
-import { motion } from "motion/react";
+import { motion, AnimatePresence } from "motion/react";
 import { PlusCircle, Printer, FileText, CheckCircle2, Circle, AlertCircle, Edit, Trash2, Calendar, ClipboardList, ArrowUpDown, Sparkles, Camera } from "lucide-react";
 import { Debt, InstallmentDebt } from "../types";
 import { useCurrency } from "../utils/CurrencyContext";
@@ -672,9 +672,14 @@ export const DebtList: React.FC<DebtListProps> = ({
                     } catch { return false; }
                   })();
                   return (
-                    <div
+                    <motion.div
                       key={d.id}
-                      className={`p-4 bg-white dark:bg-slate-800 rounded-2xl border-l-[6px] border border-slate-200/50 dark:border-slate-700/50 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+                      layout
+                      initial={{ opacity: 0, scale: 0.98, y: 12 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
+                      transition={{ type: "spring", stiffness: 350, damping: 25 }}
+                      className={`p-4 bg-white dark:bg-slate-800 rounded-2xl border-l-[6px] border border-slate-200/50 dark:border-slate-700/50 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-colors duration-300 ${
                         isPaid ? "border-l-emerald-500" : "border-l-rose-500"
                       }`}
                     >
@@ -720,17 +725,44 @@ export const DebtList: React.FC<DebtListProps> = ({
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
-                        <button
+                        <motion.button
+                          whileHover={{ scale: 1.04 }}
+                          whileTap={{ scale: 0.96 }}
                           onClick={() => onToggleDebtPaid(d.id)}
-                          className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1 shrink-0 ${
-                            isPaid ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-400" : "bg-indigo-600 text-white hover:bg-indigo-700"
+                          className={`px-3.5 py-1.5 rounded-xl text-xs font-extrabold flex items-center gap-1.5 shrink-0 select-none cursor-pointer transition-all duration-300 ${
+                            isPaid 
+                              ? "bg-emerald-50/80 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400 border border-emerald-500/10" 
+                              : "bg-indigo-600 text-white hover:bg-indigo-750 shadow-md shadow-indigo-600/10"
                           }`}
                         >
-                          {isPaid ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Circle className="w-3.5 h-3.5" />}
-                          {isPaid ? "Ödeme Geri Al" : "Ödendi Yap"}
-                        </button>
+                          <AnimatePresence mode="wait">
+                            {isPaid ? (
+                              <motion.span
+                                key="checked"
+                                initial={{ scale: 0.4, rotate: -45 }}
+                                animate={{ scale: 1, rotate: 0 }}
+                                exit={{ scale: 0.4 }}
+                                transition={{ type: "spring", stiffness: 400, damping: 15 }}
+                                className="flex items-center justify-center"
+                              >
+                                <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                              </motion.span>
+                            ) : (
+                              <motion.span
+                                key="unchecked"
+                                initial={{ scale: 0.8 }}
+                                animate={{ scale: 1 }}
+                                exit={{ scale: 0.8 }}
+                                className="flex items-center justify-center"
+                              >
+                                <Circle className="w-4 h-4" />
+                              </motion.span>
+                            )}
+                          </AnimatePresence>
+                          <span>{isPaid ? "Ödeme Geri Al" : "Ödendi Yap"}</span>
+                        </motion.button>
                       </div>
-                    </div>
+                    </motion.div>
                   );
                 })}
 

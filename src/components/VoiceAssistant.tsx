@@ -22,6 +22,167 @@ import {
 import { Debt } from "../types";
 import { getApiUrl } from "../utils/api";
 
+function parseVoiceCommandOfflineClient(text: string): any {
+  const norm = text.toLowerCase().trim();
+  
+  // 1. Expense/Gider (gider, harcama, harcadım, ödedim, satın aldım)
+  if (norm.includes("gider") || norm.includes("harca") || norm.includes("öde") || norm.includes("ödeme") || norm.includes("aldım") || norm.includes("aldim")) {
+    const numMatch = norm.match(/(\d+[\d\s,.]*)\s*(tl|lira|₺)?/i);
+    let amount = 0;
+    if (numMatch) {
+      amount = parseFloat(numMatch[1].replace(/\s/g, "").replace(/,/g, "."));
+    }
+    
+    // category selection based on keyword
+    let categoryId = 1; // Default: Diğer/Kira
+    let desc = "Sesli Gider Kaydı";
+    if (norm.includes("market") || norm.includes("gıda") || norm.includes("gida") || norm.includes("yemek") || norm.includes("manav")) {
+      categoryId = 2; // Market
+      desc = "Sesli Market Gideri";
+    } else if (norm.includes("ulaşım") || norm.includes("ulasim") || norm.includes("yol") || norm.includes("taksi") || norm.includes("yakıt") || norm.includes("benzin")) {
+      categoryId = 3; // Ulaşım
+      desc = "Sesli Ulaşım Gideri";
+    } else if (norm.includes("yemek") || norm.includes("kafe") || norm.includes("cafe") || norm.includes("lokanta") || norm.includes("restoran")) {
+      categoryId = 4; // Yeme İçme
+      desc = "Sesli Yemek Gideri";
+    } else if (norm.includes("fatura") || norm.includes("elektrik") || norm.includes("su") || norm.includes("gaz") || norm.includes("telefon") || norm.includes("internet")) {
+      categoryId = 5; // Faturalar
+      desc = "Sesli Fatura Ödemesi";
+    }
+    
+    const cleanedDesc = text.replace(/\d+/g, "").replace(/(gider|harcama|tl|türk lirası|lira|₺|ekle|kaydet|için|icin|satın|aldım|aldim)/gi, "").trim();
+    if (cleanedDesc.length > 2) {
+      desc = cleanedDesc;
+    }
+    
+    if (amount > 0) {
+      return {
+        action: "addExpense",
+        expenseData: { amount, description: desc, categoryId },
+        explanation: `🔊 Çevrimdışı Analiz: "${desc}" bütçenize ₺${amount} tutarında harcama olarak eklenmiştir.`
+      };
+    }
+  }
+
+  // 2. Income/Gelir (gelir, maaş, alacak, aldım, kazandım)
+  if (norm.includes("gelir") || norm.includes("maaş") || norm.includes("maas") || norm.includes("aldım") || norm.includes("aldim") || norm.includes("kazandım") || norm.includes("kazandim") || norm.includes("yatta") || norm.includes("yatti") || norm.includes("yattı")) {
+    const numMatch = norm.match(/(\d+[\d\s,.]*)\s*(tl|lira|₺)?/i);
+    let amount = 0;
+    if (numMatch) {
+      amount = parseFloat(numMatch[1].replace(/\s/g, "").replace(/,/g, "."));
+    }
+    
+    let name = "Sesli Gelir Kaydı";
+    const cleanedName = text.replace(/\d+/g, "").replace(/(gelir|maaş|maas|tl|türk lirası|lira|₺|ekle|kaydet|aldım|aldim|kazandım|kazandim|yattı|yatti|için|icin)/gi, "").trim();
+    if (cleanedName.length > 2) {
+      name = cleanedName;
+    }
+
+    if (amount > 0) {
+      return {
+        action: "addIncome",
+        incomeData: { name, amount, date: new Date().toISOString().slice(0, 10) },
+        explanation: `🔊 Çevrimdışı Analiz: "${name}" bütçenize ₺${amount} tutarında gelir olarak eklenmiştir.`
+      };
+    }
+  }
+
+  // 3. Taksit (taksit, ay taksit, taksitle)
+  if (norm.includes("taksit")) {
+    const numMatches = [...norm.matchAll(/(\d+[\d\s,.]*)/g)];
+    let totalAmount = 0;
+    let installmentCount = 12; // default
+    if (numMatches.length >= 1) {
+      totalAmount = parseFloat(numMatches[0][1].replace(/\s/g, "").replace(/,/g, "."));
+    }
+    if (numMatches.length >= 2) {
+      installmentCount = parseInt(numMatches[1][1].replace(/\s/g, ""));
+    }
+    
+    let name = "Taksitli Sesli Borç";
+    const cleanedName = text.replace(/\d+/g, "").replace(/(taksit|taksitli|tl|türk lirası|lira|₺|ekle|kaydet|borç|borc|için|icin)/gi, "").trim();
+    if (cleanedName.length > 2) {
+      name = cleanedName;
+    }
+
+    if (totalAmount > 0) {
+      return {
+        action: "addInstallment",
+        installmentData: {
+          name,
+          totalAmount,
+          installmentCount,
+          paidInstallmentCount: 0,
+          firstDueDate: new Date().toISOString().slice(0, 10)
+        },
+        explanation: `🔊 Çevrimdışı Analiz: ${installmentCount} Ay taksitli "${name}" (Toplam: ₺${totalAmount}) planınız başarıyla tanımlandı.`
+      };
+    }
+  }
+
+  // 4. Debt update (e.g., 'Ahmet borcunun ödenen kısmını 500 TL yap' or 'Mehmet borcuna 200 TL ödedim')
+  if ((norm.includes("borç") || norm.includes("borc")) && (norm.includes("ödenen") || norm.includes("yap") || norm.includes("güncelle") || norm.includes("guncelle") || norm.includes("öde") || norm.includes("ode") || norm.includes("tutar") || norm.includes("miktar"))) {
+    const numMatch = norm.match(/(\d+[\d\s,.]*)\s*(tl|lira|₺)?/i);
+    if (numMatch) {
+      const paidAmount = parseFloat(numMatch[1].replace(/\s/g, "").replace(/,/g, "."));
+      const isAbsolute = norm.includes("yap") || norm.includes("olsun") || norm.includes("eşitle") || norm.includes("esitle");
+      
+      let debtName = "";
+      // Extract name from the beginning of text up to the "borç" / "borc"
+      const matchName = text.match(/^(.*?)(?:borç|borc|ödenen|ode|yap|güncelle|tutar|miktar)/i);
+      if (matchName && matchName[1].trim().length > 1) {
+        debtName = matchName[1].replace(/['"’]/g, "").trim();
+      }
+
+      if (debtName && paidAmount > 0) {
+        return {
+          action: "updateDebtPaid",
+          updateDebtData: {
+            name: debtName,
+            paidAmount,
+            isAbsolute
+          },
+          explanation: `🔊 Çevrimdışı Analiz: "${debtName}" borcunun ödenen kısmı ₺${paidAmount} olarak ${isAbsolute ? 'güncellenecektir.' : 'artırılacaktır.'}`
+        };
+      }
+    }
+  }
+
+  // 5. Debt/Borç (borç, borc, verecek, borçlandım, aldım)
+  if (norm.includes("borç") || norm.includes("borc") || norm.includes("borçlandım") || norm.includes("borclandim") || norm.includes("borçlandık") || norm.includes("borclandik")) {
+    const numMatch = norm.match(/(\d+[\d\s,.]*)\s*(tl|lira|₺)?/i);
+    let amount = 0;
+    if (numMatch) {
+      amount = parseFloat(numMatch[1].replace(/\s/g, "").replace(/,/g, "."));
+    }
+    
+    let name = "Sesli Borç Kaydı";
+    const cleanedName = text.replace(/\d+/g, "").replace(/(borç|borc|tl|türk lirası|lira|₺|ekle|kaydet|borçlandım|borclandim|için|icin)/gi, "").trim();
+    if (cleanedName.length > 2) {
+      name = cleanedName;
+    }
+
+    if (amount > 0) {
+      return {
+        action: "addDebt",
+        debtData: {
+          name,
+          amount,
+          paid: 0,
+          category: "Şahıs",
+          dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10) // 1 month from now
+        },
+        explanation: `🔊 Çevrimdışı Analiz: "${name}" olarak ₺${amount} değerinde yeni bir borç eklenmiştir.`
+      };
+    }
+  }
+
+  return {
+    action: "unknown",
+    explanation: `🤔 Söylediğiniz ifadeyi tam olarak ayrıştıramadım: "${text}". Lütfen: "Market harcaması 150 lira", "Ahmet'e borç 4000 lira", "Gelir maaş 25000 lira" veya "Telefon taksiti 12000 lira 12 taksit" şeklinde net belirtin.`
+  };
+}
+
 interface VoiceAssistantProps {
   debts?: Debt[];
   onSaveDebt: (debtData: any, autoCreateAlarm?: boolean) => void;
@@ -51,8 +212,6 @@ export default function VoiceAssistant({
   const [isSupported, setIsSupported] = useState(true);
   const [audioEnabled, setAudioEnabled] = useState(true);
   const [micVolume, setMicVolume] = useState<number>(0);
-  const [showServerSettings, setShowServerSettings] = useState(false);
-  const [customUrlInput, setCustomUrlInput] = useState(() => localStorage.getItem("customServerUrl") || "");
 
   const recognitionRef = useRef<any>(null);
   const isActiveRef = useRef(false);
@@ -358,9 +517,29 @@ export default function VoiceAssistant({
         }
       }
     } catch (err: any) {
-      console.error(err);
-      setErrorMsg(err.message || "Bütçe kaydı ayrıştırılırken bir servis hatası oluştu.");
-      setStatus("error");
+      console.warn("Sunucu bağlantısı kurulamadı, yerel/çevrimdışı ses analizine geçiliyor:", err);
+      try {
+        const offlineResult = parseVoiceCommandOfflineClient(textToProcess);
+        setAiResponse(offlineResult);
+
+        if (offlineResult.action && offlineResult.action !== "unknown") {
+          applyAction(offlineResult);
+          setStatus("success");
+          if (audioEnabled) {
+            speakText(offlineResult.explanation);
+          }
+        } else {
+          setStatus("error");
+          setErrorMsg(offlineResult.explanation || "Söylediğiniz ifadeyi bütçe şablonlarıyla eşleştiremedim.");
+          if (audioEnabled) {
+            speakText(offlineResult.explanation || "Söylediğiniz ifadeyi bütçe şablonlarıyla eşleştiremedim.");
+          }
+        }
+      } catch (fallbackErr) {
+        console.error("Yerel ses analizi de başarısız:", fallbackErr);
+        setErrorMsg("Bütçe kaydı ayrıştırılırken bir servis hatası oluştu.");
+        setStatus("error");
+      }
     }
   };
 
@@ -483,19 +662,7 @@ export default function VoiceAssistant({
     handleProcessText(sampleCmd);
   };
 
-  const handleSaveCustomServer = (e: React.FormEvent) => {
-    e.preventDefault();
-    const val = customUrlInput.trim();
-    if (val) {
-      localStorage.setItem("customServerUrl", val);
-      triggerToast("Sunucu API Adresi kaydedildi ve aktif edildi.");
-    } else {
-      localStorage.removeItem("customServerUrl");
-      triggerToast("Sunucu API adresi varsayılana sıfırlandı.");
-    }
-    setErrorMsg("");
-    setStatus("idle");
-  };
+
 
   const toggleOpen = () => {
     if ("speechSynthesis" in window) {
@@ -701,63 +868,7 @@ export default function VoiceAssistant({
                         >
                           Tekrar Dene
                         </button>
-                        {errorMsg.includes("Sunucu bağlantısı") && !showServerSettings && (
-                          <button
-                            onClick={() => setShowServerSettings(true)}
-                            className="py-1 px-3.5 bg-indigo-950/40 hover:bg-indigo-900/40 border border-indigo-500/20 text-xs text-indigo-300 rounded-lg transition active:scale-95 cursor-pointer mt-1"
-                          >
-                            Sunucu Ayarı Yap
-                          </button>
-                        )}
                       </div>
-
-                      {showServerSettings && (
-                        <div className="w-full mt-3 pt-3 border-t border-slate-800/60 max-w-sm">
-                          <form onSubmit={handleSaveCustomServer} className="text-left space-y-2 bg-slate-950/40 p-3 rounded-xl border border-slate-900">
-                            <p className="text-[10px] text-slate-400 leading-relaxed font-medium">
-                              APK uygulamasında veya mobil cihazınızda bütçe sunucusu bulunamadıysa, sesli asistanın bağlanacağı adresi güncelleyebilirsiniz:
-                            </p>
-                            <div>
-                              <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider block mb-1">
-                                Sunucu API Adresi (Base URL)
-                              </label>
-                              <div className="flex gap-1.5">
-                                <input
-                                  type="url"
-                                  value={customUrlInput}
-                                  onChange={(e) => setCustomUrlInput(e.target.value)}
-                                  placeholder="Varsayılan: https://ais-pre-... (veya özel)"
-                                  className="flex-1 bg-slate-950 border border-slate-800 focus:border-indigo-500 rounded-lg px-2.5 py-1.5 text-[10px] font-bold text-slate-200 placeholder-slate-700 focus:outline-hidden"
-                                />
-                                <button
-                                  type="submit"
-                                  className="px-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-[10px] font-bold transition whitespace-nowrap cursor-pointer"
-                                >
-                                  Kaydet
-                                </button>
-                              </div>
-                            </div>
-                            <div className="flex justify-between items-center text-[9px] text-slate-500">
-                              <span>Aktif: {localStorage.getItem("customServerUrl") ? "Özel Adres" : "Varsayılan Bulut"}</span>
-                              {localStorage.getItem("customServerUrl") && (
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setCustomUrlInput("");
-                                    localStorage.removeItem("customServerUrl");
-                                    triggerToast("Varsayılan adrese sıfırlandı.");
-                                    setErrorMsg("");
-                                    setStatus("idle");
-                                  }}
-                                  className="text-rose-400 hover:text-rose-300 underline cursor-pointer"
-                                >
-                                  Sıfırla
-                                </button>
-                              )}
-                            </div>
-                          </form>
-                        </div>
-                      )}
                     </div>
                   ) : (
                     <div className="flex flex-col items-center space-y-3">
