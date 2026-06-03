@@ -433,161 +433,161 @@ Görevlerin ve Davranış Kuralların:
 function parseVoiceCommandOffline(text: string): any {
   const norm = text.toLowerCase().trim();
   
-  // 1. Expense/Gider (gider, harcama, harcadım, ödedim, satın aldım)
-  if (norm.includes("gider") || norm.includes("harca") || norm.includes("öde") || norm.includes("ödeme") || norm.includes("aldım") || norm.includes("aldim")) {
-    const numMatch = norm.match(/(\d+[\d\s,.]*)\s*(tl|lira|₺)?/i);
-    let amount = 0;
-    if (numMatch) {
-      amount = parseFloat(numMatch[1].replace(/\s/g, "").replace(/,/g, "."));
-    }
-    
-    // category selection based on keyword
-    let categoryId = 1; // Default: Diğer/Kira
-    let desc = "Sesli Gider Kaydı";
-    if (norm.includes("market") || norm.includes("gıda") || norm.includes("gida") || norm.includes("yemek") || norm.includes("manav")) {
-      categoryId = 2; // Market
-      desc = "Sesli Market Gideri";
-    } else if (norm.includes("ulaşım") || norm.includes("ulasim") || norm.includes("yol") || norm.includes("taksi") || norm.includes("yakıt") || norm.includes("benzin")) {
-      categoryId = 3; // Ulaşım
-      desc = "Sesli Ulaşım Gideri";
-    } else if (norm.includes("yemek") || norm.includes("kafe") || norm.includes("cafe") || norm.includes("lokanta") || norm.includes("restoran")) {
-      categoryId = 4; // Yeme İçme
-      desc = "Sesli Yemek Gideri";
-    } else if (norm.includes("fatura") || norm.includes("elektrik") || norm.includes("su") || norm.includes("gaz") || norm.includes("telefon") || norm.includes("internet")) {
-      categoryId = 5; // Faturalar
-      desc = "Sesli Fatura Ödemesi";
-    }
-    
-    const cleanedDesc = text.replace(/\d+/g, "").replace(/(gider|harcama|tl|türk lirası|lira|₺|ekle|kaydet|için|icin|satın|aldım|aldim)/gi, "").trim();
-    if (cleanedDesc.length > 2) {
-      desc = cleanedDesc;
-    }
-    
-    if (amount > 0) {
-      return {
-        action: "addExpense",
-        expenseData: { amount, description: desc, categoryId },
-        explanation: `🔊 Çevrimdışı Mod: "${desc}" bütçenize ₺${amount} tutarında harcama olarak eklenmiştir.`
-      };
-    }
+  // Clean text of punctuation and replace some typical Turkish speech transcription artifacts
+  const cleanNorm = norm
+    .replace(/['"’\.]/g, "")
+    .replace(/lira/gi, "tl")
+    .replace(/türk lirası/gi, "tl");
+
+  // Extract all numbers
+  const numMatches = [...cleanNorm.matchAll(/(\d+[\d\s,.]*)/g)];
+  if (numMatches.length === 0) {
+    return {
+      action: "unknown",
+      explanation: `🤔 Söylediğiniz ifadede herhangi bir tutar/sayı algılayamadım: "${text}". Lütfen: "Market 150 lira" veya "Ahmet borç 2000 TL" gibi bir tutar belirterek söyleyin.`
+    };
   }
 
-  // 2. Income/Gelir (gelir, maaş, alacak, aldım, kazandım)
-  if (norm.includes("gelir") || norm.includes("maaş") || norm.includes("maas") || norm.includes("aldım") || norm.includes("aldim") || norm.includes("kazandım") || norm.includes("kazandim") || norm.includes("yattı") || norm.includes("yatti")) {
-    const numMatch = norm.match(/(\d+[\d\s,.]*)\s*(tl|lira|₺)?/i);
-    let amount = 0;
-    if (numMatch) {
-      amount = parseFloat(numMatch[1].replace(/\s/g, "").replace(/,/g, "."));
+  // Parse the first number found (amount)
+  let amount = 0;
+  const rawNum1 = numMatches[0][1].replace(/\s/g, "");
+  if (rawNum1.includes(",") && rawNum1.includes(".")) {
+    amount = parseFloat(rawNum1.replace(/\./g, "").replace(/,/g, "."));
+  } else if (rawNum1.includes(",")) {
+    const parts = rawNum1.split(",");
+    if (parts[1].length <= 2) {
+      amount = parseFloat(rawNum1.replace(/,/g, "."));
+    } else {
+      amount = parseFloat(rawNum1.replace(/,/g, ""));
     }
-    
-    let name = "Sesli Gelir Kaydı";
-    const cleanedName = text.replace(/\d+/g, "").replace(/(gelir|maaş|maas|tl|türk lirası|lira|₺|ekle|kaydet|aldım|aldim|kazandım|kazandim|yattı|yatti|için|icin)/gi, "").trim();
-    if (cleanedName.length > 2) {
-      name = cleanedName;
-    }
-
-    if (amount > 0) {
-      return {
-        action: "addIncome",
-        incomeData: { name, amount, date: new Date().toISOString().slice(0, 10) },
-        explanation: `🔊 Çevrimdışı Mod: "${name}" bütçenize ₺${amount} tutarında gelir olarak eklenmiştir.`
-      };
-    }
+  } else {
+    amount = parseFloat(rawNum1);
   }
 
-  // 3. Taksit (taksit, ay taksit, taksitle)
-  if (norm.includes("taksit")) {
-    const numMatches = [...norm.matchAll(/(\d+[\d\s,.]*)/g)];
-    let totalAmount = 0;
+  amount = isNaN(amount) ? 0 : amount;
+
+  if (amount <= 0) {
+    return {
+      action: "unknown",
+      explanation: `🤔 Söylediğiniz ifadedeki tutar geçersiz: "${text}". Lütfen geçerli bir miktar belirtin.`
+    };
+  }
+
+  // 1. Taksit (taksit, ay taksit, taksitle)
+  if (cleanNorm.includes("taksit")) {
     let installmentCount = 12; // default
-    if (numMatches.length >= 1) {
-      totalAmount = parseFloat(numMatches[0][1].replace(/\s/g, "").replace(/,/g, "."));
-    }
     if (numMatches.length >= 2) {
-      installmentCount = parseInt(numMatches[1][1].replace(/\s/g, ""));
+      const parsedCount = parseInt(numMatches[1][1].replace(/\s/g, ""));
+      if (!isNaN(parsedCount) && parsedCount > 0) {
+        installmentCount = parsedCount;
+      }
     }
     
-    let name = "Taksitli Sesli Borç";
+    let name = "Taksit Planı";
     const cleanedName = text.replace(/\d+/g, "").replace(/(taksit|taksitli|tl|türk lirası|lira|₺|ekle|kaydet|borç|borc|için|icin)/gi, "").trim();
     if (cleanedName.length > 2) {
-      name = cleanedName;
+      name = cleanedName.charAt(0).toUpperCase() + cleanedName.slice(1);
     }
 
-    if (totalAmount > 0) {
-      return {
-        action: "addInstallment",
-        installmentData: {
-          name,
-          totalAmount,
-          installmentCount,
-          paidInstallmentCount: 0,
-          firstDueDate: new Date().toISOString().slice(0, 10)
-        },
-        explanation: `🔊 Çevrimdışı Mod: ${installmentCount} Ay taksitli "${name}" (Toplam: ₺${totalAmount}) planınız başarıyla tanımlandı.`
-      };
-    }
+    return {
+      action: "addInstallment",
+      installmentData: {
+        name,
+        totalAmount: amount,
+        installmentCount,
+        paidInstallmentCount: 0,
+        firstDueDate: new Date().toISOString().slice(0, 10)
+      },
+      explanation: `🔊 Çevrimdışı Mod: ${installmentCount} Ay taksitli "${name}" (Toplam: ₺${amount}) planınız başarıyla tanımlandı.`
+    };
   }
 
-  // 4. Debt update (e.g., 'Ahmet borcunun ödenen kısmını 500 TL yap' or 'Mehmet borcuna 200 TL ödedim')
-  if ((norm.includes("borç") || norm.includes("borc")) && (norm.includes("ödenen") || norm.includes("yap") || norm.includes("güncelle") || norm.includes("guncelle") || norm.includes("öde") || norm.includes("ode") || norm.includes("tutar") || norm.includes("miktar"))) {
-    const numMatch = norm.match(/(\d+[\d\s,.]*)\s*(tl|lira|₺)?/i);
-    if (numMatch) {
-      const paidAmount = parseFloat(numMatch[1].replace(/\s/g, "").replace(/,/g, "."));
-      const isAbsolute = norm.includes("yap") || norm.includes("olsun") || norm.includes("eşitle") || norm.includes("esitle");
-      
-      let debtName = "";
-      // Extract name from the beginning of text up to the "borç" / "borc"
-      const matchName = text.match(/^(.*?)(?:borç|borc|ödenen|ode|yap|güncelle|tutar|miktar)/i);
-      if (matchName && matchName[1].trim().length > 1) {
-        debtName = matchName[1].replace(/['"’]/g, "").trim();
-      }
-
-      if (debtName && paidAmount > 0) {
-        return {
-          action: "updateDebtPaid",
-          updateDebtData: {
-            name: debtName,
-            paidAmount,
-            isAbsolute
-          },
-          explanation: `🔊 Çevrimdışı Mod: "${debtName}" borcunun ödenen kısmı ₺${paidAmount} olarak ${isAbsolute ? 'güncellenecektir.' : 'artırılacaktır.'}`
-        };
-      }
-    }
-  }
-
-  // 5. Debt/Borç (borç, borc, verecek, borçlandım, aldım)
-  if (norm.includes("borç") || norm.includes("borc") || norm.includes("borçlandım") || norm.includes("borclandim") || norm.includes("borçlandık") || norm.includes("borclandik")) {
-    const numMatch = norm.match(/(\d+[\d\s,.]*)\s*(tl|lira|₺)?/i);
-    let amount = 0;
-    if (numMatch) {
-      amount = parseFloat(numMatch[1].replace(/\s/g, "").replace(/,/g, "."));
-    }
-    
-    let name = "Sesli Borç Kaydı";
-    const cleanedName = text.replace(/\d+/g, "").replace(/(borç|borc|tl|türk lirası|lira|₺|ekle|kaydet|borçlandım|borclandim|için|icin)/gi, "").trim();
+  // 2. Income/Gelir (gelir, maaş, alacak, aldım, kazandım, yattı, yatti, yatta)
+  if (cleanNorm.includes("gelir") || cleanNorm.includes("maaş") || cleanNorm.includes("maas") || cleanNorm.includes("kazandım") || cleanNorm.includes("kazandim") || cleanNorm.includes("yattı") || cleanNorm.includes("yatti") || cleanNorm.includes("yatta") || cleanNorm.includes("alacak")) {
+    let name = "Sesli Gelir";
+    const cleanedName = text.replace(/\d+/g, "").replace(/(gelir|maaş|maas|tl|türk lirası|lira|₺|ekle|kaydet|aldım|aldim|kazandım|kazandim|yattı|yatti|yatta|için|icin|alacak)/gi, "").trim();
     if (cleanedName.length > 2) {
-      name = cleanedName;
+      name = cleanedName.charAt(0).toUpperCase() + cleanedName.slice(1);
     }
 
-    if (amount > 0) {
+    return {
+      action: "addIncome",
+      incomeData: { name, amount, date: new Date().toISOString().slice(0, 10) },
+      explanation: `🔊 Çevrimdışı Mod: "${name}" bütçenize ₺${amount} tutarında gelir olarak eklenmiştir.`
+    };
+  }
+
+  // 3. Debt update (e.g., 'Ahmet borcunun ödenen kısmını 500 TL yap' or 'Mehmet borcuna 200 TL ödedim')
+  if ((cleanNorm.includes("borç") || cleanNorm.includes("borc")) && (cleanNorm.includes("ödenen") || cleanNorm.includes("yap") || cleanNorm.includes("güncelle") || cleanNorm.includes("guncelle") || cleanNorm.includes("öde") || cleanNorm.includes("ode") || cleanNorm.includes("tutar") || cleanNorm.includes("miktar"))) {
+    const isAbsolute = cleanNorm.includes("yap") || cleanNorm.includes("olsun") || cleanNorm.includes("eşitle") || cleanNorm.includes("esitle");
+    
+    let debtName = "";
+    const matchName = text.match(/^(.*?)(?:borç|borc|ödenen|ode|yap|güncelle|tutar|miktar)/i);
+    if (matchName && matchName[1].trim().length > 1) {
+      debtName = matchName[1].replace(/['"’]/g, "").trim();
+    }
+
+    if (debtName) {
       return {
-        action: "addDebt",
-        debtData: {
-          name,
-          amount,
-          paid: 0,
-          category: "Şahıs",
-          dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10) // 1 month from now
+        action: "updateDebtPaid",
+        updateDebtData: {
+          name: debtName,
+          paidAmount: amount,
+          isAbsolute
         },
-        explanation: `🔊 Çevrimdışı Mod: "${name}" olarak ₺${amount} değerinde yeni bir borç eklenmiştir.`
+        explanation: `🔊 Çevrimdışı Mod: "${debtName}" borcunun ödenen kısmı ₺${amount} olarak ${isAbsolute ? 'güncellenecektir.' : 'artırılacaktır.'}`
       };
     }
+  }
+
+  // 4. Debt/Borç (borç, borc, verecek, borçlandım, aldım, borclandim, borçlandık, borclandik)
+  if (cleanNorm.includes("borç") || cleanNorm.includes("borc") || cleanNorm.includes("borçlandım") || cleanNorm.includes("borclandim") || cleanNorm.includes("borçlandık") || cleanNorm.includes("borclandik") || cleanNorm.includes("verecek")) {
+    let name = "Sesli Borç";
+    const cleanedName = text.replace(/\d+/g, "").replace(/(borç|borc|tl|türk lirası|lira|₺|ekle|kaydet|borçlandım|borclandim|borçlandık|borclandik|için|icin|verecek)/gi, "").trim();
+    if (cleanedName.length > 2) {
+      name = cleanedName.charAt(0).toUpperCase() + cleanedName.slice(1);
+    }
+
+    return {
+      action: "addDebt",
+      debtData: {
+        name,
+        amount,
+        paid: 0,
+        category: "Şahıs",
+        dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+      },
+      explanation: `🔊 Çevrimdışı Mod: "${name}" olarak ₺${amount} değerinde yeni bir borç eklenmiştir.`
+    };
+  }
+
+  // 5. Default Fallback -> It is an Expense! (market, gıda, yemek, fatura, benzin, vb. or simply general phrase with numbers)
+  let categoryId = 1; // Default: Diğer
+  let desc = "Gider Kaydı";
+  
+  if (cleanNorm.includes("market") || cleanNorm.includes("gıda") || cleanNorm.includes("gida") || cleanNorm.includes("manav") || cleanNorm.includes("süpermarket") || cleanNorm.includes("supermarket")) {
+    categoryId = 2; // Market
+    desc = "Market Gideri";
+  } else if (cleanNorm.includes("ulaşım") || cleanNorm.includes("ulasim") || cleanNorm.includes("yol") || cleanNorm.includes("taksi") || cleanNorm.includes("yakıt") || cleanNorm.includes("benzin") || cleanNorm.includes("otobüs") || cleanNorm.includes("bilet")) {
+    categoryId = 3; // Ulaşım
+    desc = "Ulaşım Gideri";
+  } else if (cleanNorm.includes("yemek") || cleanNorm.includes("kafe") || cleanNorm.includes("cafe") || cleanNorm.includes("lokanta") || cleanNorm.includes("restoran") || cleanNorm.includes("döner") || cleanNorm.includes("pizz")) {
+    categoryId = 4; // Yeme İçme
+    desc = "Yemek Gideri";
+  } else if (cleanNorm.includes("fatura") || cleanNorm.includes("elektrik") || cleanNorm.includes("su") || cleanNorm.includes("gaz") || cleanNorm.includes("telefon") || cleanNorm.includes("internet") || cleanNorm.includes("aidat")) {
+    categoryId = 5; // Faturalar
+    desc = "Fatura Ödemesi";
+  }
+
+  const cleanedDesc = text.replace(/\d+/g, "").replace(/(gider|harcama|tl|türk lirası|lira|₺|ekle|kaydet|için|icin|satın|aldım|aldim|fatura|ödedim|odedim|ödeme|odeme)/gi, "").trim();
+  if (cleanedDesc.length > 2) {
+    desc = cleanedDesc.charAt(0).toUpperCase() + cleanedDesc.slice(1);
   }
 
   return {
-    action: "unknown",
-    explanation: `🤔 Söylediğiniz ifadeyi tam olarak ayrıştıramadım: "${text}". Lütfen: "Market harcaması 150 lira", "Ahmet'e borç 4000 lira", "Gelir maaş 25000 lira" veya "Telefon taksiti 12000 lira 12 taksit" şeklinde net belirtin.`
+    action: "addExpense",
+    expenseData: { amount, description: desc, categoryId },
+    explanation: `🔊 Çevrimdışı Mod: "${desc}" bütçenize ₺${amount} tutarında harcama olarak eklenmiştir.`
   };
 }
 
