@@ -30,9 +30,10 @@ function describeArc(x: number, y: number, radius: number, startAngle: number, e
 
 interface DoughnutChartProps {
   data: { label: string; value: number; color: string }[];
+  type?: "income" | "expense";
 }
 
-export const DoughnutChart: React.FC<DoughnutChartProps> = ({ data }) => {
+export const DoughnutChart: React.FC<DoughnutChartProps> = ({ data, type = "expense" }) => {
   const { format } = useCurrency();
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
 
@@ -83,33 +84,41 @@ export const DoughnutChart: React.FC<DoughnutChartProps> = ({ data }) => {
             })}
           </defs>
 
-          {/* Futuristic Slow Spinning Outer Starburst HUD Ring */}
-          <motion.circle
-            cx="75"
-            cy="75"
-            r="64"
-            fill="none"
-            stroke="rgba(148, 163, 184, 0.15)"
-            strokeWidth="1"
-            strokeDasharray="4 8"
+          {/* Futuristic Slow Spinning Outer Starburst HUD Ring - Enclosed inside custom centered motion.g */}
+          <motion.g
+            style={{ transformOrigin: "75px 75px" }}
             animate={{ rotate: 360 }}
             transition={{ duration: 32, repeat: Infinity, ease: "linear" }}
-            className="origin-center pointer-events-none"
-          />
+          >
+            <circle
+              cx="75"
+              cy="75"
+              r="64"
+              fill="none"
+              stroke="rgba(148, 163, 184, 0.15)"
+              strokeWidth="1"
+              strokeDasharray="4 8"
+              className="pointer-events-none"
+            />
+          </motion.g>
 
-          {/* Micro Orbit Track Ring (Inner Core) */}
-          <motion.circle
-            cx="75"
-            cy="75"
-            r="23"
-            fill="none"
-            stroke="rgba(148, 163, 184, 0.18)"
-            strokeWidth="0.75"
-            strokeDasharray="2 3"
+          {/* Micro Orbit Track Ring (Inner Core) - Enclosed inside custom centered motion.g */}
+          <motion.g
+            style={{ transformOrigin: "75px 75px" }}
             animate={{ rotate: -360 }}
             transition={{ duration: 16, repeat: Infinity, ease: "linear" }}
-            className="origin-center pointer-events-none"
-          />
+          >
+            <circle
+              cx="75"
+              cy="75"
+              r="23"
+              fill="none"
+              stroke="rgba(148, 163, 184, 0.18)"
+              strokeWidth="0.75"
+              strokeDasharray="2 3"
+              className="pointer-events-none"
+            />
+          </motion.g>
 
           {/* Centered Slices rendering inside translated SVG Group */}
           <g transform="translate(75, 75)">
@@ -198,13 +207,13 @@ export const DoughnutChart: React.FC<DoughnutChartProps> = ({ data }) => {
               className="space-y-0.5"
             >
               <span className="text-[9px] text-slate-450 dark:text-slate-500 font-black uppercase tracking-widest block">
-                TOPLAM GİDER
+                {type === "income" ? "TOPLAM GELİR" : "TOPLAM GİDER"}
               </span>
               <span className="text-base font-black text-slate-900 dark:text-white font-mono block leading-none">
                 {format(total)}
               </span>
               <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 block">
-                {data.length} Kategori Masrafı
+                {data.length} {type === "income" ? "Gelir Grubu" : "Kategori Masrafı"}
               </span>
             </motion.div>
           )}

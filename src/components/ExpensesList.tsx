@@ -43,6 +43,10 @@ interface ExpensesListProps {
 const getSavingTipForCategory = (name: string, icon: string): string => {
   const norm = name.toLowerCase().trim();
 
+  // Calculate a day-based rotation index (0 to 4) depending on the calendar date
+  const date = new Date();
+  const dayIndex = (date.getDate() + date.getMonth()) % 5;
+
   // 1. Market & Gıda & Mutfak
   if (
     norm.includes("market") ||
@@ -53,8 +57,17 @@ const getSavingTipForCategory = (name: string, icon: string): string => {
     norm.includes("manav") ||
     icon === "🛒"
   ) {
-    return "Market alışverişlerinize gitmeden önce mutlaka haftalık menü planlayın ve tok karnına bir liste ile gidin. Özel markalı (Private Label) ürünlere şans vererek sepet tutarını %30'a kadar düşürebilirsiniz.";
+    const marketTips = [
+      "Market alışverişlerinize gitmeden önce mutlaka haftalık menü planlayın ve tok karnına bir liste ile gidin. Özel markalı (Private Label) ürünlere şans vererek sepet tutarını %30'a kadar düşürebilirsiniz.",
+      "Kiloluk veya büyük boy paketler satın alırken birim fiyat analizi yapın. Genellikle alt raflarda yer alan alternatif markaların birim kilo fiyatları göz hizasındakilere göre çok daha avantajlıdır.",
+      "Haftalık taze sebze-meyve ihtiyaçlarınızı akşam saatlerinde semt pazarından yapmayı tercih edin. Büyük zincir marketlere kıyasla taze ürünleri %40 tasarrufla temin edebilirsiniz.",
+      "Süpermarket sadakat kartlarını ve mobil uygulama indirim kuponlarını senkronize edin. Harcama geçmişinize tanımlanan özel kuponlar sayesinde temel gıda bütçenizi büyük ölçüde hafifletin.",
+      "Gıda israfını önlemek için evdeki malzemeleri tamamen tüketmeden yeni bir market turu planlamayın. Buzdolabındaki malzemeleri yaratıcı tariflerle değerlendirerek bütçeyi koruyun."
+    ];
+    return marketTips[dayIndex];
   }
+
+  // 2. Restoran & Dışarıda Yemek & Kafe
   if (
     norm.includes("yemek") ||
     norm.includes("restoran") ||
@@ -66,8 +79,17 @@ const getSavingTipForCategory = (name: string, icon: string): string => {
     icon === "🥩" ||
     icon === "🍷"
   ) {
-    return "Dışarıda yemek siparişlerini haftada maksimum 1 güne düşürün. İş yerinde öğle yemeğini evden götürmek veya kendi kahvenizi termosta taşımak, bütçenizde devasa bir tasarruf alanı açacaktır.";
+    const foodOutTips = [
+      "Dışarıda yemek siparişlerini haftada maksimum 1 güne düşürün. İş yerinde öğle yemeğini evden pratik kaplarda götürmek veya kendi filtre kahvenizi termosta taşımak devasa bir tasarruf alanı açacaktır.",
+      "Hafta içi dışarıdaki restoranlarda iş yemeği yemek yerine, mekanların öğle menüsü indirim saatlerini takip edin veya şirketlerin sunduğu yemek hakkı bakiyelerini rasyonel planlayın.",
+      "Arkadaş buluşmalarını pahalı restoranlar yerine park, sahil ve koru gibi sosyal alanlarda planlayarak kişi başı içecek ve servis ücreti ödemelerini %75'e varan oranda azaltabilirsiniz.",
+      "Paket servis sipariş uygulamalarındaki abonelikleri ve kayıtlı kartları iptal edin. Bu üyelikler sizde her akşam dürtüsel olarak hazır yemek siparişi verme motivasyonu yaratır.",
+      "Hafta sonu akşam buluşmalarını masraflı mekanlar yerine ev ortamında 'herkes sevdiği bir yiyeceği/içeceği getirsin' konseptli tematik geceler düzenleyerek organize edin."
+    ];
+    return foodOutTips[dayIndex];
   }
+
+  // 3. Kira & Konut & Ev Düzeni
   if (
     norm.includes("kira") ||
     norm.includes("ev") ||
@@ -76,8 +98,17 @@ const getSavingTipForCategory = (name: string, icon: string): string => {
     norm.includes("aidat") ||
     icon === "🏠"
   ) {
-    return "Evinizdeki enerji tüketimini optimize edin. LED ampuller kullanmak, akıllı prizler tercih etmek ve kullanılmayan cihazları fişten çekmek elektrik faturanızı yaklaşık %15 oranında iyileştirecektir.";
+    const homeTips = [
+      "Evinizdeki enerji tüketimini optimize edin. Standart ampulleri LED'lerle değiştirmek, akıllı prizler tercih etmek ve televizyon gibi cihazları bekleme modundan çıkarmak faturayı %15 düşürür.",
+      "Ortak aidat giderlerini ve bütçe planlarını inceleyin. Site ya da apartman yönetim toplantılarına aktif katılıp harcama şeffaflığı talep etmek gereksiz ortak masrafları önler.",
+      "Kışın oda termostatını sadece 1 derece düşürün. Bu küçük ayar, ısınma faturanızda doğrudan %7 oranında tasarruf sağlar. Kapı ve pencere boşluklarını sünger bantlarla yalıtın.",
+      "Kullanmadığınız ortak alan aboneliklerini kapatın ve evdeki temizlik işlerinde yüksek fiyatlı kimyasallar yerine sirke ve karbonat gibi doğal, ekonomik alternatifleri benimseyin.",
+      "Kira artış dönemlerinde ev sahibiyle dürüst ve yapıcı ilişkiler kurun. Taşınma masraflarını ve yeni emlakçı komisyonlarını göze almak yerine her iki taraf için rasyonel bir oranı hedefleyin."
+    ];
+    return homeTips[dayIndex];
   }
+
+  // 4. Ulaşım & Yol & Metro
   if (
     norm.includes("ulaşım") ||
     norm.includes("yol") ||
@@ -87,8 +118,17 @@ const getSavingTipForCategory = (name: string, icon: string): string => {
     icon === "🚗" ||
     icon === "✈️"
   ) {
-    return "Toplu taşıma kullanırken aylık abonman paketlerini tercih edin. Kısa mesafelerde taksi yerine yürümek hem sağlığınıza hem de cüzdanınıza doğrudan katkı sağlayacaktır.";
+    const transportTips = [
+      "Toplu taşıma kullanırken tekli biletler yerine mutlaka aylık sınırsız abonman paketlerini tercih edin. Günlük yolculuk maliyetiniz böylece yarı yarıya düşecektir.",
+      "Yakın mesafelerde taksi çağırmak yerine yürümeyi veya bisiklet/scooter gibi alternatifleri alışkanlık haline getirin. Hem cüzdanınızı hem de kondisyonunuzu olumlu etkilersiniz.",
+      "Aynı bölgede yaşayan iş arkadaşlarınızla ortak araç kullanımı (ride-sharing) planlayarak yakıt, yol geçiş ve otopark harcamalarını adil şekilde paylaşın.",
+      "Kartlı geçiş sistemlerindeki (HGS/OGS) otomatik bakiye yüklemelerini ve ekstrelerini kontrol edin. Hatalı gişelerden kaynaklanan mükerrer ödeme kesintilerini önleyin.",
+      "Şehirlerarası veya uluslararası yolculuk planlarınızı en az 3-4 hafta öncesinden planlayarak uçak ve otobüs biletlerinizi en ucuz erken rezervasyon oranlarıyla sabitleyin."
+    ];
+    return transportTips[dayIndex];
   }
+
+  // 5. Araba & Yakıt & Bakım
   if (
     norm.includes("araba") ||
     norm.includes("araç") ||
@@ -99,8 +139,17 @@ const getSavingTipForCategory = (name: string, icon: string): string => {
     norm.includes("sigorta") ||
     icon === "🔧"
   ) {
-    return "Akaryakıt tasarrufu için aracınızı stabil hızlarda sürün, ani fren ve kalkışlardan kaçının. Lastik havalarını düzenli kontrol etmek yakıt tüketimini %3-4 oranında azaltır.";
+    const carTips = [
+      "Akaryakıt tasarrufu için aracınızı stabil hız limitlerinde sürün, ani fren ve sert kalkışlardan kaçının. Lastik havalarını düzenli kontrol etmek yakıt harcamasını %3-4 azaltır.",
+      "Aracınızın yağ, hava ve polen filtresi gibi periyodik bakımlarını zamanında yaptırın. Tıkalı filtreler motorun çekiş gücünü düşürür ve daha fazla yakıt harcamasına yol açar.",
+      "Akaryakıt ve yakıt alımlarınızı bankaların dönemlik kredi kartı kampanyalarıyla birleştirin. Belirli sayıda alıma verilen nakit puanları doğrudan sonraki yakıt dolumuna yansıtın.",
+      "Kasko ve Zorunlu Trafik Sigortası tekliflerini yenilemeden önce tek bir acenteye bağlı kalmayın; en az 4-5 farklı sigorta şirketinden karşılaştırmalı teklifler toplayın.",
+      "Aracınızın bagajında biriken ve ihtiyaç duyulmayan gereksiz pasif ağırlıkları boşaltın. Bagajdaki her ekstra 50 kg yük, yakıt sarfiyatını %1.5 ila %2 artırır."
+    ];
+    return carTips[dayIndex];
   }
+
+  // 6. Fatura & Elektrik & Abonelikler
   if (
     norm.includes("fatura") ||
     norm.includes("elektrik") ||
@@ -110,8 +159,17 @@ const getSavingTipForCategory = (name: string, icon: string): string => {
     norm.includes("telefon") ||
     icon === "⚡"
   ) {
-    return "Otomatik ödeme talimatlarınızı kontrol edin. Kullanmadığınız TV/müzik aboneliklerini (Netflix, Spotify vb.) askıya alın veya aile planlarıyla ortaklaşa kullanarak harcamayı paylaşın.";
+    const billsTips = [
+      "Kullanmadığınız ve aylardır açmadığınız TV/video ve müzik aboneliklerinizi (Netflix, Spotify vb.) askıya alın. Mevcut planları ise aile/ortak paketlerine taşıyarak faturayı bölüşün.",
+      "İletişim ve internet taahhüt bitiş tarihlerini takviminize işleyin. Taahhüt dolmadan 1 ay önce yeni müşteri geçiş kampanyalarını araştırıp fiyat kilitlerinden sıyrılın.",
+      "Bulaşık ve çamaşır makinelerini sadece tamamen dilediğinde çalıştırın. Kısa yıkama ve eko-mod programları sayesinde elektrik ve su faturalarınızı doğrudan yarıya yaklaştırın.",
+      "Elektrik tüketiminde üç zamanlı (tarihsel avantajlı) tarife bütçenize uygunsa, enerji canavarı olan cihazları (ütü, kurutma makinesi) 22:00'den sonra çalıştırın.",
+      "Fatura otomatik ödemelerini devretmek yerine, her ay bizzat kontrol ederek tutarların gelişimini inceleyin. Paranın çıkışını gözlemlemek, gereksiz su ve akım harcamalarını frenler."
+    ];
+    return billsTips[dayIndex];
   }
+
+  // 7. Giyim & Alışveriş & Moda
   if (
     norm.includes("giyim") ||
     norm.includes("elbise") ||
@@ -122,8 +180,17 @@ const getSavingTipForCategory = (name: string, icon: string): string => {
     icon === "🛍️" ||
     icon === "💇"
   ) {
-    return "Giymediğiniz kıyafetleri ikinci el uygulamalarında satarak bütçenize ek katkı sağlayın. Yeni bir şey almadan önce kapsül gardırop yaklaşımını inceleyerek gereksiz tüketimin önüne geçebilirsiniz.";
+    const clothesTips = [
+      "Dolabınızda artık kullanmadığınız giyim eşyalarını temizleyerek ikinci el satış platformlarında satın. Elde ettiğiniz bütçeyi sonraki zaruri ihtiyaçlarınıza yönlendirin.",
+      "Bir kıyafeti beğenip satın almadan önce en az 48 saat kuralını uygulayın. Ürünü sepete atıp bekleyin; heyecanınızın dindiğini ve dürtüsel iştahın %80 oranda kaybolduğunu göreceksiniz.",
+      "Sezon sonu indirim zamanlamalarını rasyonel takip edin. Örneğin kışlık kaban, mont ya da bot ihtiyaçlarınızı ilkbahar dönemindeki tasfiye satışlarından yarı fiyatına alın.",
+      "Alışverişe çıkmadan önce dolabınızı detaylı inceleyin ve birbirine çok benzeyen renkli veya tarzdaki parçaların kaydını tutun. Sadece eksik olan parçaları hedefleyin.",
+      "Modası çabuk geçecek ucuz ve kalitesiz ürünler yerine zamansız, kumaş ve dikiş kalitesi yüksek parçalar alın. Kısa süreli yıpranmaların yaratacağı mükerrer masrafları önleyin."
+    ];
+    return clothesTips[dayIndex];
   }
+
+  // 8. Eğlence & Sosyal Aktivite & Kültür
   if (
     norm.includes("eğlence") ||
     norm.includes("sinema") ||
@@ -134,8 +201,17 @@ const getSavingTipForCategory = (name: string, icon: string): string => {
     icon === "🍿" ||
     icon === "🎸"
   ) {
-    return "Belediyelerin ücretsiz kültür-sanat etkinliklerini ve ücretsiz müze günlerini takip edin. Arkadaş gruplarınızla dışarıda buluşmak yerine ev ortamında tematik aktiviteler düzenleyebilirsiniz.";
+    const funTips = [
+      "Belediyelerin ve kültür müdürlüklerinin düzenlediği ücretsiz söyleşi, tiyatro, açık hava sineması ve konser takvimlerini dijital bültenlerden takip edin.",
+      "Sinema biletlerinde, dijital oyun üyeliklerinde veya kafelerdeki tatlı siparişlerinde GSM operatörlerinin ve bankaların '1 alana 1 bedava' kodlarını aktif şekilde kullanın.",
+      "Arkadaş gruplarınızla dış mekan etkinlik harcamaları yerine evde masa oyunları, film izleme saatleri veya tematik akşam sohbetleri gibi sıfır bütçeli konseptler üretin.",
+      "Aktif oynamadığınız veya artık zevk almadığınız konsol/PC oyun üyeliklerini vakit kaybetmeden iptal edin. Bu küçük kalemler filtre edilmediğinde büyük sızıntı yaratır.",
+      "Okumak istediğiniz kitap grupları ya da çizgi romanlar için şehir ve araştırma kütüphanelerini kullanın. Kütüphaneler binlerce eseri size tamamen bedelsiz sunar."
+    ];
+    return funTips[dayIndex];
   }
+
+  // 9. Sağlık & İlaç & Doktor & Bakım
   if (
     norm.includes("sağlık") ||
     norm.includes("ilaç") ||
@@ -144,8 +220,17 @@ const getSavingTipForCategory = (name: string, icon: string): string => {
     norm.includes("eczane") ||
     icon === "💊"
   ) {
-    return "Koruyucu sağlık önlemlerine (düzenli spor, dengeli beslenme) yatırım yaparak uzun vadeli tedavi masraflarını önleyin. İlaç alımlarında devlet katkı payları ve muadil ilaç seçeneklerini sorun.";
+    const healthTips = [
+      "Koruyucu sağlık yatırımlarına (düzenli spor, günlük yürüyüşler, şeker oranı düşük doğal beslenme) yönelin. Sağlıklı yaşam tarzı sizi pahalı ilaç ve klinik tedavi faturalarından korur.",
+      "Hafif cilt ve saç bakımlarını eczane ürünleri veya evde hazırlayabileceğiniz doğal, pratik maskelerle gerçekleştirin. Güzellik merkezlerine harcanan taksit bütçelerini azaltın.",
+      "Eğer tamamlayıcı ya da özel sağlık sigortanız varsa, hak ettiğiniz yılda 1 ücretsiz diş temizliği, göz muayenesi ve check-up gibi poliçe teminatlarını kaçırmadan tamamlayın.",
+      "Reçeteli ilaçlarınızı alırken eczacınıza mutlaka devlet kurumlarının asgari muadil (aynı etken maddeli eşdeğer) ilaç seçeneklerini sorup bütçe dostu tercihler yapın.",
+      "Fitness ve spor kulübü üyelikleri yerine belediye tesislerini ve parklardaki ücretsiz açık hava spor alanlarını ve internetteki profesyonel ev egzersiz videolarını değerlendirin."
+    ];
+    return healthTips[dayIndex];
   }
+
+  // 10. Eğitim & Kitap & Kurslar
   if (
     norm.includes("eğitim") ||
     norm.includes("kurs") ||
@@ -153,8 +238,17 @@ const getSavingTipForCategory = (name: string, icon: string): string => {
     norm.includes("okul") ||
     icon === "🎓"
   ) {
-    return "Ücretsiz akademik kaynaklardan (Khan Academy, Coursera vb.) yararlanın. Ders kitapları ve genel okuma kitapları için kütüphaneleri veya ikinci el kitap platformlarını tercih edin.";
+    const eduTips = [
+      "İnternette yer alan akademik ve teknik eğitim fırsatlarını değerlendirin. Khan Academy, YouTube, Coursera ve edX gibi devler sıfır bütçeyle devasa kütüphaneler sunar.",
+      "Mesleki veya edebi her kitabı anında satın almak yerine, arkadaş çevreniz arasında 'kitap takası grupları (kitap kardeşliği)' kurarak kaynakları ortaklaştırın.",
+      "Yabancı dil pratiğinizi geliştirmek için pahalı yüz yüze kurslar yerine ücretsiz platformları (örneğin mobil uygulamalar ve konuşma kulüpleri) aktif şekilde kullanın.",
+      "Tasarım, yazılım veya mühendislik alanlarında öğrenci ya da akademik e-posta adresine (@edu) sahipseniz, markaların sunduğu %80'e varan devasa indirimlerden yararlanın.",
+      "Sertifikalı kariyer gelişim programlarında doğrudan ödeme yapmak yerine, kamu kurumlarının ve odaların sunduğu ücretsiz veya hibeli hobi/meslek edindirme programlarına başvurun."
+    ];
+    return eduTips[dayIndex];
   }
+
+  // 11. Hediye & Özel Günler & Bağış
   if (
     norm.includes("hediye") ||
     norm.includes("bağış") ||
@@ -162,17 +256,23 @@ const getSavingTipForCategory = (name: string, icon: string): string => {
     icon === "🎁" ||
     icon === "💰"
   ) {
-    return "Hediyeleşmelerde satın almak yerine el yapımı alternatifleri deneyin. Özel günler için bütçenizde her ay önceden küçük bir pay ayırıp sürpriz harcamaların önüne geçin.";
+    const giftTips = [
+      "Özel gün hediyelerinde pahalı fabrikasyon ürünler yerine el emeği sanatsal kutular, mektuplar ya da ortak anıların biriktiği şık dijital albümler yapın. Manevi derinlik daha kalıcıdır.",
+      "Doğum günü, evlilik yıldönümü gibi belirli dönem kartopu etkilerini aşmak için her ay bütçenizin bir kenarında minik bir 'özel günler fonu' biriktirerek şok ödemeleri ezin.",
+      "Ortak arkadaş buluşmalarındaki hediye alımlarında harcamayı diğer arkadaşlarla eşit şekilde bölüşerek bireysel olarak üstleneceğiniz finansal baskıyı hafifletin.",
+      "Özel hediyeleri son ana bırakıp telaşlı ve plansız alışveriş yapmayın. Sıkışık zamanlarda yapılan alışverişler genellikle kıyaslama fırsatı vermez ve %50 daha pahalıya patlar.",
+      "Sevdiklerinize fiziki materyaller hediye etmek yerine, zaman ayırıp birlikte gezebileceğiniz keyifli rotalar ya da kendi hazırlayacağınız gurme bir akşam yemeği deneyimi sunun."
+    ];
+    return giftTips[dayIndex];
   }
 
-  // Dynamic Diversified fallback algorithm using a deterministic character-sum hash
-  // This ensures that different custom categories always get unique, tailored, smart advice
-  // rather than showing the exact same text!
+  // Fallback dynamic rotating algorithm for custom categories
+  // Generates 5 diversified, tailored personal finance methods based on character sum + date
   let charSum = 0;
   for (let i = 0; i < name.length; i++) {
     charSum += name.charCodeAt(i);
   }
-  const fallbackId = charSum % 5;
+  const fallbackId = (charSum + date.getDate()) % 5;
 
   const fallbackTips = [
     `"${name}" kalemi için bu ay sınır koyun. Her pazartesi kendinize haftalık harcama limiti belirleyin. Limit dolduğunda harcamayı durdurmak, oto-kontrol kasınızı anında güçlendirir.`,
@@ -717,9 +817,9 @@ export const ExpensesList: React.FC<ExpensesListProps> = ({
         </span>
       </motion.div>
 
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-6 grid-cols-1 lg:grid-cols-12">
         {/* Left Side: Listing */}
-        <div className="space-y-4 shadow-sm rounded-2xl">
+        <div className="space-y-4 shadow-sm rounded-2xl lg:col-span-7">
           <div className="space-y-3">
             <div className="flex items-center justify-between gap-2">
               <h4 className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest flex items-center gap-1">
@@ -1293,7 +1393,7 @@ export const ExpensesList: React.FC<ExpensesListProps> = ({
         </div>
 
         {/* Right Side: Charts */}
-        <div className="space-y-6">
+        <div className="space-y-6 lg:col-span-5">
           {/* Doughnut Chart */}
           {doughnutData.length > 0 ? (
             <div className="p-4 bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700/50 shadow-sm space-y-2">

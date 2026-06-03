@@ -123,9 +123,9 @@ export const IncomesList: React.FC<IncomesListProps> = ({
         )}
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-6 grid-cols-1 lg:grid-cols-12">
         {/* Left Side: Listing */}
-        <div className="space-y-3">
+        <div className="space-y-3 lg:col-span-7">
           <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wide">Gelir Kayıtları</h4>
           {incomes.length === 0 ? (
             <div className="text-center py-6 text-xs text-slate-400 font-medium">
@@ -183,12 +183,12 @@ export const IncomesList: React.FC<IncomesListProps> = ({
         </div>
 
         {/* Right Side: Visual Graphs */}
-        <div className="space-y-6">
+        <div className="space-y-6 lg:col-span-5">
           {incomes.length > 0 && (
             <>
               <div className="p-4 bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700/50 shadow-sm space-y-2">
                 <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wide text-center">Gelir Dağılım Grafiği</h4>
-                <DoughnutChart data={doughnutData} />
+                <DoughnutChart data={doughnutData} type="income" />
               </div>
 
               {trendValues.length > 1 && (

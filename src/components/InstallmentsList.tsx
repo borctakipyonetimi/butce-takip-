@@ -137,9 +137,9 @@ export const InstallmentsList: React.FC<InstallmentsListProps> = ({
         <div>🗓️ Bu Ay Ödenmesi Gereken Toplam Taksit: <span className="text-base text-indigo-600 dark:text-indigo-400 block font-mono">{format(currentMonthDue)}</span></div>
       </div>
 
-      <div className="space-y-3">
+      <div className="grid gap-6 grid-cols-1 md:grid-cols-2">
         {installmentDebts.length === 0 ? (
-          <div className="text-center py-8 text-xs text-slate-400 font-medium">
+          <div className="text-center py-8 text-xs text-slate-400 font-medium md:col-span-2">
             Kayıtlı aktif taksitli borç planı bulunmuyor.
           </div>
         ) : (
@@ -149,83 +149,189 @@ export const InstallmentsList: React.FC<InstallmentsListProps> = ({
             const percentage = (inst.paidInstallmentCount / inst.installmentCount) * 100;
             const isCompleted = inst.paidInstallmentCount === inst.installmentCount;
 
+            // Pick a beautiful color theme dynamically based on installment name/id
+            const CARD_THEMES = [
+              {
+                gradient: "from-slate-900 via-indigo-950 to-purple-950 dark:from-slate-950 dark:via-indigo-980 dark:to-purple-980",
+                glow: "shadow-indigo-500/10",
+                chip: "bg-amber-400/80 border-amber-300",
+                brand: "PREMIUM PLATINUM",
+                badge: "bg-indigo-500/30 text-indigo-200 border-indigo-400/20"
+              },
+              {
+                gradient: "from-cyan-950 via-blue-950 to-indigo-950",
+                glow: "shadow-cyan-500/10",
+                chip: "bg-yellow-500/80 border-yellow-300",
+                brand: "WORLD SIGNATURE",
+                badge: "bg-cyan-500/30 text-cyan-200 border-cyan-400/20"
+              },
+              {
+                gradient: "from-rose-950 via-purple-950 to-pink-950",
+                glow: "shadow-rose-500/10",
+                chip: "bg-amber-350/80 border-amber-200",
+                brand: "AMEX ULTIMATE",
+                badge: "bg-rose-500/30 text-rose-200 border-rose-400/20"
+              },
+              {
+                gradient: "from-emerald-950 via-teal-950 to-emerald-900",
+                glow: "shadow-emerald-500/10",
+                chip: "bg-yellow-400/80 border-yellow-300",
+                brand: "ECO CAPITAL",
+                badge: "bg-emerald-500/30 text-emerald-200 border-emerald-400/20"
+              },
+              {
+                gradient: "from-amber-950 via-orange-950 to-slate-950",
+                glow: "shadow-amber-550/10",
+                chip: "bg-amber-200/80 border-amber-100",
+                brand: "GOLD METALLIC",
+                badge: "bg-amber-550/30 text-amber-200 border-amber-400/20"
+              }
+            ];
+
+            const themeIndex = (inst.id || 0) % CARD_THEMES.length;
+            const cardTheme = CARD_THEMES[themeIndex];
+
+            // Expiry Date (Valid thru) computation based on the plan count
+            const getExpiryText = (firstDueDate: string, totalCount: number) => {
+              try {
+                const baseDate = new Date(firstDueDate);
+                baseDate.setMonth(baseDate.getMonth() + totalCount);
+                const mm = String(baseDate.getMonth() + 1).padStart(2, "0");
+                const yy = String(baseDate.getFullYear()).slice(-2);
+                return `${mm}/${yy}`;
+              } catch (e) {
+                return "12/28";
+              }
+            };
+
+            const expiryText = getExpiryText(inst.firstDueDate || new Date().toISOString(), inst.installmentCount);
+
             return (
-              <div
+              <motion.div
                 key={inst.id}
-                className={`p-4 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/55 dark:border-slate-700/60 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
-                  isCompleted ? "border-l-[6px] border-l-emerald-500" : "border-l-[6px] border-l-amber-500"
-                }`}
+                whileHover={{ scale: 1.025, y: -4 }}
+                transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                className={`relative overflow-hidden rounded-3xl p-5 border border-white/10 text-white bg-gradient-to-br ${cardTheme.gradient} shadow-xl ${cardTheme.glow} flex flex-col justify-between min-h-[210px] select-none`}
               >
-                <div className="space-y-2 flex-1">
-                  <div className="flex items-center flex-wrap gap-2 text-slate-800 dark:text-slate-100">
-                    <span className="font-extrabold text-sm">{inst.name}</span>
-                    <span className="px-2 py-0.5 bg-indigo-50 dark:bg-indigo-950/20 text-indigo-600 dark:text-indigo-400 text-[10px] font-bold rounded-full">
-                      📊 {inst.paidInstallmentCount} / {inst.installmentCount} Taksit
+                {/* Decorative intersecting circles context layout */}
+                <div className="absolute -right-10 -top-10 w-40 h-40 rounded-full bg-white/5 blur-xl pointer-events-none" />
+                <div className="absolute -left-10 -bottom-10 w-32 h-32 rounded-full bg-white/3 blur-xl pointer-events-none" />
+
+                {/* Upper Deck: Chip, Name, and Brand */}
+                <div className="relative z-10 flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    {/* Simulated golden SIM card chip */}
+                    <div className="w-8 h-6 rounded-md bg-amber-400/85 relative overflow-hidden border border-amber-300/40 shadow-inner shrink-0">
+                      {/* Chip metal grid lines */}
+                      <div className="absolute inset-0 grid grid-cols-3 grid-rows-2 gap-px p-0.5 opacity-60">
+                        <div className="border border-amber-600/30 rounded-xs"></div>
+                        <div className="border border-amber-600/30 rounded-xs"></div>
+                        <div className="border border-amber-600/30 rounded-xs"></div>
+                        <div className="border border-amber-600/30 rounded-xs"></div>
+                        <div className="border border-amber-600/30 rounded-xs"></div>
+                        <div className="border border-amber-600/30 rounded-xs"></div>
+                      </div>
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-black tracking-wide uppercase truncate max-w-[130px]">{inst.name}</h4>
+                      <p className="text-[8px] opacity-75 font-mono tracking-widest">{cardTheme.brand}</p>
+                    </div>
+                  </div>
+
+                  <span className={`px-2 py-0.5 border text-[9px] font-black rounded-md tracking-wider shrink-0 shadow-xs uppercase leading-none ${cardTheme.badge}`}>
+                    {inst.paidInstallmentCount} / {inst.installmentCount} Taksit
+                  </span>
+                </div>
+
+                {/* Middle Deck: Large display of monthly payment amount */}
+                <div className="relative z-10 my-3">
+                  <span className="text-[9px] text-white/60 font-black uppercase tracking-widest block leading-none mb-1">
+                    AYLIK ÖDEME TUTARI
+                  </span>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-xl sm:text-2xl font-black font-mono tracking-tight text-white drop-shadow-xs">
+                      {format(singlePayment)}
                     </span>
-                    {isCompleted && (
-                      <span className="px-2 py-0.5 bg-emerald-100 dark:bg-emerald-950/30 text-emerald-800 dark:text-emerald-400 text-[10px] font-bold rounded-full">
-                        ✔ Bitti
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="text-xs text-slate-500 dark:text-slate-400 font-medium space-y-1">
-                    <p>
-                      Aylık Taksit: <span className="font-bold text-slate-700 dark:text-slate-200 font-mono">{format(singlePayment)}</span> | Toplam: 💼 <span className="font-mono">{format(inst.totalAmount)}</span> | Kalan Borç: <span className="font-mono">{format(remaining)}</span>
-                    </p>
-                    <p className="text-[10px] text-slate-400 flex items-center gap-0.5">
-                      <Calendar className="w-3.5 h-3.5" /> İlk Vade: {new Date(inst.firstDueDate).toLocaleDateString("tr-TR")}
-                    </p>
-                  </div>
-
-                  {/* Progress block */}
-                  <div className="w-full bg-slate-100 dark:bg-slate-700 h-2 rounded-full overflow-hidden shadow-inner">
-                    <div
-                      className="h-full bg-indigo-600 rounded-full transition-all"
-                      style={{ width: `${percentage}%` }}
-                    />
+                    <span className="text-[10px] text-white/70 font-bold">/ ay</span>
                   </div>
                 </div>
 
-                <div className="flex items-center flex-wrap gap-2 self-start sm:self-center shrink-0">
-                  <button
-                    onClick={() => handleOpenEdit(inst)}
-                    className="p-2 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100 rounded-lg transition"
-                    title="Düzenle"
-                  >
-                    <Edit className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => onDeleteInstallment(inst.id)}
-                    className="p-2 text-rose-500 hover:text-rose-600 dark:text-rose-400 dark:hover:text-rose-300 rounded-lg transition"
-                    title="Sil"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                  {onRevertPayment && (
-                    <button
-                      disabled={inst.paidInstallmentCount === 0}
-                      onClick={() => onRevertPayment(inst.id)}
-                      title={inst.paidInstallmentCount === 0 ? "Geri alınacak ödeme bulunmuyor" : "Son taksit ödemesini geri al"}
-                      className={`px-3 py-1.5 font-extrabold text-xs rounded-xl flex items-center gap-1 transition active:scale-95 shadow-xs ${
-                        inst.paidInstallmentCount === 0
-                          ? "bg-slate-50 dark:bg-slate-900/40 text-slate-400 dark:text-slate-600 border border-slate-205/30 dark:border-slate-800/30 cursor-not-allowed opacity-50"
-                          : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200/50 dark:border-slate-700 cursor-pointer"
-                      }`}
-                    >
-                      <RotateCcw className="w-3.5 h-3.5" /> Geri Al
-                    </button>
-                  )}
-                  {!isCompleted && (
-                    <button
-                      onClick={() => onPayInstallment(inst.id)}
-                      className="px-3 py-1.5 bg-indigo-600 text-white hover:bg-indigo-700 font-extrabold text-xs rounded-xl flex items-center gap-1 transition active:scale-95 shadow-sm"
-                    >
-                      <Wallet className="w-3.5 h-3.5" /> Taksit Öde
-                    </button>
-                  )}
+                {/* Bottom Stats & Data section */}
+                <div className="relative z-10 space-y-3">
+                  {/* Real-time slider progress line */}
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-[10px] text-white/70 font-bold font-mono">
+                      <span>Ödenen {inst.paidInstallmentCount} Taksit</span>
+                      <span>%{percentage.toFixed(0)} pay</span>
+                    </div>
+                    <div className="w-full bg-white/10 h-1.5 rounded-full overflow-hidden shadow-inner flex">
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${percentage}%` }}
+                        transition={{ duration: 1, ease: "easeOut" }}
+                        className={`h-full rounded-full ${isCompleted ? 'bg-emerald-400' : 'bg-gradient-to-r from-teal-300 to-amber-300'}`}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Valid-thru, totals description and action buttons */}
+                  <div className="flex items-center justify-between text-white/85 text-[10px] font-semibold gap-2 border-t border-white/10 pt-2.5">
+                    <div className="flex gap-4 font-mono">
+                      <div>
+                        <span className="text-[8px] text-white/50 block font-normal leading-none mb-0.5">TOPLAM</span>
+                        <span className="font-extrabold">{format(inst.totalAmount)}</span>
+                      </div>
+                      <div>
+                        <span className="text-[8px] text-white/50 block font-normal leading-none mb-0.5">KALAN</span>
+                        <span className="font-extrabold text-[#fda4af]">{format(remaining)}</span>
+                      </div>
+                      <div>
+                        <span className="text-[8px] text-white/50 block font-normal leading-none mb-0.5">VALİD THRU</span>
+                        <span className="font-extrabold">{expiryText}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        onClick={() => handleOpenEdit(inst)}
+                        className="p-1 px-1.5 bg-white/15 hover:bg-white/25 rounded-md transition text-white"
+                        title="Düzenle"
+                      >
+                        <Edit className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => onDeleteInstallment(inst.id)}
+                        className="p-1 px-1.5 bg-rose-500/30 hover:bg-rose-500/50 rounded-md transition text-rose-200"
+                        title="Sil"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                      {onRevertPayment && (
+                        <button
+                          disabled={inst.paidInstallmentCount === 0}
+                          onClick={() => onRevertPayment(inst.id)}
+                          title="Taksiti Geri Al"
+                          className={`p-1 px-1.5 rounded-md transition ${
+                            inst.paidInstallmentCount === 0
+                              ? "opacity-35 cursor-not-allowed text-white/40"
+                              : "bg-white/15 hover:bg-white/25 text-white"
+                          }`}
+                        >
+                          <RotateCcw className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                      {!isCompleted && (
+                        <button
+                          onClick={() => onPayInstallment(inst.id)}
+                          className="px-2.5 py-1 bg-white hover:bg-white/90 text-slate-900 font-extrabold text-[10px] rounded-md shadow-md transition active:scale-95 flex items-center gap-1"
+                        >
+                          <Wallet className="w-3 h-3 text-slate-800" /> Taksit Öde
+                        </button>
+                      )}
+                    </div>
+                  </div>
                 </div>
-              </div>
+              </motion.div>
             );
           })
         )}
