@@ -540,12 +540,31 @@ function parseVoiceCommandOffline(text: string): any {
     }
   }
 
-  // 4. Debt/Borç (borç, borc, verecek, borçlandım, aldım, borclandim, borçlandık, borclandik)
-  if (cleanNorm.includes("borç") || cleanNorm.includes("borc") || cleanNorm.includes("borçlandım") || cleanNorm.includes("borclandim") || cleanNorm.includes("borçlandık") || cleanNorm.includes("borclandik") || cleanNorm.includes("verecek")) {
+  // 4. Debt/Borç (borç, borc, verecek, borçlandım, aldım, borclandim, borçlandık, borclandik, alacak)
+  if (cleanNorm.includes("borç") || cleanNorm.includes("borc") || cleanNorm.includes("borçlandım") || cleanNorm.includes("borclandim") || cleanNorm.includes("borçlandık") || cleanNorm.includes("borclandik") || cleanNorm.includes("verecek") || cleanNorm.includes("alacak")) {
     let name = "Sesli Borç";
-    const cleanedName = text.replace(/\d+/g, "").replace(/(borç|borc|tl|türk lirası|lira|₺|ekle|kaydet|borçlandım|borclandim|borçlandık|borclandik|için|icin|verecek)/gi, "").trim();
+    const cleanedName = text.replace(/\d+/g, "").replace(/(borç|borc|tl|türk lirası|lira|₺|ekle|kaydet|borçlandım|borclandim|borçlandık|borclandik|için|icin|verecek|alacak|verdim|aldım)/gi, "").trim();
     if (cleanedName.length > 2) {
       name = cleanedName.charAt(0).toUpperCase() + cleanedName.slice(1);
+    }
+
+    const baseName = name.split(/['"’\s-]/)[0].replace(/[0-9]/g, "");
+    const isPerson = cleanNorm.includes("borç verdim") || cleanNorm.includes("borç aldım") || cleanNorm.includes("alacağım") || cleanNorm.includes("alacagim") || cleanNorm.includes("borcum") || cleanNorm.includes("vereceğim") || cleanNorm.includes("verecegim") || (cleanedName.length < 25 && !cleanNorm.includes("banka") && !cleanNorm.includes("kart") && !cleanNorm.includes("kredi"));
+
+    if (isPerson && baseName.length > 1) {
+      const isReceivable = cleanNorm.includes("verdim") || cleanNorm.includes("alacak") || cleanNorm.includes("alacağım") || cleanNorm.includes("alacagim") || cleanNorm.includes("bana borç") || cleanNorm.includes("bana borc");
+      const pType = isReceivable ? "receivable" : "payable";
+
+      return {
+        action: "addContactDebt",
+        contactDebtData: {
+          contactName: baseName,
+          amount,
+          type: pType,
+          description: "Sesli kayıt ile otomatik oluşturuldu"
+        },
+        explanation: `🔊 Çevrimdışı Mod: Kişi rehberinizdeki "${baseName}" isimli kişiye ₺${amount} tutarında ${pType === "receivable" ? "alacak" : "verecek/borç"} kaydı başarıyla eklenmiştir.`
+      };
     }
 
     return {
@@ -555,7 +574,7 @@ function parseVoiceCommandOffline(text: string): any {
         amount,
         paid: 0,
         category: "Şahıs",
-        dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+        dueDate: new Date().toISOString().slice(0, 10)
       },
       explanation: `🔊 Çevrimdışı Mod: "${name}" olarak ₺${amount} değerinde yeni bir borç eklenmiştir.`
     };
@@ -611,13 +630,16 @@ app.post("/api/voice-command", async (req, res) => {
     const promptText = 
       "Sen 'Bütçem Pro' finans asistanısın. Kullanıcının türkçe sesli bütçe kaydı / komutunu analiz edip bunu yapılandırılmış JSON verisine dönüştüreceksin.\n\n" +
       "Kullanıcı şunları yapabilir:\n" +
-      "1. Borç ekleme (addDebt): 'Ahmet'e 5000 lira borç verdim/aldım', 'Banka kredisi borcu 100000 TL', vb.\n" +
-      "2. Taksit/Taksitli borç ekleme (addInstallment): 'Koltuk takımı 12000 lira 6 taksit', 'Telefon için 24000 TL 12 taksit', vb.\n" +
-      "3. Harcama/Gider ekleme (addExpense): 'Market harcaması 250 lira', 'Benzin aldım 800 TL', 'Yemek 350 lira', vb.\n" +
-      "4. Gelir ekleme (addIncome): 'Maaş yattı 35000 lira', 'Kira geliri aldım 15000 TL', vb.\n" +
-      "5. Borç güncelleme / Ödenen kısmı güncelleme (updateDebtPaid): 'Ahmet borcunun ödenen kısmını 500 TL yap', 'Banka kredisi borcunun ödenenini 1000 lira yap', 'Mehmet borcuna 200 TL ödedim' vb.\n\n" +
-      "Senin görevin, söylenen ifadeyi bu 5 eylemden birine sığdırmak (action: 'addDebt' | 'addInstallment' | 'addExpense' | 'addIncome' | 'updateDebtPaid' | 'unknown') ve ilgili bilgileri çıkarmaktır. Gerekirse tarihleri bugünün tarihi varsay.\n" +
-      "Ayrıca, kullanıcının eylemi duyduğunu onaylayan sevimli, samimi bir yapay zeka Türkçe sesli asistan onay mesajı yaz (explanation). Örn: 'Anlaşıldı! Koltuk takımı bütçenize 12 taksitli toplam 12.000 ₺ olarak eklenmiştir.'";
+      "1. Borç ekleme (addDebt): Belirli bir şahsı belirtmeyen genel borçlar. Örn: 'Birim borcu 2000 TL', 'Banka kredisi borcu 100000 TL', vb. (Eğer sesli komutta belirli ve özel bir kişi ismi geçiyorsa, bu eylem yerine mutlaka addContactDebt eylemini kullan!)\n" +
+      "2. Kişi alacak verecek ekleme (addContactDebt): Sesli komutta belirli bir şahıs/kişi ismi geçiyorsa (örn: 'Ahmet'e 5000 lira borç verdim', 'Mehmet'ten 3000 lira borç aldım', 'Zeynep'ten 1000 TL alacağım var', 'Ayşe'ye 200 TL borcum var'). Bu durumda contactName (Örn: 'Ahmet', 'Mehmet', 'Zeynep', 'Ayşe'), amount (Tutar), type ('receivable' veya 'payable') ve description alanlarını doldur.\n" +
+      "   - 'receivable' (Alacak): Biz ona borç verdiysek ya da ondan bir alacağımız varsa. (Örn: 'borç verdim', 'alacağım var', 'bana borçlu')\n" +
+      "   - 'payable' (Verecek): Ondan borç aldıysak ya da ona bir borcumuz varsa. (Örn: 'borç aldım', 'borcum var', 'ona vereceğim var')\n" +
+      "3. Taksit/Taksitli borç ekleme (addInstallment): 'Koltuk takımı 12000 lira 6 taksit', 'Telefon için 24000 TL 12 taksit', vb.\n" +
+      "4. Harcama/Gider ekleme (addExpense): 'Market harcaması 250 lira', 'Benzin aldım 800 TL', 'Yemek 350 lira', vb.\n" +
+      "5. Gelir ekleme (addIncome): 'Maaş yattı 35000 lira', 'Kira geliri aldım 15000 TL', vb.\n" +
+      "6. Borç güncelleme / Ödenen kısmı güncelleme (updateDebtPaid): 'Ahmet borcunun ödenen kısmını 500 TL yap', 'Banka kredisi borcunun ödenenini 1000 lira yap', 'Mehmet borcuna 200 TL ödedim' vb.\n\n" +
+      "Senin görevin, söylenen ifadeyi bu 6 eylemden birine sığdırmak (action: 'addDebt' | 'addContactDebt' | 'addInstallment' | 'addExpense' | 'addIncome' | 'updateDebtPaid' | 'unknown') ve ilgili bilgileri çıkarmaktır. Gerekirse tarihleri bugünün tarihi varsay.\n" +
+      "Ayrıca, kullanıcının eylemi duyduğunu onaylayan sevimli, samimi bir yapay zeka Türkçe sesli asistan onay mesajı yaz (explanation). Örn: 'Anlaşıldı! Ahmet için kişi defterinize 5.000 ₺ tutarında alacak kaydı başarıyla eklenmiştir.'";
 
     const response = await aiClient.models.generateContent({
       model: "gemini-3.5-flash",
@@ -632,7 +654,17 @@ app.post("/api/voice-command", async (req, res) => {
           properties: {
             action: {
               type: Type.STRING,
-              description: "Eylem tipi: 'addDebt', 'addInstallment', 'addExpense', 'addIncome', 'updateDebtPaid' veya bilinmiyorsa 'unknown'."
+              description: "Eylem tipi: 'addDebt', 'addContactDebt', 'addInstallment', 'addExpense', 'addIncome', 'updateDebtPaid' veya bilinmiyorsa 'unknown'."
+            },
+            contactDebtData: {
+              type: Type.OBJECT,
+              description: "addContactDebt eylemi için kişi bazlı alacak/verecek verileri.",
+              properties: {
+                contactName: { type: Type.STRING, description: "Şahıs/Kişi ismi (Örn: Ahmet, Ayşe vb.)" },
+                amount: { type: Type.NUMBER, description: "Tutar" },
+                type: { type: Type.STRING, description: "İşlem yönü: Kullanıcının alacağı varsa 'receivable' (Alacak), borcu varsa 'payable' (Verecek)" },
+                description: { type: Type.STRING, description: "Açıklama (Örn: 'Sesli Alacak Kaydı')" }
+              }
             },
             debtData: {
               type: Type.OBJECT,

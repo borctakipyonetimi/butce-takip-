@@ -132,12 +132,31 @@ function parseVoiceCommandOfflineClient(text: string): any {
     }
   }
 
-  // 4. Debt/Borç (borç, borc, verecek, borçlandım, aldım, borclandim, borçlandık, borclandik)
-  if (cleanNorm.includes("borç") || cleanNorm.includes("borc") || cleanNorm.includes("borçlandım") || cleanNorm.includes("borclandim") || cleanNorm.includes("borçlandık") || cleanNorm.includes("borclandik") || cleanNorm.includes("verecek")) {
+  // 4. Debt/Borç (borç, borc, verecek, borçlandım, aldım, borclandim, borçlandık, borclandik, alacak)
+  if (cleanNorm.includes("borç") || cleanNorm.includes("borc") || cleanNorm.includes("borçlandım") || cleanNorm.includes("borclandim") || cleanNorm.includes("borçlandık") || cleanNorm.includes("borclandik") || cleanNorm.includes("verecek") || cleanNorm.includes("alacak")) {
     let name = "Sesli Borç";
-    const cleanedName = text.replace(/\d+/g, "").replace(/(borç|borc|tl|türk lirası|lira|₺|ekle|kaydet|borçlandım|borclandim|borçlandık|borclandik|için|icin|verecek)/gi, "").trim();
+    const cleanedName = text.replace(/\d+/g, "").replace(/(borç|borc|tl|türk lirası|lira|₺|ekle|kaydet|borçlandım|borclandim|borçlandık|borclandik|için|icin|verecek|alacak|verdim|aldım)/gi, "").trim();
     if (cleanedName.length > 2) {
       name = cleanedName.charAt(0).toUpperCase() + cleanedName.slice(1);
+    }
+
+    const baseName = name.split(/['"’\s-]/)[0].replace(/[0-9]/g, "");
+    const isPerson = cleanNorm.includes("borç verdim") || cleanNorm.includes("borç aldım") || cleanNorm.includes("alacağım") || cleanNorm.includes("alacagim") || cleanNorm.includes("borcum") || cleanNorm.includes("vereceğim") || cleanNorm.includes("verecegim") || (cleanedName.length < 25 && !cleanNorm.includes("banka") && !cleanNorm.includes("kart") && !cleanNorm.includes("kredi"));
+
+    if (isPerson && baseName.length > 1) {
+      const isReceivable = cleanNorm.includes("verdim") || cleanNorm.includes("alacak") || cleanNorm.includes("alacağım") || cleanNorm.includes("alacagim") || cleanNorm.includes("bana borç") || cleanNorm.includes("bana borc");
+      const pType = isReceivable ? "receivable" : "payable";
+
+      return {
+        action: "addContactDebt",
+        contactDebtData: {
+          contactName: baseName,
+          amount,
+          type: pType,
+          description: "Sesli kayıt ile otomatik oluşturuldu"
+        },
+        explanation: `🔊 Çevrimdışı Analiz: Kişi rehberinizdeki "${baseName}" isimli kişiye ₺${amount} tutarında ${pType === "receivable" ? "alacak" : "verecek/borç"} kaydı başarıyla eklenmiştir.`
+      };
     }
 
     return {
@@ -147,7 +166,7 @@ function parseVoiceCommandOfflineClient(text: string): any {
         amount,
         paid: 0,
         category: "Şahıs",
-        dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+        dueDate: new Date().toISOString().slice(0, 10)
       },
       explanation: `🔊 Çevrimdışı Analiz: "${name}" olarak ₺${amount} değerinde yeni bir borç eklenmiştir.`
     };
@@ -189,6 +208,8 @@ interface VoiceAssistantProps {
   onSaveIncome: (incData: any) => void;
   onSaveExpense: (expData: any) => void;
   onSaveInstallment: (instData: any) => void;
+  onSaveContactTx?: (contactName: string, amount: number, type: "receivable" | "payable", description?: string) => void;
+  currentUser?: string | null;
   userApiKey?: string;
   triggerToast: (msg: string) => void;
 }
@@ -199,6 +220,8 @@ export default function VoiceAssistant({
   onSaveIncome,
   onSaveExpense,
   onSaveInstallment,
+  onSaveContactTx,
+  currentUser,
   userApiKey,
   triggerToast
 }: VoiceAssistantProps) {
@@ -394,7 +417,16 @@ export default function VoiceAssistant({
     try {
       // Cancel previous speakings
       window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(text);
+
+      // Clean emojis and replace currency signs so they are read beautifully in Turkish
+      let cleanedText = text.replace(/₺/g, " TL");
+      // Remove standard emojis and generic pictographs/decorations
+      cleanedText = cleanedText.replace(/[\u{1F300}-\u{1F9FF}\u{1F400}-\u{1F6FF}\u{1F600}-\u{1F64F}\u{1F680}-\u{1F6FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FAFF}]/gu, '');
+      // Remove explicit symbolic characters
+      cleanedText = cleanedText.replace(/[⏺️✔️❌🔊🤔👍👎📢🔔✨🌸⭐🌟⏰💼👥📈📉💹🛒🛠️📅🗓️🗺️❓❔❕❗]/gu, '');
+      cleanedText = cleanedText.replace(/\s+/g, " ").trim();
+
+      const utterance = new SpeechSynthesisUtterance(cleanedText);
       utterance.lang = "tr-TR";
       // Find a natural Turkish voice if possible
       const voices = window.speechSynthesis.getVoices();
@@ -536,10 +568,21 @@ export default function VoiceAssistant({
   };
 
   const applyAction = (data: any) => {
-    const { action, debtData, installmentData, expenseData, incomeData, updateDebtData } = data;
+    const { action, debtData, installmentData, expenseData, incomeData, updateDebtData, contactDebtData } = data;
 
     try {
       switch (action) {
+        case "addContactDebt":
+          if (onSaveContactTx && contactDebtData) {
+            const { contactName, amount, type, description } = contactDebtData;
+            onSaveContactTx(
+              contactName || "Bilinmeyen Kişi",
+              Number(amount) || 0,
+              type === "payable" ? "payable" : "receivable",
+              description || "Sesli asistan kaydı"
+            );
+          }
+          break;
         case "updateDebtPaid":
           if (updateDebtData) {
             const { name, paidAmount, isAbsolute } = updateDebtData;
@@ -596,7 +639,7 @@ export default function VoiceAssistant({
               amount: Number(debtData.amount) || 0,
               paid: Number(debtData.paid) || 0,
               category: debtData.category || "Şahıs",
-              dueDate: debtData.dueDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+              dueDate: debtData.dueDate || new Date().toISOString().slice(0, 10)
             }, true); // Auto create alarm
           }
           break;
@@ -844,6 +887,27 @@ export default function VoiceAssistant({
                       <p className="text-xs font-bold text-slate-200 leading-relaxed max-w-sm">
                         {aiResponse.explanation}
                       </p>
+                      <div className="flex gap-2.5 mt-2">
+                        <button
+                          type="button"
+                          onClick={startListening}
+                          className="flex items-center gap-1.5 py-2 px-4 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-extrabold rounded-xl transition active:scale-95 cursor-pointer shadow-md hover:shadow-indigo-500/20 border border-indigo-400/20"
+                        >
+                          <Mic className="w-3.5 h-3.5" /> Yeni Komut Söyle
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setStatus("idle");
+                            setTranscript("");
+                            setManualInput("");
+                            setAiResponse(null);
+                          }}
+                          className="py-2 px-4 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-bold text-slate-300 hover:text-white rounded-xl transition active:scale-95 cursor-pointer"
+                        >
+                          Temizle
+                        </button>
+                      </div>
                     </div>
                   ) : status === "error" ? (
                     <div className="space-y-3 flex flex-col items-center text-center px-4">

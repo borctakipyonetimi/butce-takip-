@@ -130,6 +130,7 @@ export default function App() {
   // Navigation & Page routing state
   const [activeTab, setActiveTab] = useState("overview");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [contactSyncTrigger, setContactSyncTrigger] = useState(0);
 
   // Custom Confirmation Modal state to bypass browser alert/confirm popup blocking inside sandboxed iframes
   const [confirmModal, setConfirmModal] = useState<{
@@ -2168,6 +2169,71 @@ export default function App() {
   const handleClearNotifs = () => {
     setNotifications([]);
     saveAllToUser(debts, incomes, alarms, [], installmentDebts, payments, expenses, expenseCategories);
+  };
+
+  const handleSaveContactTx = (contactName: string, amount: number, type: "receivable" | "payable", description?: string) => {
+    try {
+      const spaceKey = currentUser ? `user_${currentUser}` : "user_anonymous";
+      const contactsKey = `${spaceKey}_contacts_directory`;
+      const txsKey = `${spaceKey}_contacts_transactions`;
+
+      let oldContacts: any[] = [];
+      let oldTxs: any[] = [];
+
+      try {
+        oldContacts = JSON.parse(localStorage.getItem(contactsKey) || "[]");
+      } catch {}
+      try {
+        oldTxs = JSON.parse(localStorage.getItem(txsKey) || "[]");
+      } catch {}
+
+      // Find or create contact
+      let contactObj = oldContacts.find(
+        (c) => c.name.toLowerCase().trim() === contactName.toLowerCase().trim()
+      );
+
+      if (!contactObj) {
+        const gradients = [
+          "from-emerald-500 to-teal-600",
+          "from-indigo-500 to-indigo-700",
+          "from-amber-500 to-orange-600",
+          "from-pink-500 to-rose-600",
+          "from-sky-500 to-blue-700",
+          "from-purple-500 to-fuchsia-700"
+        ];
+        const randomGrad = gradients[Math.floor(Math.random() * gradients.length)];
+        contactObj = {
+          id: "cont_" + Date.now(),
+          name: contactName,
+          phone: "Belirtilmemiş 📞",
+          category: "friend",
+          avatarColor: randomGrad,
+          createdAt: new Date().toISOString()
+        };
+        oldContacts = [contactObj, ...oldContacts];
+        localStorage.setItem(contactsKey, JSON.stringify(oldContacts));
+      }
+
+      // Add transaction
+      const newTx = {
+        id: "tx_" + Date.now(),
+        contactId: contactObj.id,
+        type: type,
+        amount: Number(amount) || 0,
+        description: description || "Sesli asistan kaydı",
+        dueDate: new Date().toISOString().split("T")[0],
+        isPaid: false,
+        createdAt: new Date().toISOString()
+      };
+
+      oldTxs = [newTx, ...oldTxs];
+      localStorage.setItem(txsKey, JSON.stringify(oldTxs));
+
+      // Force state sync to update lifetime stats in App.tsx
+      setContactSyncTrigger((prev) => prev + 1);
+    } catch (e) {
+      console.error("Error in handleSaveContactTx:", e);
+    }
   };
 
   // ---------------- Backup Utilities ----------------
@@ -4560,6 +4626,8 @@ export default function App() {
           onSaveIncome={handleSaveIncome}
           onSaveExpense={handleSaveExpense}
           onSaveInstallment={handleSaveInstallment}
+          onSaveContactTx={handleSaveContactTx}
+          currentUser={currentUser}
           userApiKey={localStorage.getItem("user_gemini_api_key") || undefined}
           triggerToast={triggerToast}
         />

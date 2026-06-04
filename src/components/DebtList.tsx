@@ -123,11 +123,12 @@ export const DebtList: React.FC<DebtListProps> = ({
     ...activeUnpaidInstallmentDebts.map(inst => {
       const monthly = inst.totalAmount / inst.installmentCount;
       const paidValue = inst.paidInstallmentCount * monthly;
+      const remainingTotal = inst.totalAmount - paidValue;
       return {
         id: inst.id,
         name: `${inst.name} (Taksitli)`,
         type: "installment" as const,
-        remaining: monthly,
+        remaining: remainingTotal,
         total: inst.totalAmount,
         paid: paidValue
       };
@@ -885,7 +886,7 @@ export const DebtList: React.FC<DebtListProps> = ({
         </div>
 
         <p className="text-xs text-slate-600 dark:text-slate-300 font-semibold leading-relaxed">
-          Bu ay ödemeniz gereken toplam borç miktarı (taksitli borçların tamamı yerine sadece bu ayki taksit tutarları dahil edilmiştir): <strong className="text-slate-800 dark:text-slate-100 font-black">{format(totalRemainingDebt)}</strong> ve aylık gelir kaynağınız <strong className="text-emerald-600 dark:text-emerald-400 font-black">{format(incomeVal)}</strong>. 
+          Kapatılması gereken toplam kalan borç miktarınız (taksitli borçların tamamı dahil): <strong className="text-slate-800 dark:text-slate-100 font-black">{format(totalRemainingDebt)}</strong> ve aylık gelir kaynağınız <strong className="text-emerald-600 dark:text-emerald-400 font-black">{format(incomeVal)}</strong>. 
           Bu finansal verilere göre bütçeniz için en uygun borç kapatma stratejisi: <span className="text-indigo-600 dark:text-indigo-400 font-black bg-indigo-50 dark:bg-indigo-950/40 px-2 py-0.5 rounded-lg border border-indigo-100/30 dark:border-indigo-900/30">{recommendedStrategy === "snowball" ? "Kartopu (Snowball) Yöntemi" : "Çığ (Avalanche) Yöntemi"}</span>.
         </p>
 
@@ -935,7 +936,7 @@ export const DebtList: React.FC<DebtListProps> = ({
               {smallestDebt ? (
                 <div className="p-3 bg-indigo-500/5 dark:bg-indigo-950/10 border-l-[3px] border-indigo-500 rounded-lg text-[11px] font-medium text-slate-700 dark:text-slate-300 space-y-1">
                   <span className="font-black text-[10px] text-indigo-600 dark:text-indigo-400 block uppercase tracking-wide">BUGÜNKÜ AKSİYON ADAYINIZ:</span>
-                  Bu ayki en küçük ödemeniz olan <strong className="text-indigo-600 dark:text-indigo-400 font-bold">"{smallestDebt.name}"</strong> ({smallestDebt.type === "installment" ? "bu ayki taksiti" : "kalan"} {format(smallestDebt.remaining)}) kaydını öncelikli kapatarak Kartopu etkisini hemen başlatabilirsiniz!
+                  En küçük kalan bakiyeye sahip <strong className="text-indigo-600 dark:text-indigo-400 font-bold">"{smallestDebt.name}"</strong> (kalan toplam tutar: {format(smallestDebt.remaining)}) borç kaydını öncelikli kapatarak Kartopu etkisini hemen başlatabilirsiniz!
                 </div>
               ) : (
                 <p className="text-[10px] text-slate-400 italic">Planlanacak aktif ödenmemiş borç bulunmamaktadır.</p>
@@ -954,7 +955,7 @@ export const DebtList: React.FC<DebtListProps> = ({
               {largestDebt ? (
                 <div className="p-3 bg-amber-500/5 dark:bg-amber-950/10 border-l-[3px] border-amber-500 rounded-lg text-[11px] font-medium text-slate-700 dark:text-slate-300 space-y-1">
                   <span className="font-black text-[10px] text-amber-600 dark:text-amber-400 block uppercase tracking-wide">BUGÜNKÜ AKSİYON ADAYINIZ:</span>
-                  En büyük aylık borç yükünüz olan <strong className="text-amber-600 dark:text-amber-400 font-bold">"{largestDebt.name}"</strong> ({largestDebt.type === "installment" ? "bu ayki taksiti" : "kalan"} {format(largestDebt.remaining)}) kaydına asgari ödemenin üzerinde ekstra kaynak aktararak Çığ etkisinden yararlanabilirsiniz!
+                  En büyük kalan bakiyeye sahip <strong className="text-amber-600 dark:text-amber-400 font-bold">"{largestDebt.name}"</strong> (kalan toplam tutar: {format(largestDebt.remaining)}) borç kaydına ekstra kaynak katarak Çığ etkisinden yararlanabilirsiniz!
                 </div>
               ) : (
                 <p className="text-[10px] text-slate-400 italic">Planlanacak aktif ödenmemiş borç bulunmamaktadır.</p>
