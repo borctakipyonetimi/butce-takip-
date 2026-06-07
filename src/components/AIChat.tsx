@@ -15,7 +15,15 @@ interface AIChatProps {
   expenses: Expense[];
   installmentDebts: InstallmentDebt[];
   stats: FinancialStats;
+  selectedMonth?: number | null;
+  selectedYear?: number | null;
+  expenseCategories?: { id: number; name: string; color?: string }[];
 }
+
+const TURKISH_MONTHS = [
+  "Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran",
+  "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"
+];
 
 // Helper to highlight words between **
 const renderTextWithBold = (text: string) => {
@@ -95,7 +103,16 @@ const FormattedText: React.FC<{ text: string }> = ({ text }) => {
   );
 };
 
-export const AIChat: React.FC<AIChatProps> = ({ debts, incomes, expenses, installmentDebts, stats }) => {
+export const AIChat: React.FC<AIChatProps> = ({
+  debts,
+  incomes,
+  expenses,
+  installmentDebts,
+  stats,
+  selectedMonth = new Date().getMonth(),
+  selectedYear = new Date().getFullYear(),
+  expenseCategories = []
+}) => {
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       sender: "bot",
@@ -164,7 +181,112 @@ export const AIChat: React.FC<AIChatProps> = ({ debts, incomes, expenses, instal
 
     let reply = `✨ **Bütçem Pro Gelişmiş Finansal Analiz Raporu**\n\n`;
 
-    if (matchedCategory) {
+    if (q.includes("aylık analiz raporu") || q.includes("aylik analiz raporu") || q.includes("analiz raporu")) {
+      const mNum = selectedMonth !== null && selectedMonth !== undefined ? selectedMonth : new Date().getMonth();
+      const yNum = selectedYear !== null && selectedYear !== undefined ? selectedYear : new Date().getFullYear();
+      const monthName = TURKISH_MONTHS[mNum] || "Mevcut Ay";
+
+      const mExpenses = expenses.filter((e) => {
+        try {
+          const d = new Date(e.date);
+          return d.getMonth() === mNum && d.getFullYear() === yNum;
+        } catch {
+          return false;
+        }
+      });
+
+      const mIncomes = incomes.filter((i) => {
+        try {
+          const d = new Date(i.date);
+          return d.getMonth() === mNum && d.getFullYear() === yNum;
+        } catch {
+          return false;
+        }
+      });
+
+      const tExpense = mExpenses.reduce((sum, e) => sum + e.amount, 0);
+      const tIncome = mIncomes.reduce((sum, i) => sum + i.amount, 0);
+      const nIncome = tIncome - tExpense;
+
+      const catTotals: { [key: number]: number } = {};
+      mExpenses.forEach((e) => {
+        catTotals[e.categoryId] = (catTotals[e.categoryId] || 0) + e.amount;
+      });
+
+      reply += `📊 **${monthName.toUpperCase()} ${yNum} - DETAYLI AYLIK ANALİZ RAPORU** 📊\n\n`;
+      reply += `Sistemimizdeki bütçe kayıtlarınızı bizzat tarayarak **${monthName} ${yNum}** dönemi gider kategorilerinizin kıyaslamasını çıkardım:\n\n`;
+
+      reply += `### 💵 Aylık Mali Durum Özeti\n`;
+      reply += `• **Toplam Gelir**: ₺${tIncome.toLocaleString("tr-TR")}\n`;
+      reply += `• **Toplam Gider**: ₺${tExpense.toLocaleString("tr-TR")}\n`;
+      reply += `• **Kalan Net Bakiye**: ₺${nIncome.toLocaleString("tr-TR")} (${nIncome >= 0 ? "🟢 Fazla Veriyor" : "🔴 Açık Veriyor"})\n\n`;
+
+      if (mExpenses.length === 0) {
+        reply += `🚨 **Harcama Uyarısı**: Bu seçili ay için kaydedilmiş herhangi bir harcama kalemi bulunamadı. Lütfen analiz için harcamalarınızı girin.\n`;
+      } else {
+        reply += `### 📉 Kategori Karşılaştırma Analizi\n`;
+        reply += `Aşağıdaki tabloda bu ayın harcama kategorileri, tutarları ve toplam aylık gider içindeki yüzdesel ağırlıkları gösterilmiştir:\n\n`;
+
+        reply += `| Gider Kategorisi | Harcanan Tutar | Gider Oranı (%) | Öneri Seviyesi |\n`;
+        reply += `| :--- | :--- | :---: | :---: |\n`;
+
+        const sortedCats = expenseCategories
+          .map((c) => {
+            const val = catTotals[c.id] || 0;
+            return {
+              name: c.name,
+              value: val,
+              pct: tExpense > 0 ? (val / tExpense) * 100 : 0
+            };
+          })
+          .filter((c) => c.value > 0)
+          .sort((a, b) => b.value - a.value);
+
+        sortedCats.forEach((c) => {
+          let recStatus = "🟢 Stabil";
+          if (c.pct > 30) recStatus = "🚨 Çok Yüksek";
+          else if (c.pct > 15) recStatus = "⚠️ Yüksek";
+
+          reply += `| **${c.name}** | ₺${c.value.toLocaleString("tr-TR")} | %${c.pct.toFixed(1)} | ${recStatus} |\n`;
+        });
+
+        reply += `\n`;
+
+        if (sortedCats.length > 0) {
+          const topCat = sortedCats[0];
+          reply += `💡 **En Kritik Harcama Kalemi**: Bu ay bütçenizi en çok zorlayan kategori **%${topCat.pct.toFixed(1)}** pay oranıyla **"${topCat.name}"** olmuştur (Tutar: ₺${topCat.value.toLocaleString("tr-TR")}).\n\n`;
+        }
+
+        reply += `### 🎯 Bütçe Disiplini Değerlendirmesi (50/30/20 Kuralı)\n`;
+        const essentialPct = tIncome > 0 ? (tExpense / tIncome) * 100 : 0;
+        reply += `• **Zorunlu ve Kişisel Gider Oranı**: Gelirinizin **%${essentialPct.toFixed(1)}** kadarı harcanmış durumda.\n`;
+        if (essentialPct > 80) {
+          reply += `• ⚠️ **Durum Analizi**: Harcama oranınız bütçe sınırlarını çok aşıyor. Gelirin %80'inden fazlasını harcamak, borç kapatmayı ve birikim yapmayı neredeyse imkansız kılar. Acilen lüks taksitleri durdurmalı ve abonelikleri iptal etmelisiniz.\n`;
+        } else if (essentialPct > 50) {
+          reply += `• ⚖️ **Durum Analizi**: İdeal sınırlandırmaya yakınsınız ancak hala bir miktar bütçe sızıntısı var. Gider kalemlerinde yapacağınız %10'luk bir kısıntı tasarruf hızınızı ikiye katlayabilir.\n`;
+        } else {
+          reply += `• 🟢 **Durum Analizi**: Tebrikler! Tasarruf limitleriniz oldukça güvenli bölgede. Finansal bağımsızlığınıza çok daha hızlı ulaşacaksınız.\n`;
+        }
+
+        reply += `\n### 💡 Tasarruf ve Optimizasyon Önerileri\n`;
+        sortedCats.slice(0, 3).forEach((c, idx) => {
+          const possibleSaving = c.value * 0.15;
+          reply += `${idx + 1}️⃣ **${c.name} Tasarrufu**: %15 tasarruf ile bu kalemde yapacağınız küçük fedakarlıklar size ayda **₺${possibleSaving.toFixed(0)}** ek bakiye kazandıracaktır. `;
+          if (c.name.toLowerCase().includes("market")) {
+            reply += "Haftalık alışveriş listesi yapın ve aç karnına asla alışverişe çıkmayın. Markaların kendi etiketli ekonomik ürünlerini tercih edin.";
+          } else if (c.name.toLowerCase().includes("fatura")) {
+            reply += "Kullanılmayan cihazları prizden çekin, akıllı termostat kullanın ve abonelik planlarınızı daha uygun tarifelere düşürün.";
+          } else if (c.name.toLowerCase().includes("yemek") || c.name.toLowerCase().includes("yeme")) {
+            reply += "Dışarıdan sipariş verme oranını azaltarak evde pratik yemekler hazırlayın. İş yerine kendi hazırladığınız sefertasını götürün.";
+          } else if (c.name.toLowerCase().includes("ulaşım") || c.name.toLowerCase().includes("ulasim")) {
+            reply += "Kısa mesafelerde yürümeyi veya bisiklet kullanmayı tercih edin, toplu taşımayı önceliklendirin ve ortak araç kullanımını değerlendirin.";
+          } else {
+            reply += "Fayda-maliyet analizini iyi yapın, satın almadan önce 48 saat bekleyin ve nakit ödemeleri tercih edin.";
+          }
+          reply += `\n`;
+        });
+      }
+    } else if (matchedCategory) {
       let totalCatSpent = 0;
       const catObj = categoriesList.find((c) => c.name.toLowerCase() === matchedCategory!.toLowerCase());
       const catId = catObj ? catObj.id : null;
@@ -373,6 +495,66 @@ export const AIChat: React.FC<AIChatProps> = ({ debts, incomes, expenses, instal
     handleSend(qn);
   };
 
+  const handleGenerateMonthlyReport = () => {
+    const mNum = selectedMonth !== null && selectedMonth !== undefined ? selectedMonth : new Date().getMonth();
+    const yNum = selectedYear !== null && selectedYear !== undefined ? selectedYear : new Date().getFullYear();
+    const monthName = TURKISH_MONTHS[mNum] || "Mevcut Ay";
+
+    // Filter expenses for this specific month & year
+    const monthlyExpenses = expenses.filter((e) => {
+      try {
+        const d = new Date(e.date);
+        return d.getMonth() === mNum && d.getFullYear() === yNum;
+      } catch {
+        return false;
+      }
+    });
+
+    const monthlyIncomes = incomes.filter((i) => {
+      try {
+        const d = new Date(i.date);
+        return d.getMonth() === mNum && d.getFullYear() === yNum;
+      } catch {
+        return false;
+      }
+    });
+
+    // Compute category totals
+    const categoryMap: { [key: number]: number } = {};
+    monthlyExpenses.forEach((e) => {
+      categoryMap[e.categoryId] = (categoryMap[e.categoryId] || 0) + e.amount;
+    });
+
+    // Construct prompt details
+    let categoryDetailsStr = "";
+    expenseCategories.forEach((c) => {
+      const amt = categoryMap[c.id] || 0;
+      if (amt > 0) {
+        categoryDetailsStr += `- ${c.name}: ₺${amt.toLocaleString("tr-TR")}\n`;
+      }
+    });
+
+    if (!categoryDetailsStr) {
+      categoryDetailsStr = "- Bu ay için henüz kategori bazlı bir harcama kaydedilmemiş.\n";
+    }
+
+    const totalMonthlyExpense = monthlyExpenses.reduce((sum, e) => sum + e.amount, 0);
+    const totalMonthlyIncome = monthlyIncomes.reduce((sum, i) => sum + i.amount, 0);
+
+    const prompt = `Lütfen benim için '${monthName} ${yNum} Aylık Analiz Raporu' oluştur. Bu aydaki gider kategorilerimi birbiriyle kıyasla ve bana bütçemi optimize edip birikim yapabilmem için somut tasarruf önerileri sun.
+
+Aylık Finansal Durum Özetim:
+- Toplam Gelir: ₺${totalMonthlyIncome.toLocaleString("tr-TR")}
+- Toplam Gider: ₺${totalMonthlyExpense.toLocaleString("tr-TR")}
+- Kalan Net Bakiye: ₺${(totalMonthlyIncome - totalMonthlyExpense).toLocaleString("tr-TR")}
+
+Kategori Bazlı Harcama Dağılımım:
+${categoryDetailsStr}
+Lütfen bunları karşılaştırarak hangisinin en fazla harcama yükü oluşturduğunu, ideal 50/30/20 bütçe kuralına göre durumumu ve tasarruf edebileceğim kritik alanları detaylandır.`;
+
+    handleSend(prompt);
+  };
+
   return (
     <div className="space-y-6 animate-fade-in">
       
@@ -552,6 +734,39 @@ export const AIChat: React.FC<AIChatProps> = ({ debts, incomes, expenses, instal
           )}
         </div>
       </div>
+      
+      {/* Monthly Analysis Report Generator Card */}
+      {(() => {
+        const mNum = selectedMonth !== null && selectedMonth !== undefined ? selectedMonth : new Date().getMonth();
+        const yNum = selectedYear !== null && selectedYear !== undefined ? selectedYear : new Date().getFullYear();
+        const monthName = TURKISH_MONTHS[mNum] || "Mevcut Ay";
+        return (
+          <div className="p-4 bg-gradient-to-r from-violet-500/10 via-indigo-500/10 to-blue-500/10 rounded-2xl border border-indigo-500/20 dark:border-indigo-500/30 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xs">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-gradient-to-tr from-violet-600 to-indigo-600 rounded-xl text-white shadow-3xs">
+                <TrendingUp className="w-5 h-5 animate-pulse" />
+              </div>
+              <div className="text-left w-full sm:w-auto">
+                <h4 className="text-xs font-extrabold text-slate-800 dark:text-white uppercase tracking-wider">
+                  {monthName} {yNum} Aylık Analiz Raporu
+                </h4>
+                <p className="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider mt-0.5">
+                  Gider kategorilerini otomatik kıyasla ve tasarruf analizini al
+                </p>
+              </div>
+            </div>
+            <motion.button
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
+              onClick={handleGenerateMonthlyReport}
+              disabled={loading}
+              className="px-4 py-2 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white text-[11px] font-black tracking-widest uppercase rounded-xl shadow-md cursor-pointer transition-all disabled:opacity-40 select-none shrink-0"
+            >
+              Raporu Hazırla 📊
+            </motion.button>
+          </div>
+        );
+      })()}
 
       {/* Suggested Quick Questions Panel with beautiful tag stylings - Headings & Layout Centered */}
       <div className="space-y-2 text-center">

@@ -19,7 +19,7 @@ import {
   UserCheck
 } from "lucide-react";
 
-import { Debt } from "../types";
+import { Debt, Income, Expense, InstallmentDebt } from "../types";
 import { getApiUrl } from "../utils/api";
 
 function parseVoiceCommandOfflineClient(text: string): any {
@@ -204,6 +204,9 @@ function parseVoiceCommandOfflineClient(text: string): any {
 
 interface VoiceAssistantProps {
   debts?: Debt[];
+  incomes?: Income[];
+  expenses?: Expense[];
+  installmentDebts?: InstallmentDebt[];
   onSaveDebt: (debtData: any, autoCreateAlarm?: boolean) => void;
   onSaveIncome: (incData: any) => void;
   onSaveExpense: (expData: any) => void;
@@ -216,6 +219,9 @@ interface VoiceAssistantProps {
 
 export default function VoiceAssistant({
   debts = [],
+  incomes = [],
+  expenses = [],
+  installmentDebts = [],
   onSaveDebt,
   onSaveIncome,
   onSaveExpense,
@@ -512,6 +518,44 @@ export default function VoiceAssistant({
 
     setStatus("processing");
     setErrorMsg("");
+
+    const lowerText = textToProcess.toLowerCase().trim();
+    const isStatusReport = lowerText.includes("durum") || 
+                           lowerText.includes("rapor") || 
+                           lowerText.includes("özet") || 
+                           lowerText.includes("ozet") || 
+                           lowerText.includes("hesabım") || 
+                           lowerText.includes("hesabim") ||
+                           lowerText.includes("analiz") || 
+                           lowerText.includes("ne durumda");
+
+    if (isStatusReport) {
+      // Calculate dynamic accurate metrics for the voice report
+      const totalIncomeVal = incomes.reduce((sum, inc) => sum + inc.amount, 0);
+      const totalExpenseVal = expenses.reduce((sum, exp) => sum + exp.amount, 0);
+      const remainingSimpleDebt = debts.reduce((sum, d) => sum + (d.amount - d.paid), 0);
+      const remainingInstallmentDebt = installmentDebts.reduce((sum, inst) => {
+        const monthly = inst.totalAmount / inst.installmentCount;
+        const paidValue = inst.paidInstallmentCount * monthly;
+        return sum + (inst.totalAmount - paidValue);
+      }, 0);
+      const netBalance = totalIncomeVal - totalExpenseVal;
+      const totalDebt = remainingSimpleDebt + remainingInstallmentDebt;
+
+      const reportExplanation = `🔊 Bütçem Pro sesli durum raporu: Aylık toplam geliriniz ₺${totalIncomeVal.toLocaleString("tr-TR")}, aylık harcamalarınız ise ₺${totalExpenseVal.toLocaleString("tr-TR")}. Kullanılabilir güncel net bütçe bakiyeniz ₺${netBalance.toLocaleString("tr-TR")}. Toplam ödenmemiş aktif borç yükünüz ise ₺${totalDebt.toLocaleString("tr-TR")}. Finansal sağlığınızı yüksek tutmak için Bütçe Sağlığı ve Borç Kapama Rehberi sekmesindeki önerileri takip edebilirsiniz!`;
+
+      const mockResponse = {
+        action: "statusReport",
+        explanation: reportExplanation
+      };
+
+      setAiResponse(mockResponse);
+      setStatus("success");
+      if (audioEnabled) {
+        speakText(reportExplanation);
+      }
+      return;
+    }
 
     try {
       const res = await fetch(getApiUrl("/api/voice-command"), {

@@ -1128,6 +1128,97 @@ export const ContactsDebtPanel: React.FC<ContactsDebtPanelProps> = ({
                       <strong>💡 Akıllı Amorti İpuçları:</strong> Herhangi bir borcun solundaki boş yuvarlağa tıkladığınızda işlem "Ödendi" olarak etiketlenir ve üstteki toplam grafiklerden çıkartılır. Karşılıklı transfer tanzimlerinde bu özelliği kullanabilirsiniz.
                     </p>
                   </div>
+
+                  {/* Ready Receivable Reminder Messages */}
+                  {(() => {
+                    const unpaidReceivs = activeTxs.filter((t) => t.type === "receivable");
+                    if (unpaidReceivs.length === 0) return null;
+
+                    // Compute dynamic strings based on first item
+                    const firstItem = unpaidReceivs[0];
+                    const rawPhone = contact.phone || "";
+                    const cleanPhone = rawPhone.replace(/\D/g, "");
+                    const waPhone = cleanPhone.startsWith("0") ? "90" + cleanPhone.slice(1) : cleanPhone;
+
+                    const templates = [
+                      {
+                        title: "✍️ Nazik / Standart",
+                        text: `Merhaba ${contact.name}, umarım iyisin. Bütçe hesaplarımızı güncelliyordum da, ${firstItem.description} konusundaki ${format(firstItem.amount)} tutarındaki ödemeyi müsaitsen yapabilir misin? Çok teşekkürler!`,
+                        desc: "Gündelik ve kibar hatırlatıcı üslubu."
+                      },
+                      {
+                        title: "🤝 Samimi / Yakın Dost",
+                        text: `Selam ${contact.name} kanka, ufak bir bütçe sıkışıklığım vardı da, seninle olan ${firstItem.description} (${format(firstItem.amount)}) alacağını müsait bir anında gönderebilirsen çok memnun olurum. Sağ olasın!`,
+                        desc: "Yakın arkadaşlar ve tanıdıklar için samimi dil."
+                      },
+                      {
+                        title: "🔒 Resmi / Ticari Şablon",
+                        text: `Sayın ${contact.name}, sistem kayıtlarımıza göre ${firstItem.dueDate} vadeli ${firstItem.description} işlemine ait ${format(firstItem.amount)} tutarındaki alacağımız henüz tahsil edilmemiştir. İlgili tutarın hesabımıza havale edilmesini önemle rica eder, iyi çalışmalar dileriz.`,
+                        desc: "İş ortakları veya resmi alacak ilişkileri."
+                      }
+                    ];
+
+                    return (
+                      <div className="p-4 bg-indigo-50/50 dark:bg-slate-900/40 rounded-2xl border border-indigo-150/40 dark:border-indigo-950/40 space-y-3 mt-1">
+                        <div className="flex items-center gap-1.5 border-b border-indigo-100/30 dark:border-indigo-950/40 pb-2">
+                          <BellRing className="w-4 h-4 text-indigo-500 animate-pulse" />
+                          <h4 className="text-xs font-black uppercase tracking-wider text-indigo-950 dark:text-indigo-200">
+                            HAZIR ALACAK HATIRLATMA MESAJLARI
+                          </h4>
+                        </div>
+                        <p className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold leading-relaxed">
+                          Seçilen kişi adıyla ve en yakın alacak kaydı olan <strong>{firstItem.description} ({format(firstItem.amount)})</strong> bilgisi ile optimize edilmiş mesaj şablonları:
+                        </p>
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                          {templates.map((tpl, tIdx) => {
+                            const waLink = `https://wa.me/${waPhone || "90"}?text=${encodeURIComponent(tpl.text)}`;
+
+                            return (
+                              <div
+                                key={tIdx}
+                                className="p-3 bg-white dark:bg-slate-850 rounded-xl border border-slate-150 dark:border-slate-700/60 flex flex-col justify-between space-y-2 shadow-xs"
+                              >
+                                <div>
+                                  <span className="text-[10px] font-black text-slate-850 dark:text-slate-200 block mb-1">
+                                    {tpl.title}
+                                  </span>
+                                  <p className="text-[9.5px] text-slate-450 dark:text-slate-400 font-bold mb-1.5 leading-snug">
+                                    {tpl.desc}
+                                  </p>
+                                  <div className="p-2 bg-slate-50 dark:bg-slate-900 rounded-lg text-[9px] text-slate-600 dark:text-slate-300 font-medium select-all border border-slate-100 dark:border-slate-800/60 line-clamp-4 leading-normal">
+                                    {tpl.text}
+                                  </div>
+                                </div>
+
+                                <div className="flex gap-1.5 pt-1.5 border-t border-dashed border-slate-100 dark:border-slate-700">
+                                  <button
+                                    onClick={() => {
+                                      navigator.clipboard.writeText(tpl.text);
+                                      showLocalToast("Kopya Başarılı! 📋");
+                                    }}
+                                    className="flex-1 py-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-705 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 text-[9px] font-extrabold rounded-md cursor-pointer transition active:scale-95 text-center block uppercase"
+                                  >
+                                    KOPYALA 📋
+                                  </button>
+                                  {waPhone && (
+                                    <a
+                                      href={waLink}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="flex-1 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-[9px] font-extrabold rounded-md text-center block uppercase flex items-center justify-center gap-0.5 shadow-sm shadow-emerald-500/10"
+                                    >
+                                      WP GÖNDER 💬
+                                    </a>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </motion.div>
               );
             })() : (

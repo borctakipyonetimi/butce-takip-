@@ -6,7 +6,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Sparkles, PlusCircle, ArrowUpRight, TrendingUp, ShieldAlert, Award, HelpingHand, Bell, Coins, Edit, Check, X, Info, Settings, RefreshCw, CalendarDays, ClipboardCheck, Trash2, StickyNote } from "lucide-react";
 import { motion } from "motion/react";
-import { FinancialStats } from "../types";
+import { FinancialStats, Income, Expense, ExpenseCategory } from "../types";
 import { BarChart, DoughnutChart, LineChart } from "./BudgetCharts";
 import { useCurrency } from "../utils/CurrencyContext";
 import { AdMobBanner } from "./AdMobBanner";
@@ -18,6 +18,9 @@ interface DashboardOverviewProps {
   monthlyInstallmentsDue: number;
   isPremium?: boolean;
   onUpgradeClick?: () => void;
+  incomes?: Income[];
+  expenses?: Expense[];
+  expenseCategories?: ExpenseCategory[];
 }
 
 export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
@@ -27,6 +30,9 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
   monthlyInstallmentsDue,
   isPremium = false,
   onUpgradeClick,
+  incomes = [],
+  expenses = [],
+  expenseCategories = [],
 }) => {
   const { format, currencySymbol, rates, setRates, activeCurrency, isFetching, lastUpdated, updateRatesFromAPI } = useCurrency();
   const [budgetGoal, setBudgetGoal] = useState<number>(() => {
@@ -159,6 +165,36 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
     stats.totalDebt * 1.02,
     stats.totalDebt,
   ].map(v => Math.max(v, 0));
+
+  const incomeColors = ["#10b981", "#3b82f6", "#f59e0b", "#8b5cf6", "#ec4899", "#14b8a6", "#64748b"];
+  const incomeDoughnutData = incomes.map((i, idx) => ({
+    label: i.name,
+    value: i.amount,
+    color: incomeColors[idx % incomeColors.length],
+  }));
+
+  const categoryTotals = expenses.reduce((acc: { [key: number]: number }, e) => {
+    acc[e.categoryId] = (acc[e.categoryId] || 0) + e.amount;
+    return acc;
+  }, {});
+
+  const expenseColors = [
+    "#ef4444",
+    "#f59e0b",
+    "#3b82f6",
+    "#10b981",
+    "#8b5cf6",
+    "#ec4899",
+    "#14b8a6",
+    "#6366f1",
+  ];
+  const expenseDoughnutData = expenseCategories
+    .map((c, idx) => ({
+      label: c.name,
+      value: categoryTotals[c.id] || 0,
+      color: c.color || expenseColors[idx % expenseColors.length],
+    }))
+    .filter((item) => item.value > 0);
 
   return (
     <div className="space-y-6">

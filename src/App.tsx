@@ -54,7 +54,8 @@ import {
   Users,
   Camera,
   AlertCircle,
-  Smartphone
+  Smartphone,
+  TrendingUp
 } from "lucide-react";
 import {
   Debt,
@@ -82,6 +83,7 @@ import { ProviderLoginModal } from "./components/ProviderLoginModal";
 import { SecurityLockOverlay } from "./components/SecurityLockOverlay";
 import { SecuritySettingsPanel } from "./components/SecuritySettingsPanel";
 import { ContactsDebtPanel } from "./components/ContactsDebtPanel";
+import { FinancialTools } from "./components/FinancialTools";
 import { AdMobBanner } from "./components/AdMobBanner";
 import VoiceAssistant from "./components/VoiceAssistant";
 import confetti from "canvas-confetti";
@@ -2475,6 +2477,7 @@ export default function App() {
     { id: "installments", label: "TAKSİTLİ BORÇLAR", icon: Calendar },
     { id: "notifications", label: "BİLDİRİM & GÜVENLİK", icon: Shield },
     { id: "aiStrategy", label: "YAPAY ZEKA ASİSTAN", icon: Sparkles },
+    { id: "financialTools", label: "FİNANSAL ARAÇLAR", icon: TrendingUp },
     { id: "help", label: "KULLANIM REHBERİ", icon: HelpCircle },
     { id: "blog", label: "FİNANS KILAVUZLARI", icon: BookOpen },
     { id: "feedback", label: "GERİ BİLDİRİM", icon: MessageSquare },
@@ -3553,6 +3556,9 @@ export default function App() {
             monthlyInstallmentsDue={monthlyInstallmentsDue}
             isPremium={isPremium}
             onUpgradeClick={() => setIsUpgradeModalOpen(true)}
+            incomes={filteredIncomesByMonth}
+            expenses={filteredExpensesByMonth}
+            expenseCategories={expenseCategories}
           />
         )}
 
@@ -3967,6 +3973,20 @@ export default function App() {
             expenses={expenses}
             installmentDebts={installmentDebts}
             stats={statsBag}
+            selectedMonth={selectedMonth}
+            selectedYear={selectedYear}
+            expenseCategories={expenseCategories}
+          />
+        )}
+
+        {activeTab === "financialTools" && (
+          <FinancialTools
+            debts={debts}
+            incomes={incomes}
+            expenses={expenses}
+            installmentDebts={installmentDebts}
+            currentUser={currentUser}
+            format={format}
           />
         )}
 
@@ -4622,6 +4642,9 @@ export default function App() {
       {isUnlocked && voiceAssistantEnabled && (
         <VoiceAssistant
           debts={debts}
+          incomes={incomes}
+          expenses={expenses}
+          installmentDebts={installmentDebts}
           onSaveDebt={handleSaveDebt}
           onSaveIncome={handleSaveIncome}
           onSaveExpense={handleSaveExpense}

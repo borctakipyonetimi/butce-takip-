@@ -122,15 +122,13 @@ export const DebtList: React.FC<DebtListProps> = ({
     })),
     ...activeUnpaidInstallmentDebts.map(inst => {
       const monthly = inst.totalAmount / inst.installmentCount;
-      const paidValue = inst.paidInstallmentCount * monthly;
-      const remainingTotal = inst.totalAmount - paidValue;
       return {
         id: inst.id,
-        name: `${inst.name} (Taksitli)`,
+        name: `${inst.name} (Bu Ayki Taksit)`,
         type: "installment" as const,
-        remaining: remainingTotal,
-        total: inst.totalAmount,
-        paid: paidValue
+        remaining: monthly,
+        total: monthly,
+        paid: 0
       };
     })
   ];
@@ -886,7 +884,7 @@ export const DebtList: React.FC<DebtListProps> = ({
         </div>
 
         <p className="text-xs text-slate-600 dark:text-slate-300 font-semibold leading-relaxed">
-          Kapatılması gereken toplam kalan borç miktarınız (taksitli borçların tamamı dahil): <strong className="text-slate-800 dark:text-slate-100 font-black">{format(totalRemainingDebt)}</strong> ve aylık gelir kaynağınız <strong className="text-emerald-600 dark:text-emerald-400 font-black">{format(incomeVal)}</strong>. 
+          Planlanan bu ayki toplam borç miktarınız (taksitli borçların tamamı yerine sadece bu ayki taksit tutarları dahil edilmiştir): <strong className="text-slate-800 dark:text-slate-100 font-black">{format(totalRemainingDebt)}</strong> ve aylık gelir kaynağınız <strong className="text-emerald-600 dark:text-emerald-400 font-black">{format(incomeVal)}</strong>. 
           Bu finansal verilere göre bütçeniz için en uygun borç kapatma stratejisi: <span className="text-indigo-600 dark:text-indigo-400 font-black bg-indigo-50 dark:bg-indigo-950/40 px-2 py-0.5 rounded-lg border border-indigo-100/30 dark:border-indigo-900/30">{recommendedStrategy === "snowball" ? "Kartopu (Snowball) Yöntemi" : "Çığ (Avalanche) Yöntemi"}</span>.
         </p>
 
