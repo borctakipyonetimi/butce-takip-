@@ -55,7 +55,8 @@ import {
   Camera,
   AlertCircle,
   Smartphone,
-  TrendingUp
+  TrendingUp,
+  Compass
 } from "lucide-react";
 import {
   Debt,
@@ -86,6 +87,8 @@ import { ContactsDebtPanel } from "./components/ContactsDebtPanel";
 import { FinancialTools } from "./components/FinancialTools";
 import { AdMobBanner } from "./components/AdMobBanner";
 import VoiceAssistant from "./components/VoiceAssistant";
+import { PublicLanding } from "./components/PublicLanding";
+import { PublicBlog } from "./components/PublicBlog";
 import confetti from "canvas-confetti";
 
 export default function App() {
@@ -133,6 +136,20 @@ export default function App() {
   const [activeTab, setActiveTab] = useState("overview");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [contactSyncTrigger, setContactSyncTrigger] = useState(0);
+
+  // Public Landing / Blog routing state
+  const [showPublicView, setShowPublicView] = useState<"landing" | "blog" | null>(() => {
+    const params = new URLSearchParams(window.location.search);
+    const pageParam = params.get("page");
+    if (pageParam === "landing") return "landing";
+    if (pageParam === "blog" || pageParam === "blog-post") return "blog";
+    if (pageParam === "app") return null;
+    return localStorage.getItem("skip_landing") === "true" ? null : "landing";
+  });
+  const [selectedPublicPostId, setSelectedPublicPostId] = useState<string | null>(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get("id");
+  });
 
   // Custom Confirmation Modal state to bypass browser alert/confirm popup blocking inside sandboxed iframes
   const [confirmModal, setConfirmModal] = useState<{
@@ -2482,13 +2499,53 @@ export default function App() {
     { id: "blog", label: "FİNANS KILAVUZLARI", icon: BookOpen },
     { id: "feedback", label: "GERİ BİLDİRİM", icon: MessageSquare },
     { id: "about", label: "HAKKINDA", icon: Star },
-    { id: "privacy", label: "GİZLİLİK POLİTİKASI", icon: Shield }
+    { id: "privacy", label: "GİZLİLİK POLİTİKASI", icon: Shield },
+    { id: "public_landing", label: "TANITIM & AÇILIŞ", icon: Compass }
   ];
 
   const handleNavClick = (tabId: string) => {
+    if (tabId === "public_landing") {
+      setShowPublicView("landing");
+      setIsSidebarOpen(false);
+      return;
+    }
     setActiveTab(tabId);
     setIsSidebarOpen(false);
   };
+
+  if (showPublicView === "landing") {
+    return (
+      <div className={`min-h-screen font-sans transition-all duration-300 bg-[#f8fafc] dark:bg-[#0f172a] theme-${colorTheme}`}>
+        <PublicLanding
+          onStartApp={() => {
+            localStorage.setItem("skip_landing", "true");
+            setShowPublicView(null);
+          }}
+          onNavigateToBlog={() => setShowPublicView("blog")}
+          onNavigateToPost={(id) => {
+            setSelectedPublicPostId(id);
+            setShowPublicView("blog");
+          }}
+        />
+      </div>
+    );
+  }
+
+  if (showPublicView === "blog") {
+    return (
+      <div className={`min-h-screen font-sans transition-all duration-300 bg-[#f8fafc] dark:bg-[#0f172a] theme-${colorTheme}`}>
+        <PublicBlog
+          selectedPostId={selectedPublicPostId}
+          onSelectPost={setSelectedPublicPostId}
+          onStartApp={() => {
+            localStorage.setItem("skip_landing", "true");
+            setShowPublicView(null);
+          }}
+          onBackToLanding={() => setShowPublicView("landing")}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className={`min-h-screen pb-16 md:pb-6 font-sans transition-all duration-300 bg-[#f8fafc] dark:bg-[#0f172a] theme-${colorTheme}`}>
