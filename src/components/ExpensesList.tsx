@@ -26,6 +26,7 @@ import { DoughnutChart, BarChart } from "./BudgetCharts";
 import { useCurrency } from "../utils/CurrencyContext";
 import ReceiptScanner from "./ReceiptScanner";
 import { Camera } from "lucide-react";
+import { t } from "../utils/translations";
 
 interface ExpensesListProps {
   expenses: Expense[];
@@ -38,6 +39,7 @@ interface ExpensesListProps {
   netBalance?: number;
   isPremium?: boolean;
   onUpgradeClick?: () => void;
+  language?: "tr" | "en";
 }
 
 const getSavingTipForCategory = (name: string, icon: string): string => {
@@ -296,7 +298,9 @@ export const ExpensesList: React.FC<ExpensesListProps> = ({
   netBalance,
   isPremium = false,
   onUpgradeClick,
+  language = "tr",
 }) => {
+  const translate = (txt: string) => t(txt, language as "tr" | "en");
   const { format, currencySymbol } = useCurrency();
   
   // Selected Month filter state (defaults to current year & month, e.g. "2026-05")
@@ -686,17 +690,21 @@ export const ExpensesList: React.FC<ExpensesListProps> = ({
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-3 justify-between sm:flex-row sm:items-center">
+      {/* Centered & Animated Page Title */}
+      <div className="flex flex-col items-center justify-center text-center py-4 select-none">
         <motion.h2
-          animate={{ y: [0, -1.2, 0] }}
-          transition={{ repeat: Infinity, duration: 4.5, ease: "easeInOut" }}
-          className="text-lg font-bold flex items-center gap-2 text-slate-800 dark:text-slate-100"
+          animate={{ y: [0, -4, 0] }}
+          transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
+          className="text-2xl sm:text-3xl font-black tracking-tight text-slate-800 dark:text-slate-100 flex items-center justify-center gap-2.5"
         >
-          <ShoppingCart className="w-5 h-5 text-rose-500" /> AYLIK HARCAMA
-          GİDERLERİ
+          <ShoppingCart className="w-7 h-7 text-rose-500 animate-pulse" /> HARCAMA GİDERLERİ
         </motion.h2>
+        <div className="w-16 h-1 bg-rose-500 rounded-full mt-2 opacity-80" />
+      </div>
 
-        <div className="flex items-center gap-2">
+      {/* Action Buttons Bar */}
+      <div className="flex flex-col gap-3 justify-center sm:flex-row sm:items-center">
+        <div className="flex items-center justify-center gap-2 flex-wrap">
           <button
             onClick={handleOpenAddCategory}
             className="px-3.5 py-1.5 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-semibold flex items-center gap-1.5 hover:bg-slate-50 dark:hover:bg-slate-700 transition"

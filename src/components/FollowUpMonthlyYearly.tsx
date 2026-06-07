@@ -9,6 +9,7 @@ import { motion } from "motion/react";
 import { Debt, Income, Expense, PaymentLog } from "../types";
 import { BarChart, LineChart } from "./BudgetCharts";
 import { useCurrency } from "../utils/CurrencyContext";
+import { t } from "../utils/translations";
 
 interface FollowUpMonthlyYearlyProps {
   debts: Debt[];
@@ -16,6 +17,7 @@ interface FollowUpMonthlyYearlyProps {
   expenses: Expense[];
   payments: PaymentLog[];
   viewMode: "monthly" | "yearly";
+  language?: "tr" | "en";
 }
 
 export const FollowUpMonthlyYearly: React.FC<FollowUpMonthlyYearlyProps> = ({
@@ -24,15 +26,20 @@ export const FollowUpMonthlyYearly: React.FC<FollowUpMonthlyYearlyProps> = ({
   expenses,
   payments,
   viewMode,
+  language = "tr",
 }) => {
+  const translate = (txt: string) => t(txt, language as "tr" | "en");
   const { format, currencySymbol } = useCurrency();
   const currentYear = new Date().getFullYear();
   const [selectedYear, setSelectedYear] = useState<number>(currentYear);
   const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth());
 
-  const monthsList = [
+  const monthsList = language === "tr" ? [
     "Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran",
     "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"
+  ] : [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"
   ];
 
   if (viewMode === "monthly") {
@@ -62,40 +69,42 @@ export const FollowUpMonthlyYearly: React.FC<FollowUpMonthlyYearlyProps> = ({
 
     return (
       <div className="space-y-6">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        {/* Centered & Animated Page Title */}
+        <div className="flex flex-col items-center justify-center text-center py-4 select-none">
           <motion.h2
-            animate={{ y: [0, -1.2, 0] }}
-            transition={{ repeat: Infinity, duration: 4.5, ease: "easeInOut" }}
-            className="text-lg font-bold flex items-center gap-2 text-slate-800 dark:text-slate-100"
+            animate={{ y: [0, -4, 0] }}
+            transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
+            className="text-2xl sm:text-3xl font-black tracking-tight text-slate-800 dark:text-slate-100 flex items-center justify-center gap-2.5"
           >
-            <Calendar className="w-5 h-5 text-indigo-500" /> AYLIK ÖDEME VE BÜTÇE TAKİBİ
+            <Calendar className="w-7 h-7 text-indigo-500 animate-pulse" /> AYLIK ÖDEME VE BÜTÇE TAKİBİ
           </motion.h2>
-          
-          <div className="flex items-center gap-2">
-            <select
-              value={selectedMonth}
-              onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
-              className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold dark:text-white"
-            >
-              {monthsList.map((m, idx) => (
-                <option key={idx} value={idx}>
-                  {m}
-                </option>
-              ))}
-            </select>
+          <div className="w-16 h-1 bg-indigo-500 rounded-full mt-2 opacity-80" />
+        </div>
 
-            <select
-              value={selectedYear}
-              onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-              className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold dark:text-white"
-            >
-              {[currentYear - 1, currentYear, currentYear + 1, currentYear + 2].map((y) => (
-                <option key={y} value={y}>
-                  {y}
-                </option>
-              ))}
-            </select>
-          </div>
+        <div className="flex items-center justify-center gap-2 flex-wrap">
+          <select
+            value={selectedMonth}
+            onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
+            className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold dark:text-white"
+          >
+            {monthsList.map((m, idx) => (
+              <option key={idx} value={idx}>
+                {m}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={selectedYear}
+            onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+            className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold dark:text-white"
+          >
+            {[currentYear - 1, currentYear, currentYear + 1, currentYear + 2].map((y) => (
+              <option key={y} value={y}>
+                {y}
+              </option>
+            ))}
+          </select>
         </div>
 
         {/* Dynamic monthly summaries card */}
@@ -159,19 +168,23 @@ export const FollowUpMonthlyYearly: React.FC<FollowUpMonthlyYearlyProps> = ({
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      {/* Centered & Animated Page Title */}
+      <div className="flex flex-col items-center justify-center text-center py-4 select-none">
         <motion.h2
-          animate={{ y: [0, -1.2, 0] }}
-          transition={{ repeat: Infinity, duration: 4.5, ease: "easeInOut" }}
-          className="text-lg font-bold flex items-center gap-2 text-slate-800 dark:text-slate-100"
+          animate={{ y: [0, -4, 0] }}
+          transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
+          className="text-2xl sm:text-3xl font-black tracking-tight text-slate-800 dark:text-slate-100 flex items-center justify-center gap-2.5"
         >
-          <LucideLine className="w-5 h-5 text-indigo-500" /> YILLIK PAY ANALİZİ VE EĞİLİM GRAFİKLERİ
+          <LucideLine className="w-7 h-7 text-indigo-500 animate-pulse" /> YILLIK PAY ANALİZİ VE EĞİLİM GRAFİKLERİ
         </motion.h2>
+        <div className="w-16 h-1 bg-indigo-500 rounded-full mt-2 opacity-80" />
+      </div>
 
+      <div className="flex items-center justify-center">
         <select
           value={selectedYear}
           onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-          className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold dark:text-white self-start sm:self-center"
+          className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold dark:text-white"
         >
           {[currentYear - 1, currentYear, currentYear + 1, currentYear + 2].map((y) => (
             <option key={y} value={y}>

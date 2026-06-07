@@ -13,6 +13,7 @@ import { AdMobBanner } from "./AdMobBanner";
 import ReceiptScanner from "./ReceiptScanner";
 import { DebtTimelineChart } from "./DebtTimelineChart";
 import { jsPDF } from "jspdf";
+import { t } from "../utils/translations";
 
 interface DebtListProps {
   debts: Debt[];
@@ -34,6 +35,7 @@ interface DebtListProps {
   setSelectedMonth: React.Dispatch<React.SetStateAction<number | null>>;
   setSelectedYear: React.Dispatch<React.SetStateAction<number | null>>;
   stats?: any;
+  language?: "tr" | "en";
 }
 
 export const DebtList: React.FC<DebtListProps> = ({
@@ -54,7 +56,9 @@ export const DebtList: React.FC<DebtListProps> = ({
   setSelectedMonth,
   setSelectedYear,
   stats,
+  language = "tr",
 }) => {
+  const translate = (txt: string) => t(txt, language as "tr" | "en");
   const { format, currencySymbol } = useCurrency();
   const [activeTab, setActiveTab] = useState<"unpaid" | "paid" | "all">("unpaid");
   const [sortBy, setSortBy] = useState<"none" | "amount_desc" | "amount_asc" | "due_date_asc" | "due_date_desc">("none");
@@ -906,17 +910,21 @@ export const DebtList: React.FC<DebtListProps> = ({
 
   return (
     <div className="space-y-4">
-      {/* Mini Stats and Title */}
-      <div className="flex flex-col gap-3 justify-between sm:flex-row sm:items-center">
+      {/* Centered & Animated Page Title */}
+      <div className="flex flex-col items-center justify-center text-center py-4 select-none">
         <motion.h2
-          animate={{ y: [0, -1.2, 0] }}
-          transition={{ repeat: Infinity, duration: 4.5, ease: "easeInOut" }}
-          className="text-lg font-bold flex items-center gap-2 text-slate-800 dark:text-slate-100"
+          animate={{ y: [0, -4, 0] }}
+          transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
+          className="text-2xl sm:text-3xl font-black tracking-tight text-slate-800 dark:text-slate-100 flex items-center justify-center gap-2.5"
         >
-          <ClipboardList className="w-5 h-5 text-indigo-500" /> BORÇ LİSTESİ
+          <ClipboardList className="w-7 h-7 text-indigo-500 animate-pulse" /> BORÇ LİSTESİ
         </motion.h2>
-        
-        <div className="flex items-center gap-2">
+        <div className="w-16 h-1 bg-indigo-500 rounded-full mt-2 opacity-80" />
+      </div>
+
+      {/* Mini Stats and Title Button Bar */}
+      <div className="flex flex-col gap-3 justify-center sm:flex-row sm:items-center">
+        <div className="flex items-center justify-center gap-2 flex-wrap">
           <button
             onClick={() => handlePrint(false)}
             className="px-3 py-1.5 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-semibold flex items-center gap-1 hover:bg-slate-50 transition"

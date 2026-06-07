@@ -31,6 +31,8 @@ import {
   BellRing
 } from "lucide-react";
 
+import { t } from "../utils/translations";
+
 interface Contact {
   id: string;
   name: string;
@@ -56,14 +58,17 @@ interface ContactsDebtPanelProps {
   format: (amount: number) => string;
   triggerToast?: (msg: string) => void;
   onAddAlarm?: (titleString: string, dateString: string) => void;
+  language?: "tr" | "en";
 }
 
 export const ContactsDebtPanel: React.FC<ContactsDebtPanelProps> = ({
   currentUser,
   format,
   triggerToast,
-  onAddAlarm
+  onAddAlarm,
+  language = "tr"
 }) => {
+  const translate = (txt: string) => t(txt, language as "tr" | "en");
   const spaceKey = currentUser ? `user_${currentUser}` : "user_anonymous";
 
   // State Management
@@ -459,18 +464,20 @@ export const ContactsDebtPanel: React.FC<ContactsDebtPanelProps> = ({
 
   return (
     <div className="space-y-6 select-none font-sans">
+      {/* Centered & Animated Page Title */}
+      <div className="flex flex-col items-center justify-center text-center py-4 select-none">
+        <motion.h2
+          animate={{ y: [0, -4, 0] }}
+          transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
+          className="text-2xl sm:text-3xl font-black tracking-tight text-slate-800 dark:text-slate-100 flex items-center justify-center gap-2.5"
+        >
+          <Users className="w-7 h-7 text-indigo-500 animate-pulse" /> KİŞİ ALACAK & VERECEK DEFTERİ
+        </motion.h2>
+        <div className="w-16 h-1 bg-indigo-500 rounded-full mt-2 opacity-80" />
+      </div>
+
       {/* Upper Welcome Header */}
       <div className="p-5 bg-white dark:bg-slate-800 rounded-3xl border border-slate-200/50 dark:border-slate-700 shadow-sm flex flex-col items-center text-center space-y-2">
-        <div className="p-3.5 bg-indigo-500/10 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 rounded-full">
-          <Users className="w-7 h-7" />
-        </div>
-        <motion.h2
-          animate={{ y: [0, -1.2, 0] }}
-          transition={{ repeat: Infinity, duration: 4.5, ease: "easeInOut" }}
-          className="text-base font-black text-slate-800 dark:text-slate-100 uppercase tracking-wide"
-        >
-          👥 Kişi Alacak & Verecek Defteri
-        </motion.h2>
         <p className="text-xs text-slate-600 dark:text-slate-300 max-w-xl font-medium leading-relaxed">
           Borç verdiğiniz arkadaşlarınızı, ödeme bekleyen müşterilerinizi veya borçlu olduğunuz akrabalarınızı akıllı rehber ile gruplayın. Her kişi için bağımsız veri geçmişi tutun.
         </p>

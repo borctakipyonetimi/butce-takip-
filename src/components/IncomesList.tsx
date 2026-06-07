@@ -9,6 +9,7 @@ import { motion } from "motion/react";
 import { Income } from "../types";
 import { DoughnutChart, LineChart } from "./BudgetCharts";
 import { useCurrency } from "../utils/CurrencyContext";
+import { t } from "../utils/translations";
 
 interface IncomesListProps {
   incomes: Income[];
@@ -17,6 +18,7 @@ interface IncomesListProps {
   isPremium?: boolean;
   onUpgradeClick?: () => void;
   carryOverBalance?: number;
+  language?: "tr" | "en";
 }
 
 export const IncomesList: React.FC<IncomesListProps> = ({
@@ -26,7 +28,9 @@ export const IncomesList: React.FC<IncomesListProps> = ({
   isPremium = false,
   onUpgradeClick,
   carryOverBalance,
+  language = "tr",
 }) => {
+  const translate = (txt: string) => t(txt, language as "tr" | "en");
   const { format, currencySymbol } = useCurrency();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalTitle, setModalTitle] = useState("Gelir Ekle");
@@ -94,17 +98,22 @@ export const IncomesList: React.FC<IncomesListProps> = ({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      {/* Centered & Animated Page Title */}
+      <div className="flex flex-col items-center justify-center text-center py-4 select-none">
         <motion.h2
-          animate={{ y: [0, -1.2, 0] }}
-          transition={{ repeat: Infinity, duration: 4.5, ease: "easeInOut" }}
-          className="text-lg font-bold flex items-center gap-2 text-slate-800 dark:text-slate-100"
+          animate={{ y: [0, -4, 0] }}
+          transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
+          className="text-2xl sm:text-3xl font-black tracking-tight text-slate-800 dark:text-slate-100 flex items-center justify-center gap-2.5"
         >
-          <PiggyBank className="w-5 h-5 text-emerald-500" /> GELİRLER
+          <PiggyBank className="w-7 h-7 text-emerald-500 animate-pulse" /> GELİRLER
         </motion.h2>
+        <div className="w-16 h-1 bg-emerald-500 rounded-full mt-2 opacity-80" />
+      </div>
+
+      <div className="flex items-center justify-center">
         <button
           onClick={handleOpenAdd}
-          className="px-3.5 py-1.5 bg-emerald-600 text-white hover:bg-emerald-700 text-xs font-bold rounded-xl flex items-center gap-1.5 transition active:scale-95 shadow-sm"
+          className="px-4 py-2 bg-emerald-600 text-white hover:bg-emerald-700 text-xs font-bold rounded-xl flex items-center gap-1.5 transition active:scale-95 shadow-sm"
         >
           <PlusCircle className="w-4 h-4" /> Gelir Ekle
         </button>

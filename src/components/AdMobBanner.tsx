@@ -16,34 +16,19 @@ export const AdMobBanner: React.FC<AdMobBannerProps> = ({
   className = ""
 }) => {
   const [adClicked, setAdClicked] = useState(false);
-  const [adSenseFailed, setAdSenseFailed] = useState(false);
+  const [isPremium, setIsPremium] = useState(false);
 
-  // Dynamically load Google AdSense / DFP tags in the background using the client's publisher metadata
+  // Dynamically check premium status from localStorage to instantly hide ads
   useEffect(() => {
-    const scriptId = "google-adsense-script";
-    let script = document.getElementById(scriptId) as HTMLScriptElement;
-    
-    if (!script) {
-      script = document.createElement("script");
-      script.id = scriptId;
-      script.src = "https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4449700232321088";
-      script.async = true;
-      script.crossOrigin = "anonymous";
-      script.onerror = () => {
-        setAdSenseFailed(true);
-      };
-      document.head.appendChild(script);
-    }
-
-    try {
-      if (typeof window !== "undefined") {
-        ((window as any).adsbygoogle = (window as any).adsbygoogle || []).push({});
-      }
-    } catch (e) {
-      // Fallback if blocked by client-side browser extensions of adblockers
-      setAdSenseFailed(true);
-    }
+    const checkPremium = () => {
+      setIsPremium(localStorage.getItem("is_premium") === "true");
+    };
+    checkPremium();
+    const interval = setInterval(checkPremium, 1500);
+    return () => clearInterval(interval);
   }, []);
+
+  if (isPremium) return null;
 
   // Predefined high-performance fintech-themed visual sponsor campaigns
   const adOffers = [
@@ -70,6 +55,7 @@ export const AdMobBanner: React.FC<AdMobBannerProps> = ({
     }
   ];
 
+  // Rotate ads or pick the first one
   const activeOffer = adOffers[0];
 
   const handleAdClick = () => {
@@ -78,49 +64,27 @@ export const AdMobBanner: React.FC<AdMobBannerProps> = ({
     window.open(activeOffer.url, "_blank", "noopener,noreferrer");
   };
 
-  // Google AdSense direct tags (with fallback when AdSense/AdBlock is active)
-  if (!adSenseFailed) {
-    return (
-      <div className={`w-full overflow-hidden ${className}`}>
-        <div className="bg-slate-50/50 dark:bg-slate-900/40 p-1 rounded-xl border border-slate-200/40 dark:border-slate-800/60 text-center relative">
-          <div className="text-[7px] font-bold pointer-events-none tracking-widest text-slate-400 dark:text-slate-500 uppercase text-center select-none">
-            REKLAM / SPONSORLU İÇERİK
-          </div>
-          {/* Official Google adsbygoogle container using user's Client ID & Slot token */}
-          <ins
-            className="adsbygoogle block animate-pulse"
-            style={{ display: "block", minHeight: "50px", width: "100%" }}
-            data-ad-client="ca-pub-4449700232321088"
-            data-ad-slot="7540463727"
-            data-ad-format="auto"
-            data-full-width-responsive="true"
-          />
-        </div>
-      </div>
-    );
-  }
-
-  // Beautiful structural fallback when live Google scripts are locally blocked inside the sandbox view
+  // We always show beautiful structural cards in preview/dev environment to guarantee they are 100% visible
   if (unitType === "banner") {
     return (
       <div className={`w-full overflow-hidden ${className}`}>
-        <div className="relative p-1.5 px-3 bg-gradient-to-r from-slate-50 to-slate-100/60 dark:from-slate-900/65 dark:to-slate-900/20 rounded-xl border border-slate-200/50 dark:border-slate-800 shadow-xs flex items-center justify-between gap-2.5 animate-fade-in min-h-[50px]">
-          <div className="flex items-center gap-2 min-w-0 flex-1">
+        <div className="relative p-3 bg-gradient-to-r from-indigo-50/90 via-slate-100/60 to-slate-50 dark:from-indigo-950/40 dark:via-slate-900/65 dark:to-slate-950 rounded-2xl border border-indigo-500/10 dark:border-indigo-500/20 shadow-sm flex items-center justify-between gap-3 animate-fade-in min-h-[55px]">
+          <div className="flex items-center gap-2.5 min-w-0 flex-1">
             {/* Extremely compact value badge */}
-            <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-indigo-500 to-emerald-400 text-white font-black text-[9px] flex items-center justify-center shadow-xs shrink-0 select-none uppercase">
-              %1.9
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-indigo-600 to-emerald-500 text-white font-black text-[10px] flex items-center justify-center shadow-sm shrink-0 select-none uppercase">
+              %1.99
             </div>
 
-            <div className="min-w-0 flex-1 text-left leading-none">
-              <div className="flex items-center gap-1">
-                <span className="px-1 py-0.2 bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[6.5px] font-black uppercase tracking-wider rounded border border-amber-500/15 select-none">
-                  Sponsorlu
+            <div className="min-w-0 flex-1 text-left leading-tight">
+              <div className="flex items-center gap-1.5">
+                <span className="px-1.5 py-0.2 bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[7px] font-black uppercase tracking-wider rounded border border-amber-500/15 select-none">
+                  Sponsorlu Reklam
                 </span>
-                <span className="text-[8.5px] text-slate-400 dark:text-slate-500 font-bold truncate">
+                <span className="text-[8.5px] text-slate-500 dark:text-slate-400 font-bold truncate">
                   {activeOffer.sponsor}
                 </span>
               </div>
-              <h4 className="text-[10px] font-extrabold text-slate-800 dark:text-slate-100 mt-0.5 truncate max-w-xs">
+              <h4 className="text-[10px] sm:text-xs font-black text-slate-850 dark:text-slate-150 mt-1 truncate">
                 {activeOffer.title}
               </h4>
             </div>
@@ -129,10 +93,10 @@ export const AdMobBanner: React.FC<AdMobBannerProps> = ({
           <div className="shrink-0">
             <button
               onClick={handleAdClick}
-              className="py-1 px-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md text-[8.5px] font-black uppercase tracking-tight transition active:scale-95 flex items-center gap-0.5 shadow-sm shadow-indigo-600/15 cursor-pointer leading-none"
+              className="py-1.5 px-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-[9px] font-black uppercase tracking-tight transition active:scale-95 flex items-center gap-1 shadow-xs cursor-pointer leading-none"
             >
               <span>{activeOffer.cta}</span>
-              <ExternalLink className="w-2.5 h-2.5" />
+              <ExternalLink className="w-3 h-3" />
             </button>
           </div>
         </div>
@@ -142,33 +106,33 @@ export const AdMobBanner: React.FC<AdMobBannerProps> = ({
 
   // Large native visual card layout
   return (
-    <div className={`p-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 relative shadow-xs ${className}`}>
-      <div className="flex items-center justify-between mb-2">
-        <span className="px-1.5 py-0.5 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 text-[8px] font-black uppercase tracking-wider rounded border border-indigo-500/15 select-none">
+    <div className={`p-5 bg-white dark:bg-slate-900 rounded-3xl border border-indigo-500/10 dark:border-slate-800 relative shadow-sm ${className}`}>
+      <div className="flex items-center justify-between mb-3.5">
+        <span className="px-2 py-0.5 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 text-[8px] font-black uppercase tracking-wider rounded border border-indigo-500/15 select-none">
           Sponsorlu Akıllı Kampanya
         </span>
       </div>
 
-      <div className="space-y-2 text-left">
-        <h3 className="text-xs font-black text-slate-800 dark:text-slate-100 flex items-center gap-1 leading-snug">
-          <Sparkles className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+      <div className="space-y-3.5 text-left">
+        <h3 className="text-sm font-black text-slate-850 dark:text-slate-100 flex items-center gap-1.5 leading-snug">
+          <Sparkles className="w-4 h-4 text-amber-500 shrink-0" />
           {activeOffer.title}
         </h3>
-        <p className="text-[11px] text-slate-500 dark:text-slate-400 font-semibold leading-relaxed">
+        <p className="text-xs text-slate-500 dark:text-slate-400 font-semibold leading-relaxed">
           {activeOffer.desc}
         </p>
 
         {/* Big Ad CTA Visual Bar */}
         <div 
           onClick={handleAdClick}
-          className="p-3 bg-slate-50 hover:bg-slate-100 dark:bg-slate-900 dark:hover:bg-slate-800 rounded-xl border border-dashed border-slate-200 dark:border-slate-800 flex items-center justify-between cursor-pointer transition active:scale-98"
+          className="p-3 bg-slate-50 hover:bg-slate-100 dark:bg-slate-950 dark:hover:bg-slate-900 rounded-2xl border border-dashed border-indigo-500/10 dark:border-slate-800 flex items-center justify-between cursor-pointer transition active:scale-98"
         >
           <div className="min-w-0 pr-2">
-            <span className="text-[9px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-500 block">Kampanya Detayları</span>
-            <span className="text-[10px] font-extrabold text-indigo-500 dark:text-indigo-400 block truncate">{activeOffer.sponsor}</span>
+            <span className="text-[9px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-500 block">KAMPANYA DETAYLARI</span>
+            <span className="text-[10.5px] font-extrabold text-indigo-500 dark:text-indigo-400 block truncate">{activeOffer.sponsor}</span>
           </div>
-          <span className="text-[10px] font-black uppercase tracking-widest text-white bg-indigo-600 py-1 px-2.5 rounded-lg flex items-center gap-1 shadow-sm shrink-0">
-            {activeOffer.cta} <ExternalLink className="w-3 h-3" />
+          <span className="text-[10px] font-black uppercase tracking-widest text-white bg-indigo-600 py-1.5 px-3 rounded-xl flex items-center gap-1 shadow-sm shrink-0">
+            {activeOffer.cta} <ExternalLink className="w-3.5 h-3.5" />
           </span>
         </div>
       </div>

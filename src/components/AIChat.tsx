@@ -3,6 +3,7 @@ import { Bot, Send, User, Sparkles, Brain, Flame, Target, MessageSquareCode, Set
 import { motion, AnimatePresence } from "motion/react";
 import { Debt, Income, Expense, InstallmentDebt, FinancialStats } from "../types";
 import { getApiUrl } from "../utils/api";
+import { t } from "../utils/translations";
 
 interface ChatMessage {
   sender: "user" | "bot";
@@ -18,6 +19,7 @@ interface AIChatProps {
   selectedMonth?: number | null;
   selectedYear?: number | null;
   expenseCategories?: { id: number; name: string; color?: string }[];
+  language?: "tr" | "en";
 }
 
 const TURKISH_MONTHS = [
@@ -111,12 +113,16 @@ export const AIChat: React.FC<AIChatProps> = ({
   stats,
   selectedMonth = new Date().getMonth(),
   selectedYear = new Date().getFullYear(),
-  expenseCategories = []
+  expenseCategories = [],
+  language = "tr",
 }) => {
-  const [messages, setMessages] = useState<ChatMessage[]>([
+  const translate = (txt: string) => t(txt, language as "tr" | "en");
+  const [messages, setMessages] = useState<ChatMessage[]>(() => [
     {
       sender: "bot",
-      text: "Merhaba! 😊 Ben bütçe ve borç yönetim asistanınız. Borçlarınız, aylık harcamalarınız, tasarruf stratejileri (Kartopu / Avalanche yöntemi), gelir-gider optimizasyonu veya 'hangi borcu erken ödemeliyim?' gibi finansal konular için bana dilediğinizi sorabilirsiniz. Bütçe verilerinizi analiz etmek için sabırsızlanıyorum!",
+      text: language === "tr"
+        ? "Merhaba! 😊 Ben bütçe ve borç yönetim asistanınız. Borçlarınız, aylık harcamalarınız, tasarruf stratejileri (Kartopu / Avalanche yöntemi), gelir-gider optimizasyonu veya 'hangi borcu erken ödemeliyim?' gibi finansal konular için bana dilediğinizi sorabilirsiniz. Bütçe verilerinizi analiz etmek için sabırsızlanıyorum!"
+        : "Hello! 😊 I am your budget and debt management advisor. You can ask me anything about your loans, monthly outlays, savings pathways (Snowball / Avalanche method), cash flow optimization, or 'which debt to pay first?'. Ready to help analyze your wallet!",
     },
   ]);
   const [inputValue, setInputValue] = useState("");
@@ -586,15 +592,16 @@ Lütfen bunları karşılaştırarak hangisinin en fazla harcama yükü oluştur
             </div>
           </div>
           
-          <div className="flex flex-col items-center justify-center text-center space-y-1.5">
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-2">
+          <div className="flex flex-col items-center justify-center text-center space-y-1.5 select-none">
+            <div className="flex flex-col items-center justify-center gap-2">
               <motion.h2
-                animate={{ y: [0, -1.2, 0] }}
-                transition={{ repeat: Infinity, duration: 4.5, ease: "easeInOut" }}
-                className="text-md sm:text-lg font-black tracking-tight text-slate-800 dark:text-slate-100 uppercase text-center"
+                animate={{ y: [0, -4, 0] }}
+                transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
+                className="text-2xl sm:text-3xl font-black tracking-tight text-slate-800 dark:text-slate-100 uppercase text-center flex items-center justify-center gap-2"
               >
-                FİNANSAL DANIŞMANLIK & AKILLI ANALİZ PORTALI
+                YAPAY ZEKA ASİSTAN 🤖
               </motion.h2>
+              <div className="w-16 h-1 bg-indigo-500 rounded-full my-1.5 opacity-80" />
               {/* Pulsing state indicator badge */}
               <motion.span
                 animate={{

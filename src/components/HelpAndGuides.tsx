@@ -183,6 +183,18 @@ export const HelpAndGuides: React.FC<HelpAndGuidesProps> = ({ activeTab, onNavig
   if (activeTab === "help") {
     return (
       <div className="space-y-6 max-h-[75vh] overflow-y-auto pr-2 scrollbar-thin">
+        {/* Centered & Animated Page Title */}
+        <div className="flex flex-col items-center justify-center text-center py-4 select-none">
+          <motion.h2
+            animate={{ y: [0, -4, 0] }}
+            transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
+            className="text-2xl sm:text-3xl font-black tracking-tight text-slate-800 dark:text-slate-100 flex items-center justify-center gap-2.5"
+          >
+            <HelpCircle className="w-7 h-7 text-indigo-500 animate-pulse" /> SİSTEM KULLANIM REHBERİ
+          </motion.h2>
+          <div className="w-16 h-1 bg-indigo-500 rounded-full mt-2 opacity-80" />
+        </div>
+
         {/* Modern Interactive Header inside Guide */}
         <motion.div 
           initial={{ opacity: 0, y: 15 }}
@@ -193,10 +205,6 @@ export const HelpAndGuides: React.FC<HelpAndGuidesProps> = ({ activeTab, onNavig
           <div className="absolute -top-12 -left-12 w-28 h-28 bg-indigo-500/10 rounded-full blur-2xl" />
           <div className="absolute -bottom-12 -right-12 w-28 h-28 bg-purple-500/10 rounded-full blur-2xl" />
           
-          <HelpCircle className="w-10 h-10 text-indigo-500 mx-auto animate-bounce duration-[3000ms]" />
-          <h3 className="text-base sm:text-lg font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight relative z-10 flex items-center justify-center gap-2">
-            🚀 BÜTÇEM PRO YÖNETİM SİSTEMİ REHBERİ
-          </h3>
           <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 font-medium max-w-lg mx-auto relative z-10 leading-relaxed">
             Akıllı sistemimizdeki modülleri, taksit hesaplama yapılarını ve asistan yeteneklerini keşfederek finansal bağımsızlığınız için bütçenizi kontrol altına alın.
           </p>
@@ -273,20 +281,23 @@ export const HelpAndGuides: React.FC<HelpAndGuidesProps> = ({ activeTab, onNavig
   if (activeTab === "blog") {
     return (
       <div className="space-y-6 max-h-[75vh] overflow-y-auto pr-2 scrollbar-thin">
+        {/* Centered & Animated Page Title */}
+        <div className="flex flex-col items-center justify-center text-center py-4 select-none">
+          <motion.h2
+            animate={{ y: [0, -4, 0] }}
+            transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
+            className="text-2xl sm:text-3xl font-black tracking-tight text-slate-800 dark:text-slate-100 flex items-center justify-center gap-2.5"
+          >
+            <BookOpen className="w-7 h-7 text-indigo-500 animate-pulse" /> AKADEMİK FİNANS KÜTÜPHANESİ
+          </motion.h2>
+          <div className="w-16 h-1 bg-indigo-500 rounded-full mt-2 opacity-80" />
+        </div>
+
         {/* Modern Blog Header Banner */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200/60 dark:border-slate-700/65 pb-4">
-          <div>
-            <h2 className="text-lg font-black flex items-center gap-2 text-slate-800 dark:text-slate-100 uppercase tracking-tight">
-              <BookOpen className="w-5 h-5 text-emerald-500" /> AKADEMİK FİNANS KÜTÜPHANESİ
-            </h2>
-            <p className="text-xs text-slate-400 dark:text-slate-500 mt-1 font-semibold">
-              Mali geleceğinizi planlamak ve borç sarmalından bilimsel metotlarla kurtulmak için hazırlanan finans içerikleri.
-            </p>
-          </div>
-          
-          <span className="px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-[10px] font-black tracking-widest uppercase rounded-lg self-start">
-            HAFTALIK GÜNCEL DOSYA
-          </span>
+        <div className="flex flex-col items-center justify-center text-center p-4 bg-slate-50 dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800 rounded-2xl">
+          <p className="text-xs text-slate-400 dark:text-slate-500 font-semibold max-w-xl">
+            Mali geleceğinizi planlamak ve borç sarmalından bilimsel metotlarla kurtulmak için hazırlanan finans içerikleri.
+          </p>
         </div>
 
         {/* Dynamic Blog Post Grid */}
@@ -549,9 +560,18 @@ export const HelpAndGuides: React.FC<HelpAndGuidesProps> = ({ activeTab, onNavig
   if (activeTab === "privacy") {
     return (
       <div className="space-y-4 max-h-[75vh] overflow-y-auto pr-2 scrollbar-thin">
-        <h2 className="text-xl font-bold flex items-center gap-2 text-slate-800 dark:text-slate-100">
-          <Shield className="w-5 h-5 text-indigo-500" /> BÜTÇEM PRO GİZLİLİK POLİTİKASI
-        </h2>
+        {/* Centered & Animated Page Title */}
+        <div className="flex flex-col items-center justify-center text-center py-4 select-none">
+          <motion.h2
+            animate={{ y: [0, -4, 0] }}
+            transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
+            className="text-2xl sm:text-3xl font-black tracking-tight text-slate-800 dark:text-slate-100 flex items-center justify-center gap-2.5"
+          >
+            <Shield className="w-7 h-7 text-indigo-500 animate-pulse" /> GİZLİLİK POLİTİKASI
+          </motion.h2>
+          <div className="w-16 h-1 bg-indigo-500 rounded-full mt-2 opacity-80" />
+        </div>
+
         <div className="space-y-4 text-xs md:text-sm text-slate-600 dark:text-slate-400 leading-relaxed overflow-y-auto pr-2">
           <p className="font-semibold text-slate-700 dark:text-slate-300">Son Güncelleme: 2 Haziran 2026</p>
           
@@ -618,6 +638,18 @@ export const HelpAndGuides: React.FC<HelpAndGuidesProps> = ({ activeTab, onNavig
   // default to About ("about")
   return (
     <div className="space-y-6 max-h-[75vh] overflow-y-auto pr-2 scrollbar-thin">
+      {/* Centered & Animated Page Title */}
+      <div className="flex flex-col items-center justify-center text-center py-4 select-none">
+        <motion.h2
+          animate={{ y: [0, -4, 0] }}
+          transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
+          className="text-2xl sm:text-3xl font-black tracking-tight text-slate-800 dark:text-slate-100 flex items-center justify-center gap-2.5"
+        >
+          <BookOpen className="w-7 h-7 text-indigo-500 animate-pulse" /> HAKKIMIZDA
+        </motion.h2>
+        <div className="w-16 h-1 bg-indigo-500 rounded-full mt-2 opacity-80" />
+      </div>
+
       {/* Premium Header Banner */}
       <div className="p-6 bg-gradient-to-br from-indigo-600 to-indigo-800 text-white rounded-3xl shadow-md border border-indigo-500/30 space-y-3 relative overflow-hidden">
         <div className="absolute top-0 right-0 p-8 opacity-10 select-none pointer-events-none">

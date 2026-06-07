@@ -91,6 +91,7 @@ import { AdMobBanner } from "./components/AdMobBanner";
 import VoiceAssistant from "./components/VoiceAssistant";
 import { PublicLanding } from "./components/PublicLanding";
 import { PublicBlog } from "./components/PublicBlog";
+import { GPlayEnhancements } from "./components/GPlayEnhancements";
 import confetti from "canvas-confetti";
 
 export default function App() {
@@ -138,6 +139,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState("overview");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [contactSyncTrigger, setContactSyncTrigger] = useState(0);
+  const [language, setLanguage] = useState<"tr" | "en">("tr");
 
   // Public Landing / Blog routing state
   const [showPublicView, setShowPublicView] = useState<"landing" | "blog" | null>(() => {
@@ -224,9 +226,12 @@ export default function App() {
   const [selectedMonth, setSelectedMonth] = useState<number | null>(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState<number | null>(new Date().getFullYear());
 
-  // Premium tier configurations (Free vs Paid Premium, forced to false for preview display of actual AdMob and fallback banners)
-  const [isPremium, setIsPremium] = useState<boolean>(false);
+  // Premium tier configurations (Free vs Paid Premium, persisted to keep premium state on browser reload)
+  const [isPremium, setIsPremium] = useState<boolean>(() => {
+    return localStorage.getItem("is_premium") === "true";
+  });
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
+  const [promoFeature, setPromoFeature] = useState<string | null>(null);
 
   // Local Alerts indicators
   const [showToast, setShowToast] = useState(false);
@@ -2529,13 +2534,14 @@ export default function App() {
     { id: "monthly", label: "AYLIK TAKİP", icon: Calendar },
     { id: "yearly", label: "YILLIK TAKİP", icon: Activity },
     { id: "debts", label: "BORÇ LİSTESİ", icon: Coins },
-    { id: "contacts", label: "KİŞİ ALACAK/VERECEK", icon: Users },
+    { id: "contacts", label: "KİŞİ ALACAK/VERECEK", icon: Users, isPro: true },
     { id: "income", label: "GELİRLER", icon: Wallet },
     { id: "expenses", label: "GİDERLER", icon: ShoppingCart },
     { id: "installments", label: "TAKSİTLİ BORÇLAR", icon: Calendar },
+    { id: "gplay_enhancements", label: "PRO BULUT & WIDGET", icon: Sparkles, isPro: true },
     { id: "notifications", label: "BİLDİRİM & GÜVENLİK", icon: Shield },
-    { id: "aiStrategy", label: "YAPAY ZEKA ASİSTAN", icon: Sparkles },
-    { id: "financialTools", label: "FİNANSAL ARAÇLAR", icon: TrendingUp },
+    { id: "aiStrategy", label: "YAPAY ZEKA ASİSTAN", icon: Sparkles, isPro: true },
+    { id: "financialTools", label: "FİNANSAL ARAÇLAR", icon: TrendingUp, isPro: true },
     { id: "help", label: "KULLANIM REHBERİ", icon: HelpCircle },
     { id: "blog", label: "FİNANS KILAVUZLARI", icon: BookOpen },
     { id: "feedback", label: "GERİ BİLDİRİM", icon: MessageSquare },
@@ -2550,6 +2556,15 @@ export default function App() {
       setIsSidebarOpen(false);
       return;
     }
+
+    const clickedItem = sidebarItems.find(item => item.id === tabId);
+    if (clickedItem?.isPro && !isPremium) {
+      setPromoFeature(clickedItem.label);
+      setIsUpgradeModalOpen(true);
+      triggerToast(`👑 ${clickedItem.label} özelliği yalnızca Pro üyelerimize özeldir!`);
+      return;
+    }
+
     setActiveTab(tabId);
     setIsSidebarOpen(false);
   };
@@ -3015,7 +3030,7 @@ export default function App() {
             {/* Animated Contacts Directory Logo */}
             <motion.button
               onClick={() => {
-                setActiveTab("contacts");
+                handleNavClick("contacts");
                 triggerToast("Cari Hesaplar & Kişi Rehberi Açıldı! 👤📖");
               }}
               title="Kişi Rehberi & Cari Hesaplar"
@@ -3052,6 +3067,25 @@ export default function App() {
             </motion.button>
 
             <button
+              onClick={() => {
+                const nextPrem = !isPremium;
+                setIsPremium(nextPrem);
+                localStorage.setItem("is_premium", nextPrem ? "true" : "false");
+                triggerToast(nextPrem ? "👑 Bütçem Pro Premium Sürüm Etkin!" : "⭐ Ücretsiz Sürüm (Reklamlı) Aktif!");
+              }}
+              title="Test için Sürümü Değiştir"
+              className={`p-1.5 sm:p-2 lg:p-2.5 rounded-xl border transition-all flex items-center justify-center space-x-1 duration-300 cursor-pointer shrink-0 active:scale-95 ${
+                isPremium 
+                  ? "bg-amber-500/15 hover:bg-amber-500/25 text-amber-500 border-amber-500/30 shadow-xs" 
+                  : "bg-slate-500/10 hover:bg-slate-500/20 text-slate-400 border-slate-500/20"
+              }`}
+            >
+              <span className="text-[9px] sm:text-[10px] font-black tracking-wide uppercase">
+                {isPremium ? "🏆 PREMİUM SÜRÜM" : "⭐ ÜCRETSİZ SÜRÜM"}
+              </span>
+            </button>
+
+            <button
               onClick={() => setIsSecurityModalOpen(true)}
               title="Güvenlik ve Kilit Ayarları"
               className="p-1.5 sm:p-2 lg:p-2.5 bg-indigo-600/15 hover:bg-indigo-600/25 border border-indigo-600/30 text-indigo-400 dark:text-indigo-300 active:scale-95 rounded-xl transition-all flex items-center justify-center space-x-1 duration-300 cursor-pointer shrink-0"
@@ -3059,7 +3093,8 @@ export default function App() {
               <Settings className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-indigo-400 animate-spin [animation-duration:30s]" />
               <span className="hidden sm:inline text-[9px] sm:text-[10px] font-black tracking-wide uppercase text-indigo-300">Güvenlik</span>
             </button>
-            
+
+
             <button
               onClick={() => setDarkMode((prev) => !prev)}
               title="Arka Plan Teması"
@@ -3083,7 +3118,7 @@ export default function App() {
 
             <button
               onClick={() => {
-                setActiveTab("notifications");
+                handleNavClick("notifications");
                 const el = document.getElementById("main-nav-tabs") || document.getElementById("notifications-container");
                 if (el) {
                   el.scrollIntoView({ behavior: "smooth" });
@@ -3209,7 +3244,9 @@ export default function App() {
           <div className="flex items-center gap-2 border-b dark:border-slate-700 pb-3">
             <Coins className="w-6 h-6 text-indigo-500 animate-pulse animate-spin [animation-duration:15s]" />
             <div>
-              <h2 className="text-sm font-black text-slate-800 dark:text-slate-50 tracking-wide uppercase">Hesap Asistanı</h2>
+              <h2 className="text-sm font-black text-slate-800 dark:text-slate-50 tracking-wide uppercase">
+                {language === "tr" ? "Hesap Asistanı" : "Account Advisor"}
+              </h2>
               <p className="text-[10px] font-bold text-slate-400">v5.0 Ultimate</p>
             </div>
           </div>
@@ -3436,18 +3473,30 @@ export default function App() {
           <nav className="space-y-1 flex-1 overflow-y-auto pr-1">
             {sidebarItems.map((item) => {
               const Icon = item.icon;
+              const isProFeatured = (item as any).isPro;
               return (
                 <button
                   key={item.id}
                   onClick={() => handleNavClick(item.id)}
-                  className={`w-full px-4 py-2.5 rounded-xl flex items-center gap-3 text-xs font-bold leading-normal transition-all ${
+                  className={`w-full px-4 py-2.5 rounded-xl flex items-center justify-between text-xs font-bold leading-normal transition-all ${
                     activeTab === item.id
                       ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/30 dark:text-indigo-400 border-l-[4px] border-indigo-600"
                       : "text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700/50"
                   }`}
                 >
-                  <Icon className="w-4 h-4 shrink-0" />
-                  <span>{item.label}</span>
+                  <div className="flex items-center gap-3 min-w-0">
+                    <Icon className={`w-4 h-4 shrink-0 ${isProFeatured ? "text-amber-500" : "text-slate-400"}`} />
+                    <span className="truncate text-left">{item.label}</span>
+                  </div>
+                  {isProFeatured && (
+                    <motion.span
+                      animate={{ scale: [1, 1.1, 1] }}
+                      transition={{ repeat: Infinity, duration: 1.8, ease: "easeInOut" }}
+                      className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[8px] font-black bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-600 text-slate-950 border border-amber-300 tracking-widest font-mono shadow-[0_0_8px_rgba(245,158,11,0.4)] shrink-0 ml-1.5"
+                    >
+                      PRO
+                    </motion.span>
+                  )}
                 </button>
               );
             })}
@@ -3649,7 +3698,7 @@ export default function App() {
         {activeTab === "overview" && (
           <DashboardOverview
             stats={statsBag}
-            onNavigate={setActiveTab}
+            onNavigate={handleNavClick}
             monthlyPaymentsCount={currentMonthTotalPaymentsCount}
             monthlyInstallmentsDue={monthlyInstallmentsDue}
             isPremium={isPremium}
@@ -3662,6 +3711,7 @@ export default function App() {
             setSelectedMonth={setSelectedMonth}
             setSelectedYear={setSelectedYear}
             colorTheme={colorTheme}
+            language={language}
           />
         )}
 
@@ -3672,6 +3722,7 @@ export default function App() {
             expenses={expenses}
             payments={payments}
             viewMode="monthly"
+            language={language}
           />
         )}
 
@@ -3682,6 +3733,7 @@ export default function App() {
             expenses={expenses}
             payments={payments}
             viewMode="yearly"
+            language={language}
           />
         )}
 
@@ -3704,6 +3756,7 @@ export default function App() {
             setSelectedMonth={setSelectedMonth}
             setSelectedYear={setSelectedYear}
             stats={statsBag}
+            language={language}
           />
         )}
 
@@ -3713,6 +3766,7 @@ export default function App() {
             format={format}
             triggerToast={triggerToast}
             onAddAlarm={handleAddAlarm}
+            language={language}
           />
         )}
 
@@ -3724,6 +3778,7 @@ export default function App() {
             isPremium={isPremium}
             onUpgradeClick={() => setIsUpgradeModalOpen(true)}
             carryOverBalance={statsBag.carryOverBalance}
+            language={language}
           />
         )}
 
@@ -3739,6 +3794,7 @@ export default function App() {
             netBalance={statsBag.netIncome}
             isPremium={isPremium}
             onUpgradeClick={() => setIsUpgradeModalOpen(true)}
+            language={language}
           />
         )}
 
@@ -3750,6 +3806,7 @@ export default function App() {
             onPayInstallment={handlePayInstallment}
             onRevertPayment={handleRevertInstallmentPayment}
             isPremium={isPremium}
+            language={language}
           />
         )}
 
@@ -4080,6 +4137,7 @@ export default function App() {
             selectedMonth={selectedMonth}
             selectedYear={selectedYear}
             expenseCategories={expenseCategories}
+            language={language}
           />
         )}
 
@@ -4091,11 +4149,35 @@ export default function App() {
             installmentDebts={installmentDebts}
             currentUser={currentUser}
             format={format}
+            language={language}
+          />
+        )}
+
+        {activeTab === "gplay_enhancements" && (
+          <GPlayEnhancements
+            language={language}
+            setLanguage={setLanguage}
+            expenseCategories={expenseCategories}
+            onUpdateAllCategories={handleSaveAllCategories}
+            expenses={expenses}
+            statsBag={{
+              totalDebt: statsBag.totalDebt,
+              totalPaid: statsBag.totalPaid,
+              remaining: statsBag.remaining,
+              totalIncome: statsBag.totalIncome,
+              totalExpense: statsBag.totalExpense,
+              netIncome: statsBag.netIncome
+            }}
+            currentUser={currentUser}
+            triggerToast={triggerToast}
+            debts={debts}
+            installmentDebts={installmentDebts}
+            format={format}
           />
         )}
 
         {["help", "blog", "feedback", "about", "privacy"].includes(activeTab) && (
-          <HelpAndGuides activeTab={activeTab} onNavigate={setActiveTab} />
+          <HelpAndGuides activeTab={activeTab} onNavigate={handleNavClick} />
         )}
 
         {/* Enerjik ve Optimize Edilmiş Web Sayfası Footer Kartı (SEO & Sosyal Paylaşım & Kanallar) */}
@@ -4415,42 +4497,42 @@ export default function App() {
               className={getBottomTabClass("overview")}
             >
               <LayoutDashboard className="w-4 h-4" />
-              <span className="text-[9px] font-bold">Genel</span>
+              <span className="text-[9px] font-bold">{language === "tr" ? "Genel" : "Dashboard"}</span>
             </button>
             <button
               onClick={() => handleNavClick("income")}
               className={getBottomTabClass("income")}
             >
               <Wallet className="w-4 h-4" />
-              <span className="text-[9px] font-bold">Gelirler</span>
+              <span className="text-[9px] font-bold">{language === "tr" ? "Gelirler" : "Incomes"}</span>
             </button>
             <button
               onClick={() => handleNavClick("debts")}
               className={getBottomTabClass("debts")}
             >
               <Coins className="w-4 h-4" />
-              <span className="text-[9px] font-bold">Borçlar</span>
+              <span className="text-[9px] font-bold">{language === "tr" ? "Borçlar" : "Debts"}</span>
             </button>
             <button
               onClick={() => handleNavClick("expenses")}
               className={getBottomTabClass("expenses")}
             >
               <ShoppingCart className="w-4 h-4" />
-              <span className="text-[9px] font-bold">Giderler</span>
+              <span className="text-[9px] font-bold">{language === "tr" ? "Giderler" : "Expenses"}</span>
             </button>
             <button
               onClick={() => handleNavClick("installments")}
               className={getBottomTabClass("installments")}
             >
               <Calendar className="w-4 h-4" />
-              <span className="text-[9px] font-bold">Taksitler</span>
+              <span className="text-[9px] font-bold">{language === "tr" ? "Taksitler" : "Installments"}</span>
             </button>
             <button
               onClick={() => handleNavClick("aiStrategy")}
               className={getBottomTabClass("aiStrategy")}
             >
               <Sparkles className="w-4 h-4 animate-pulse" />
-              <span className="text-[9px] font-bold">Asistan</span>
+              <span className="text-[9px] font-bold">{language === "tr" ? "Asistan" : "AI Advisor"}</span>
             </button>
           </footer>
         );
@@ -4732,7 +4814,7 @@ export default function App() {
                   onClick={() => setIsCsvModalOpen(false)}
                   className="px-4 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl font-bold transition cursor-pointer"
                 >
-                  Vazgeç
+                  {language === "tr" ? "Vazgeç" : "Cancel"}
                 </button>
                 <button
                   type="button"
@@ -4740,9 +4822,9 @@ export default function App() {
                     handleDownloadCSV(csvStartDate, csvEndDate);
                     setIsCsvModalOpen(false);
                   }}
-                  className="px-5 py-2.5 bg-gradient-to-r from-emerald-650 to-teal-500 hover:from-emerald-700 hover:to-teal-600 text-white rounded-xl font-black text-xs transition active:scale-95 flex items-center gap-1.5 shadow-sm cursor-pointer border-transparent"
+                  className="px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-700 hover:to-teal-600 text-white rounded-xl font-black text-xs transition active:scale-95 flex items-center gap-1.5 shadow-sm cursor-pointer border-transparent"
                 >
-                  <Download className="w-4 h-4" /> RAPORU İNDİR (.CSV)
+                  <Download className="w-4 h-4" /> {language === "tr" ? "RAPORU İNDİR (.CSV)" : "DOWNLOAD EXPORT (.CSV)"}
                 </button>
               </div>
             </motion.div>
@@ -4758,7 +4840,7 @@ export default function App() {
               initial={{ opacity: 0, scale: 0.95, y: 30 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 30 }}
-              className="w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden relative my-8"
+              className="w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden relative my-8 text-left"
             >
               {/* Decorative golden/amber premium header gradient */}
               <div className="h-2 w-full bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-600 animate-pulse" />
@@ -4779,12 +4861,21 @@ export default function App() {
                   </p>
                 </div>
 
+                {/* Promo Feature notice if navigated specifically */}
+                {promoFeature && (
+                  <div className="p-3 bg-amber-500/10 rounded-2xl border border-amber-500/20 text-center text-xs font-semibold text-slate-700 dark:text-slate-300">
+                    ⚠️ <span className="font-black text-indigo-600 dark:text-indigo-400">{promoFeature}</span> özelliğine erişmek için Premium üye olmanız gerekmektedir.
+                  </div>
+                )}
+
                 {/* Features list */}
                 <div className="p-4 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3">
                   <div className="flex items-start gap-3">
                     <span className="p-1.5 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 rounded-lg text-xs leading-none shrink-0 font-bold">📸</span>
                     <div className="space-y-0.5">
-                      <p className="text-xs font-extrabold text-slate-800 dark:text-slate-200">Kamera / AI Fiş & Makbuz Taraması</p>
+                      <p className="text-xs font-extrabold text-slate-800 dark:text-slate-200">
+                        Kamera / AI Fiş & Makbuz Taraması
+                      </p>
                       <p className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold leading-normal">
                         Kameradan veya dosya yükleme ile bütçe girdilerinizi yapay zeka yardımıyla anında otomatik oluşturun.
                       </p>
@@ -4794,7 +4885,9 @@ export default function App() {
                   <div className="flex items-start gap-3 pt-2.5 border-t border-slate-200/40 dark:border-slate-800/60">
                     <span className="p-1.5 bg-amber-500/10 text-amber-600 dark:text-amber-400 rounded-lg text-xs leading-none shrink-0 font-bold">📄</span>
                     <div className="space-y-0.5">
-                      <p className="text-xs font-extrabold text-slate-800 dark:text-slate-200">Yazıcı & Sınırsız PDF Dışa Aktarma</p>
+                      <p className="text-xs font-extrabold text-slate-800 dark:text-slate-200">
+                        Yazıcı & Sınırsız PDF Dışa Aktarma
+                      </p>
                       <p className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold leading-normal">
                         Borç raporlarınızı, ödeme geçmişinizi ve bütçenizi tek tıkla resmi, temiz ve paylaşılabilir PDF raporu yapın.
                       </p>
@@ -4804,9 +4897,11 @@ export default function App() {
                   <div className="flex items-start gap-3 pt-2.5 border-t border-slate-200/40 dark:border-slate-800/60">
                     <span className="p-1.5 bg-teal-500/10 text-teal-600 dark:text-teal-400 rounded-lg text-xs leading-none shrink-0 font-bold">☁️</span>
                     <div className="space-y-0.5">
-                      <p className="text-xs font-extrabold text-slate-800 dark:text-slate-200">JSON Veri Yedekleme ve Geri Yükleme</p>
+                      <p className="text-xs font-extrabold text-slate-800 dark:text-slate-200">
+                        Güvenli Bulut ve Widget Entegrasyonu
+                      </p>
                       <p className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold leading-normal">
-                        Bütün finansal kayıtlarınızı tek tıkla bilgisayarınıza indirin veya başka bir cihazda anında geri yükleyin.
+                        Verilerinizi Google Drive ile senkronize edin ve telefon ekranınıza bütçe takip araçları (Widget'lar) ekleyin.
                       </p>
                     </div>
                   </div>
@@ -4814,7 +4909,9 @@ export default function App() {
                   <div className="flex items-start gap-3 pt-2.5 border-t border-slate-200/40 dark:border-slate-800/60">
                     <span className="p-1.5 bg-rose-500/10 text-rose-600 dark:text-rose-400 rounded-lg text-xs leading-none shrink-0 font-bold">🚫</span>
                     <div className="space-y-0.5">
-                      <p className="text-xs font-extrabold text-slate-800 dark:text-slate-200">%100 Reklamsız Kullanım</p>
+                      <p className="text-xs font-extrabold text-slate-800 dark:text-slate-200">
+                        %100 Reklamsız Kullanım
+                      </p>
                       <p className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold leading-normal">
                         Uygulama genelindeki sponsorlu banka reklam panolarını ve yönlendirmeleri tamamen gizleyin.
                       </p>
@@ -4824,20 +4921,22 @@ export default function App() {
 
                 {/* Simulated Plans Select / Activation block */}
                 <div className="space-y-2">
-                  <p className="text-[10px] font-black uppercase text-slate-400 tracking-wider text-center">Fiyatlandırma Paketleri</p>
+                  <p className="text-[10px] font-black uppercase text-slate-400 tracking-wider text-center">
+                    Fiyatlandırma Paketleri
+                  </p>
                   <div className="grid grid-cols-3 gap-2">
                     <div className="p-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl text-center">
                       <p className="text-[9px] font-extrabold text-slate-400 uppercase">AYLIK</p>
                       <p className="text-xs font-black text-slate-800 dark:text-slate-200 mt-0.5">₺29,99</p>
                     </div>
                     <div className="p-2 bg-amber-500/5 dark:bg-amber-500/10 border-2 border-amber-500/60 rounded-2xl text-center relative overflow-hidden">
-                      <span className="absolute top-0 right-0 left-0 bg-amber-500 text-white text-[6px] font-black py-0.5">BEST</span>
-                      <p className="text-[9px] font-extrabold text-amber-600 dark:text-amber-400 uppercase pt-1.5">YILLIK</p>
-                      <p className="text-xs font-black text-slate-800 dark:text-slate-200 mt-0.5">₺199,99</p>
+                      <span className="absolute top-0 right-0 left-0 bg-amber-500 text-white text-[6px] font-black py-0.5">EN İYİSİ</span>
+                      <p className="text-[9px] font-extrabold text-amber-600 dark:text-amber-400 uppercase pt-1.5 font-sans">YILLIK</p>
+                      <p className="text-xs font-black text-slate-800 dark:text-slate-202 mt-0.5">₺199,99</p>
                     </div>
                     <div className="p-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl text-center">
                       <p className="text-[9px] font-extrabold text-slate-400 uppercase">ÖMÜR BOYU</p>
-                      <p className="text-xs font-black text-slate-800 dark:text-slate-200 mt-0.5">₺299,99</p>
+                      <p className="text-xs font-black text-slate-800 dark:text-slate-202 mt-0.5">₺299,99</p>
                     </div>
                   </div>
                 </div>
@@ -4845,19 +4944,19 @@ export default function App() {
                 <div className="space-y-2 pt-1">
                   {isPremium ? (
                     <div className="space-y-2.5">
-                      <div className="p-3 bg-emerald-500/5 dark:bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-2xl text-center font-bold text-xs uppercase tracking-tight flex items-center justify-center gap-1.5">
-                        <span>👑 PREMIUM LİSANSINIZ ETKİN COŞKUSU</span>
+                      <div className="p-3 bg-emerald-500/5 dark:bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-2xl text-center font-bold text-xs uppercase tracking-tight flex items-center justify-center gap-1.5 font-sans">
+                        <span>👑 PREMİUM LİSANSINIZ ETKİN</span>
                       </div>
                       <button
                         type="button"
                         onClick={() => {
                           setIsPremium(false);
                           localStorage.setItem("is_premium", "false");
-                          triggerToast("Ücretsiz plana başarıyla geçiş yapıldı (Test modülü) ⭐");
+                          triggerToast("Ücretsiz plana geçiş yapıldı ⭐");
                         }}
                         className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-black text-xs uppercase tracking-wider rounded-xl transition cursor-pointer active:scale-97 border border-dashed border-slate-300 dark:border-slate-700"
                       >
-                        Ücretsiz Sürümü Test Et (Dev-Downgrade)
+                        Ücretsiz Sürümü Test Et
                       </button>
                     </div>
                   ) : (
@@ -4867,11 +4966,11 @@ export default function App() {
                         setIsPremium(true);
                         localStorage.setItem("is_premium", "true");
                         setIsUpgradeModalOpen(false);
-                        triggerToast("👑 Premium Sürüm Başarıyla Aktif Edildi! Tüm Sınırlar Kaldırıldı!");
+                        triggerToast("👑 Premium Sürüm Aktif Edildi! Tüm Sınırlar Kaldırıldı!");
                       }}
                       className="w-full py-3 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-650 text-white font-black text-xs uppercase tracking-wider rounded-xl transition flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20 cursor-pointer active:scale-97"
                     >
-                      <span>PREMİUM SÜRÜMÜ BAŞLAT (SİMÜLE ET) ⚡</span>
+                      <span>PREMİUM SÜRÜMÜ ETKİNLEŞTİR ⚡</span>
                     </button>
                   )}
 
@@ -4888,7 +4987,6 @@ export default function App() {
           </div>
         )}
       </AnimatePresence>
-
       {/* Voice Assistant Speech-to-Text Module */}
       {isUnlocked && voiceAssistantEnabled && (
         <VoiceAssistant

@@ -10,6 +10,7 @@ import { InstallmentDebt } from "../types";
 import { useCurrency } from "../utils/CurrencyContext";
 import { AdMobBanner } from "./AdMobBanner";
 import { InstallmentsPortalChart } from "./BudgetCharts";
+import { t } from "../utils/translations";
 
 interface InstallmentsListProps {
   installmentDebts: InstallmentDebt[];
@@ -18,6 +19,7 @@ interface InstallmentsListProps {
   onPayInstallment: (id: number) => void;
   onRevertPayment?: (id: number) => void;
   isPremium?: boolean;
+  language?: "tr" | "en";
 }
 
 export const InstallmentsList: React.FC<InstallmentsListProps> = ({
@@ -27,7 +29,9 @@ export const InstallmentsList: React.FC<InstallmentsListProps> = ({
   onPayInstallment,
   onRevertPayment,
   isPremium,
+  language = "tr",
 }) => {
+  const translate = (txt: string) => t(txt, language as "tr" | "en");
   const { format } = useCurrency();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalTitle, setModalTitle] = useState("Yeni Taksitli Borç Planı");
@@ -116,17 +120,22 @@ export const InstallmentsList: React.FC<InstallmentsListProps> = ({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      {/* Centered & Animated Page Title */}
+      <div className="flex flex-col items-center justify-center text-center py-4 select-none">
         <motion.h2
-          animate={{ y: [0, -1.2, 0] }}
-          transition={{ repeat: Infinity, duration: 4.5, ease: "easeInOut" }}
-          className="text-lg font-bold flex items-center gap-2 text-slate-800 dark:text-slate-100"
+          animate={{ y: [0, -4, 0] }}
+          transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
+          className="text-2xl sm:text-3xl font-black tracking-tight text-slate-800 dark:text-slate-100 flex items-center justify-center gap-2.5"
         >
-          <CalendarDays className="w-5 h-5 text-indigo-500" /> TAKSİTLİ BORÇLAR
+          <CalendarDays className="w-7 h-7 text-indigo-500 animate-pulse" /> TAKSİTLİ BORÇLAR
         </motion.h2>
+        <div className="w-16 h-1 bg-indigo-500 rounded-full mt-2 opacity-80" />
+      </div>
+
+      <div className="flex items-center justify-center">
         <button
           onClick={handleOpenAdd}
-          className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 transition active:scale-95 shadow-sm"
+          className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 transition active:scale-95 shadow-sm"
         >
           <PlusCircle className="w-4 h-4" /> Taksit Planı Ekle
         </button>

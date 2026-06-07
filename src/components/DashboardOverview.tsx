@@ -10,6 +10,7 @@ import { FinancialStats, Income, Expense, ExpenseCategory } from "../types";
 import { BarChart, DoughnutChart, LineChart } from "./BudgetCharts";
 import { useCurrency } from "../utils/CurrencyContext";
 import { AdMobBanner } from "./AdMobBanner";
+import { t } from "../utils/translations";
 
 interface DashboardOverviewProps {
   stats: FinancialStats;
@@ -26,6 +27,7 @@ interface DashboardOverviewProps {
   setSelectedMonth: (m: number | null) => void;
   setSelectedYear: (y: number | null) => void;
   colorTheme?: string;
+  language?: "tr" | "en";
 }
 
 export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
@@ -43,7 +45,9 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
   setSelectedMonth,
   setSelectedYear,
   colorTheme = "indigo",
+  language = "tr",
 }) => {
+  const translate = (txt: string) => t(txt, language as "tr" | "en");
   const { format, currencySymbol, rates, setRates, activeCurrency, isFetching, lastUpdated, updateRatesFromAPI } = useCurrency();
   const [budgetGoal, setBudgetGoal] = useState<number>(() => {
     const email = localStorage.getItem("currentUser") || "anonymous";
@@ -208,6 +212,18 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
 
   return (
     <div className="space-y-6">
+      {/* Centered & Animated Page Title */}
+      <div className="flex flex-col items-center justify-center text-center py-4 select-none">
+        <motion.h2
+          animate={{ y: [0, -4, 0] }}
+          transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
+          className="text-2xl sm:text-3xl font-black tracking-tight text-slate-800 dark:text-slate-100 flex items-center justify-center gap-2.5"
+        >
+          📊 GENEL BAKIŞ VE FİNANSAL YÖNETİM
+        </motion.h2>
+        <div className="w-16 h-1 bg-indigo-500 rounded-full mt-2 opacity-80" />
+      </div>
+
       {/* Modern Greeting & Operations Banner */}
       <div className="bg-gradient-to-r from-indigo-500/10 via-purple-500/5 to-transparent p-5 rounded-3xl border border-indigo-500/10 dark:border-indigo-500/5 flex flex-col items-center justify-center text-center gap-3">
         <motion.div
@@ -216,19 +232,6 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
           transition={{ duration: 0.5, ease: "easeOut" }}
           className="flex flex-col items-center text-center"
         >
-          <motion.h3 
-            animate={{ 
-              scale: [1, 1.03, 1],
-            }}
-            transition={{ 
-              duration: 4, 
-              repeat: Infinity,
-              ease: "easeInOut"
-            }}
-            className="text-base sm:text-lg font-black text-slate-800 dark:text-slate-100 flex items-center gap-2 justify-center"
-          >
-            📊 FİNANSAL YÖNETİM MERKEZİ
-          </motion.h3>
           <p className="text-[11px] sm:text-xs text-slate-700 dark:text-slate-300 font-semibold mt-1">
             Bütçenizi, borç durumunuzu ve ödemelerinizi anlık grafiklerle görüntüleyin.
           </p>
@@ -389,39 +392,51 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
         </div>
 
         <div className="p-4 bg-emerald-600 text-white rounded-3xl space-y-1.5 relative overflow-hidden group shadow-md hover:shadow-lg transition flex flex-col items-center justify-center text-center min-h-[100px]">
-          <span className="text-[10px] font-bold text-emerald-100 block uppercase tracking-wide">ÖDENMİŞ KISIM</span>
+          <span className="text-[10px] font-bold text-emerald-100 block uppercase tracking-wide">
+            {language === "tr" ? "ÖDENMİŞ KISIM" : "TOTAL REPAID"}
+          </span>
           <p className="text-sm sm:text-lg font-black font-mono">{format(stats.totalPaid)}</p>
         </div>
 
         <div className="flex flex-col gap-3 h-full justify-between">
           <div className="p-3.5 bg-indigo-500/10 dark:bg-indigo-950/40 border border-indigo-500/20 text-indigo-950 dark:text-indigo-200 rounded-3xl space-y-0.5 relative overflow-hidden flex-1 shadow-sm flex flex-col items-center justify-center text-center min-h-[50px]">
-            <span className="text-[9px] font-bold text-indigo-600 dark:text-indigo-400 block uppercase tracking-wide">BU AYKİ BORÇ TOPLAMI</span>
+            <span className="text-[9px] font-bold text-indigo-600 dark:text-indigo-400 block uppercase tracking-wide">
+              {language === "tr" ? "BU AYKİ BORÇ TOPLAMI" : "MONTHLY TOTAL LOANS"}
+            </span>
             <p className="text-sm sm:text-base font-extrabold font-mono">{format(stats.thisMonthTotalBorc)}</p>
           </div>
 
           <div className="p-3.5 bg-rose-600 text-white rounded-3xl space-y-0.5 relative overflow-hidden flex-1 shadow-md hover:shadow-lg transition flex flex-col items-center justify-center text-center min-h-[50px]">
-            <span className="text-[9px] font-bold text-rose-100 block uppercase tracking-wide">BU AY KALAN BORÇ</span>
+            <span className="text-[9px] font-bold text-rose-100 block uppercase tracking-wide">
+              {language === "tr" ? "BU AY KALAN BORÇ" : "MONTH WRAP REMAINING"}
+            </span>
             <p className="text-sm sm:text-base font-extrabold font-mono">{format(stats.thisMonthKalanBorc)}</p>
           </div>
         </div>
 
         <div className="p-4 bg-blue-600 text-white rounded-3xl space-y-1.5 relative overflow-hidden shadow-md transition flex flex-col items-center justify-center text-center min-h-[100px]">
-          <span className="text-[10px] font-bold text-blue-105 block uppercase tracking-wide">AYLIK GELİR</span>
+          <span className="text-[10px] font-bold text-blue-105 block uppercase tracking-wide">
+            {language === "tr" ? "AYLIK GELİR" : "MONTHLY INCOME"}
+          </span>
           <p className="text-sm sm:text-lg font-black font-mono">{format(stats.totalIncome)}</p>
           {stats.carryOverBalance !== undefined && stats.carryOverBalance !== 0 && (
             <span className="text-[9px] text-blue-100 font-extrabold block bg-blue-700/50 px-2 py-0.5 rounded-lg mt-1">
-              Önceki Aydan Devreden: {format(stats.carryOverBalance)}
+              {translate("Önceki Aydan Devreden")}: {format(stats.carryOverBalance)}
             </span>
           )}
         </div>
 
         <div className="p-4 bg-amber-600 text-white rounded-3xl space-y-1.5 relative overflow-hidden shadow-md transition flex flex-col items-center justify-center text-center min-h-[100px]">
-          <span className="text-[10px] font-bold text-amber-105 block uppercase tracking-wide">AYLIK GİDER</span>
+          <span className="text-[10px] font-bold text-amber-105 block uppercase tracking-wide">
+            {language === "tr" ? "AYLIK GİDER" : "MONTHLY OUTFLOW"}
+          </span>
           <p className="text-sm sm:text-lg font-black font-mono">{format(stats.totalExpense)}</p>
         </div>
 
         <div className={`p-4 text-white rounded-3xl space-y-1.5 relative overflow-hidden shadow-md transition flex flex-col items-center justify-center text-center min-h-[100px] ${stats.netIncome >= 0 ? "bg-indigo-600" : "bg-red-700"}`}>
-          <span className="text-[10px] font-bold text-indigo-105 block uppercase tracking-wide">NET KALAN REZERV</span>
+          <span className="text-[10px] font-bold text-indigo-105 block uppercase tracking-wide">
+            {language === "tr" ? "NET KALAN REZERV" : "NET SURPLUS VALUE"}
+          </span>
           <p className="text-sm sm:text-lg font-black font-mono">{format(stats.netIncome)}</p>
         </div>
       </div>
@@ -447,7 +462,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
           
           <div className="flex-1 min-w-0">
             <span className="text-[10px] sm:text-[11px] font-black tracking-widest text-violet-500 dark:text-violet-400 uppercase block mb-1">
-              Bu Ay Ödenecek Taksit
+              {translate("Bu Ay Ödenecek Taksit")}
             </span>
             <div className="flex items-baseline gap-1.5 flex-wrap">
               <span className="text-xl sm:text-2xl font-black font-mono text-violet-800 dark:text-violet-200 tracking-tight leading-none">
@@ -455,7 +470,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
               </span>
             </div>
             <p className="text-[10px] font-semibold text-slate-600 dark:text-slate-300 mt-1">
-              Aktif ödeme planlarındaki cari ay taksit yükümlülüğü
+              {translate("Aktif ödeme planlarındaki cari ay taksit yükümlülüğü")}
             </p>
           </div>
         </motion.div>
@@ -482,15 +497,15 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
             
             <div className="flex-1 min-w-0">
               <span className="text-[10px] sm:text-[11px] font-black tracking-widest text-amber-600 dark:text-amber-400 uppercase block mb-1">
-                Bu Ay Yapılan Ödemeler
+                {translate("Bu Ay Yapılan Ödemeler")}
               </span>
               <div className="flex items-baseline gap-1.5 flex-wrap">
                 <span className="text-xl sm:text-2xl font-black font-mono text-amber-800 dark:text-amber-200 tracking-tight leading-none">
-                  {monthlyPaymentsCount} <span className="text-xs sm:text-sm font-bold text-amber-600/80">Adet</span>
+                  {monthlyPaymentsCount} <span className="text-xs sm:text-sm font-bold text-amber-600/80">{translate("Adet")}</span>
                 </span>
               </div>
               <p className="text-[10px] font-semibold text-slate-600 dark:text-slate-300 mt-1">
-                Sisteminizde bu ay başarıyla belgelenen ödeme sayısı
+                {translate("Sisteminizde bu ay başarıyla belgelenen ödeme sayısı")}
               </p>
             </div>
           </motion.div>
@@ -507,9 +522,9 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
             <div className="absolute top-0 right-0 w-16 h-16 bg-emerald-500/5 rounded-full blur-xl pointer-events-none" />
 
             <div className="flex items-center justify-between">
-              <h4 className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-wide">Ödeme İlerlemesi</h4>
+              <h4 className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-wide">{translate("Ödeme İlerlemesi")}</h4>
               <span className="px-2.5 py-1 bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-bold rounded-xl font-mono">
-                %{paymentProgress.toFixed(1)} Ödendi
+                %{paymentProgress.toFixed(1)} {translate("Ödendi")}
               </span>
             </div>
             
@@ -523,7 +538,9 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
             </div>
             
             <p className="text-[10.5px] text-slate-500 dark:text-slate-400 font-medium leading-relaxed">
-              Toplam {format(stats.totalDebt)} borcun {format(stats.totalPaid)} kadarı ödendi. Sabırla ve planlı ödemelerle borçlarını sıfırlayabilirsin!
+              {language === "tr"
+                ? `Toplam ${format(stats.totalDebt)} borcun ${format(stats.totalPaid)} kadarı ödendi. Sabırla ve planlı ödemelerle borçlarını sıfırlayabilirsin!`
+                : `Out of total ${format(stats.totalDebt)} debt, ${format(stats.totalPaid)} has been paid. With structured payments, you can settle your balances fully!`}
             </p>
           </motion.div>
         </div>

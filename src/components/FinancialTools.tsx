@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { Debt, Income, Expense, InstallmentDebt } from "../types";
 import { jsPDF } from "jspdf";
+import { t } from "../utils/translations";
 
 interface FinancialToolsProps {
   debts: Debt[];
@@ -32,6 +33,7 @@ interface FinancialToolsProps {
   installmentDebts: InstallmentDebt[];
   currentUser: string | null;
   format: (val: number) => string;
+  language?: "tr" | "en";
 }
 
 export interface SavingsGoal {
@@ -48,8 +50,10 @@ export function FinancialTools({
   expenses,
   installmentDebts,
   currentUser,
-  format
+  format,
+  language = "tr"
 }: FinancialToolsProps) {
+  const translate = (txt: string) => t(txt, language as "tr" | "en");
   const [activeSubTab, setActiveSubTab] = useState<"health" | "savings" | "calendar" | "report">("health");
 
   // Local savings goals persistence
@@ -257,16 +261,25 @@ export function FinancialTools({
 
   return (
     <div className="w-full space-y-6">
+      {/* Centered & Animated Page Title */}
+      <div className="flex flex-col items-center justify-center text-center py-4 select-none">
+        <motion.h2
+          animate={{ y: [0, -4, 0] }}
+          transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
+          className="text-2xl sm:text-3xl font-black tracking-tight text-slate-800 dark:text-slate-100 flex items-center justify-center gap-2.5"
+        >
+          <Coins className="w-7 h-7 text-indigo-500 animate-pulse" /> FİNANSAL ANALİZ VE MODELLEME ARAÇLARI
+        </motion.h2>
+        <div className="w-16 h-1 bg-indigo-500 rounded-full mt-2 opacity-80" />
+      </div>
+
       {/* Visual Menu Header Bar */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200/60 dark:border-slate-800 shadow-sm relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/5 via-transparent to-transparent pointer-events-none" />
-        <div className="z-10">
-          <span className="text-[10px] bg-indigo-100 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-400 font-extrabold px-3 py-1 rounded-full uppercase tracking-wider">
+        <div className="z-10 w-full text-center md:text-left">
+          <span className="text-[10px] bg-indigo-100 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-400 font-extrabold px-3 py-1 rounded-full uppercase tracking-wider inline-block">
             Premium Akıllı Modüller
           </span>
-          <h2 className="text-xl md:text-2xl font-black text-slate-900 dark:text-white tracking-tight mt-1">
-            FİNANSAL ANALİZ VE MODELLEME ARAÇLARI
-          </h2>
           <p className="text-xs text-slate-500 dark:text-slate-400 font-medium leading-relaxed mt-1">
             Bütçenizin sürdürülebilirliğini ölçümleyin, birikim havuzları dizayn edin, risk analiz raporlarını inceleyin.
           </p>
