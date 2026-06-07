@@ -23,6 +23,7 @@ import {
   BadgePercent
 } from "lucide-react";
 import { Debt, Income, Expense, InstallmentDebt } from "../types";
+import { jsPDF } from "jspdf";
 
 interface FinancialToolsProps {
   debts: Debt[];
@@ -817,7 +818,7 @@ export function FinancialTools({
 
             {/* Control Panel Block */}
             <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200/60 dark:border-slate-800 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4 print:hidden">
-              <div>
+              <div className="space-y-1">
                 <h4 className="text-sm font-bold text-slate-800 dark:text-white uppercase tracking-tight">
                   RAPOR HAZIRLAYICI VE DENETİM PANELİ
                 </h4>
@@ -826,12 +827,292 @@ export function FinancialTools({
                 </p>
               </div>
 
-              <button
-                onClick={() => window.print()}
-                className="px-5 py-2.5 bg-indigo-650 hover:bg-indigo-650 text-white text-xs font-black rounded-xl transition cursor-pointer active:scale-97 flex items-center gap-1.5 shadow-md hover:shadow-indigo-500/10 border border-indigo-400/20"
-              >
-                <Printer className="w-3.5 h-3.5" /> PDF Kaydet & Yazdır
-              </button>
+              <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+                <button
+                  onClick={() => {
+                    const doc = new jsPDF();
+                    
+                    // safe Turkish text converter for standard fonts
+                    const safeText = (text: string) => {
+                      if (!text) return "";
+                      const map: { [key: string]: string } = {
+                        'ç': 'c', 'Ç': 'C',
+                        'ğ': 'g', 'Ğ': 'G',
+                        'ı': 'i', 'İ': 'I',
+                        'ö': 'o', 'Ö': 'O',
+                        'ş': 's', 'Ş': 'S',
+                        'ü': 'u', 'Ü': 'U'
+                      };
+                      return text.replace(/[çÇğĞıİöÖşŞüÜ]/g, (match) => map[match] || match);
+                    };
+
+                    // Header Background Banner
+                    doc.setFillColor(30, 41, 59); // slate-800
+                    doc.rect(0, 0, 210, 35, "F");
+
+                    // Header Text
+                    doc.setTextColor(255, 255, 255);
+                    doc.setFont("Helvetica", "bold");
+                    doc.setFontSize(16);
+                    doc.text("Butcem Pro - Resmi Finansal Denetim Raporu", 15, 18);
+
+                    doc.setFont("Helvetica", "normal");
+                    doc.setFontSize(8);
+                    doc.setTextColor(226, 232, 240);
+                    const docId = `BP-${Date.now().toString().slice(-6)}`;
+                    doc.text(`Belge Seri No: ${docId} | Olusturma Tarihi: ${new Date().toLocaleDateString("tr-TR")} ${new Date().toLocaleTimeString("tr-TR")}`, 15, 27);
+
+                    // Section 1: Summary Cards
+                    doc.setFontSize(11);
+                    doc.setFont("Helvetica", "bold");
+                    doc.setTextColor(15, 23, 42); // slate-900
+                    doc.text(safeText("1. GÖSTERGE VE DETAYLI FİNANSAL ÖZET"), 15, 50);
+
+                    // separator
+                    doc.setDrawColor(203, 213, 225);
+                    doc.setLineWidth(0.5);
+                    doc.line(15, 53, 195, 53);
+
+                    // KPI Blocks
+                    let blockY = 58;
+                    // Left Box
+                    doc.setFillColor(248, 250, 252); // slate-50
+                    doc.rect(15, blockY, 85, 25, "F");
+                    doc.setDrawColor(226, 232, 240);
+                    doc.rect(15, blockY, 85, 25, "S");
+                    doc.setFont("Helvetica", "bold");
+                    doc.setFontSize(8);
+                    doc.setTextColor(100, 116, 139);
+                    doc.text(safeText("TOPLAM GELİR AKIŞI"), 20, blockY + 8);
+                    doc.setFontSize(11);
+                    doc.setTextColor(16, 185, 129); // emerald-500
+                    doc.text(format(totalIncomesSum), 20, blockY + 18);
+
+                    // Right Box
+                    doc.setFillColor(248, 250, 252); // slate-50
+                    doc.rect(110, blockY, 85, 25, "F");
+                    doc.rect(110, blockY, 85, 25, "S");
+                    doc.setFont("Helvetica", "bold");
+                    doc.setFontSize(8);
+                    doc.setTextColor(100, 116, 139);
+                    doc.text(safeText("TOPLAM HARCAMALAR"), 115, blockY + 8);
+                    doc.setFontSize(11);
+                    doc.setTextColor(244, 63, 94); // rose-500
+                    doc.text(format(totalExpensesSum), 115, blockY + 18);
+
+                    blockY += 30;
+
+                    // Left Box 2
+                    doc.setFillColor(248, 250, 252); // slate-50
+                    doc.rect(15, blockY, 85, 25, "F");
+                    doc.rect(15, blockY, 85, 25, "S");
+                    doc.setFont("Helvetica", "bold");
+                    doc.setFontSize(8);
+                    doc.setTextColor(100, 116, 139);
+                    doc.text(safeText("KALAN BORÇ PORTFÖYÜ"), 20, blockY + 8);
+                    doc.setFontSize(11);
+                    doc.setTextColor(249, 115, 22); // orange-500
+                    doc.text(format(grandTotalRemainingDebt), 20, blockY + 18);
+
+                    // Right Box 2
+                    doc.setFillColor(248, 250, 252); // slate-50
+                    doc.rect(110, blockY, 85, 25, "F");
+                    doc.rect(110, blockY, 85, 25, "S");
+                    doc.setFont("Helvetica", "bold");
+                    doc.setFontSize(8);
+                    doc.setTextColor(100, 116, 139);
+                    doc.text(safeText("BÜTÇE SAĞLIK SKORU"), 115, blockY + 8);
+                    doc.setFontSize(11);
+                    doc.setTextColor(79, 70, 229); // indigo-600
+                    doc.text(`${healthScore} / 100`, 115, blockY + 18);
+
+                    // Section 2: Active Debts Breakdown
+                    let tableY = blockY + 38;
+                    doc.setFontSize(11);
+                    doc.setFont("Helvetica", "bold");
+                    doc.setTextColor(15, 23, 42); // slate-900
+                    doc.text(safeText("2. KALAN AKTİF BORÇLAR DÖKÜMÜ"), 15, tableY);
+
+                    // separator
+                    doc.setDrawColor(203, 213, 225);
+                    doc.line(15, tableY + 3, 195, tableY + 3);
+
+                    tableY += 10;
+                    
+                    // check if debts list empty
+                    if (debts.length === 0 && installmentDebts.length === 0) {
+                      doc.setFont("Helvetica", "italic");
+                      doc.setFontSize(9);
+                      doc.setTextColor(100, 116, 139);
+                      doc.text(safeText("Kayıtlı aktif borç veya taksitli borç tespit edilmedi."), 15, tableY);
+                      tableY += 8;
+                    } else {
+                      doc.setFont("Helvetica", "bold");
+                      doc.setFontSize(9);
+                      doc.setFillColor(241, 245, 249);
+                      doc.rect(15, tableY - 4, 180, 7, "F");
+                      doc.setTextColor(71, 85, 105);
+                      doc.text(safeText("Borç Adı & Detayı"), 18, tableY + 1);
+                      doc.text(safeText("Kalan Tutar / Toplam Tutar"), 120, tableY + 1);
+                      tableY += 10;
+
+                      debts.forEach(d => {
+                        if (tableY > 265) {
+                          doc.addPage();
+                          tableY = 25;
+                        }
+                        doc.setFont("Helvetica", "bold");
+                        doc.setFontSize(9);
+                        doc.setTextColor(30, 41, 59);
+                        doc.text(safeText(`${d.name} (${d.category})`), 18, tableY);
+                        doc.setFont("Helvetica", "normal");
+                        doc.text(`Kalan: ${format(d.amount - d.paid)} / Toplam: ${format(d.amount)}`, 120, tableY);
+                        doc.setDrawColor(241, 245, 249);
+                        doc.line(15, tableY + 3, 195, tableY + 3);
+                        tableY += 8;
+                      });
+
+                      installmentDebts.forEach(inst => {
+                        if (tableY > 265) {
+                          doc.addPage();
+                          tableY = 25;
+                        }
+                        const monthly = inst.totalAmount / inst.installmentCount;
+                        const paidValue = inst.paidInstallmentCount * monthly;
+                        doc.setFont("Helvetica", "bold");
+                        doc.setFontSize(9);
+                        doc.setTextColor(30, 41, 59);
+                        doc.text(safeText(`${inst.name} (Taksitli Borç)`), 18, tableY);
+                        doc.setFont("Helvetica", "normal");
+                        doc.text(`Kalan: ${format(inst.totalAmount - paidValue)} / Toplam: ${format(inst.totalAmount)}`, 120, tableY);
+                        doc.setDrawColor(241, 245, 249);
+                        doc.line(15, tableY + 3, 195, tableY + 3);
+                        tableY += 8;
+                      });
+                    }
+
+                    // Section 3: AI Assistant Strategy
+                    tableY += 5;
+                    if (tableY > 240) {
+                      doc.addPage();
+                      tableY = 25;
+                    }
+
+                    doc.setFont("Helvetica", "bold");
+                    doc.setFontSize(11);
+                    doc.setTextColor(79, 70, 229); // indigo-600
+                    doc.text(safeText("3. ASİSTAN STRATEJİ KARARI"), 15, tableY);
+                    // separator
+                    doc.setDrawColor(203, 213, 225);
+                    doc.line(15, tableY + 3, 195, tableY + 3);
+
+                    tableY += 10;
+                    doc.setFillColor(243, 244, 246); // gray-100
+                    doc.rect(15, tableY - 4, 180, 25, "F");
+                    doc.setFont("Helvetica", "normal");
+                    doc.setFontSize(9);
+                    doc.setTextColor(55, 65, 81); // gray-700
+                    
+                    const splitAdvice = doc.splitTextToSize(safeText(advice.desc), 170);
+                    doc.text(splitAdvice, 18, tableY + 2);
+
+                    // Footnote
+                    doc.setFontSize(8);
+                    doc.setTextColor(148, 163, 184);
+                    doc.text(safeText("Bu veri tablosu tamamen kişisel gizlilik standartlarına uygun olarak derlenmiştir."), 15, 285);
+
+                    doc.save(`Butcem_Pro_Finansal_Rapor_${docId}.pdf`);
+                  }}
+                  className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold rounded-xl transition cursor-pointer active:scale-97 flex items-center gap-1.5 shadow-md border border-amber-400/20"
+                >
+                  <FileText className="w-3.5 h-3.5" /> PDF Olarak İndir 📥
+                </button>
+
+                <button
+                  onClick={() => {
+                    const reportHtml = document.getElementById("financial-audit-report")?.innerHTML;
+                    if (!reportHtml) {
+                      alert("Rapor içeriği bulunamadı.");
+                      return;
+                    }
+                    
+                    const html = `
+                      <html>
+                        <head>
+                          <title>Bütçem Pro Raporu</title>
+                          <style>
+                            body { font-family: sans-serif; padding: 25px; color: #1e293b; background: #fff; }
+                            h1 { color: #0f172a; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; font-size: 18px; }
+                            .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+                            .p-4 { padding: 12px; border: 1px solid #e2e8f0; border-radius: 8px; text-align: center; }
+                            .flex { display: flex; justify-content: space-between; align-items: center; }
+                            .border-b { border-bottom: 1px solid #e2e8f0; }
+                            .pb-1\\.5 { padding-bottom: 6px; }
+                            .py-1 { padding-top: 4px; padding-bottom: 4px; }
+                            .pb-6 { padding-bottom: 16px; margin-bottom: 16px; border-bottom: 1px solid #e2e8f0; }
+                            .text-xs { font-size: 12px; }
+                            .text-[10px] { font-size: 10px; }
+                            .font-mono { font-family: monospace; }
+                            .space-y-2 > * { margin-bottom: 6px; }
+                            .space-y-3 > * { margin-bottom: 8px; }
+                            .space-y-8 > * { margin-bottom: 20px; }
+                            .bg-slate-50 { background-color: #f8fafc; border: 1px solid #f1f5f9; padding: 12px; border-radius: 8px; }
+                            .text-emerald-600 { color: #059669; }
+                            .text-rose-500 { color: #f43f5e; }
+                            .text-orange-500 { color: #f97316; }
+                            .text-indigo-600 { color: #4f46e5; }
+                            .text-center { text-align: center; }
+                            .pt-6 { padding-top: 16px; margin-top: 16px; border-top: 1px solid #e2e8f0; }
+                            .text-slate-400 { color: #94a3b8; }
+                            .font-black { font-weight: 800; }
+                            .font-bold { font-weight: 700; }
+                            .font-semibold { font-weight: 600; }
+                            .block { display: block; }
+                            .mt-1 { margin-top: 4px; }
+                            .uppercase { text-transform: uppercase; }
+                            .justify-between { justify-content: space-between; }
+                            .text-rose-600 { color: #dc2626; }
+                          </style>
+                        </head>
+                        <body>
+                          <div style="max-width: 800px; margin: 0 auto;">
+                            ${reportHtml}
+                          </div>
+                        </body>
+                      </html>
+                    `;
+
+                    const printFrame = document.createElement("iframe");
+                    printFrame.style.position = "fixed";
+                    printFrame.style.right = "0";
+                    printFrame.style.bottom = "0";
+                    printFrame.style.width = "0";
+                    printFrame.style.height = "0";
+                    printFrame.style.border = "0";
+                    document.body.appendChild(printFrame);
+
+                    const printDoc = printFrame.contentWindow?.document || printFrame.contentDocument;
+                    if (printDoc) {
+                      printDoc.write(html);
+                      printDoc.close();
+                      setTimeout(() => {
+                        try {
+                          printFrame.contentWindow?.focus();
+                          printFrame.contentWindow?.print();
+                        } catch (e) {
+                          console.error("Iframe native print failed:", e);
+                        }
+                        setTimeout(() => {
+                          document.body.removeChild(printFrame);
+                        }, 1500);
+                      }, 500);
+                    }
+                  }}
+                  className="px-4 py-2 bg-indigo-650 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition cursor-pointer active:scale-97 flex items-center gap-1.5 shadow-md border border-indigo-400/20"
+                >
+                  <Printer className="w-3.5 h-3.5" /> Sistemden Yazdır 🖨️
+                </button>
+              </div>
             </div>
 
             {/* Print/Audit Report Sheet container styled to look extremely clean and official */}

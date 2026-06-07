@@ -12,6 +12,7 @@ import { DoughnutChart, BarChart } from "./BudgetCharts";
 import { AdMobBanner } from "./AdMobBanner";
 import ReceiptScanner from "./ReceiptScanner";
 import { DebtTimelineChart } from "./DebtTimelineChart";
+import { jsPDF } from "jspdf";
 
 interface DebtListProps {
   debts: Debt[];
@@ -447,8 +448,142 @@ export const DebtList: React.FC<DebtListProps> = ({
       return;
     }
 
-    const printWin = window.open("", "_blank");
-    if (!printWin) return;
+    if (isPdf) {
+      const doc = new jsPDF();
+      
+      // Let's safe-convert turkish strings for standard PDF compatibility
+      const safeText = (text: string) => {
+        if (!text) return "";
+        const map: { [key: string]: string } = {
+          'ç': 'c', 'Ç': 'C',
+          'ğ': 'g', 'Ğ': 'G',
+          'ı': 'i', 'İ': 'I',
+          'ö': 'o', 'Ö': 'O',
+          'ş': 's', 'Ş': 'S',
+          'ü': 'u', 'Ü': 'U'
+        };
+        return text.replace(/[çÇğĞıİöÖşŞüÜ]/g, (match) => map[match] || match);
+      };
+
+      // Header Banner Box
+      doc.setFillColor(30, 41, 59); // slate-800
+      doc.rect(0, 0, 210, 32, "F");
+
+      // Header Text
+      doc.setTextColor(255, 255, 255);
+      doc.setFont("Helvetica", "bold");
+      doc.setFontSize(18);
+      doc.text("Butcem Pro - Borc Durum Raporu", 15, 18);
+
+      doc.setFont("Helvetica", "normal");
+      doc.setFontSize(9);
+      doc.setTextColor(226, 232, 240);
+      const activeText = activeTab === "unpaid" ? "Odenmemis" : activeTab === "paid" ? "Odenmis" : "Tumu";
+      doc.text(`Tarih: ${new Date().toLocaleDateString("tr-TR")} | Borc Grubu: ${safeText(activeText)}`, 15, 26);
+
+      // Section
+      doc.setFontSize(11);
+      doc.setFont("Helvetica", "bold");
+      doc.setTextColor(15, 23, 42); // slate-900
+      doc.text(safeText("Borç Detayları Listesi"), 15, 45);
+
+      // Draw horizontal line
+      doc.setDrawColor(226, 232, 240);
+      doc.setDrawColor(148, 163, 184);
+      doc.setLineWidth(0.5);
+      doc.line(15, 48, 195, 48);
+
+      let yPos = 56;
+
+      // Table Header row
+      doc.setFillColor(241, 245, 249); // slate-100
+      doc.rect(15, yPos - 5, 180, 8, "F");
+
+      doc.setFontSize(9);
+      doc.setFont("Helvetica", "bold");
+      doc.setTextColor(51, 65, 85); // slate-700
+      doc.text(safeText("Borç Adı"), 18, yPos);
+      doc.text(safeText("Kategori"), 70, yPos);
+      doc.text(safeText("Son Ödeme"), 105, yPos);
+      doc.text(safeText("Tutar"), 140, yPos);
+      doc.text(safeText("Ödenen"), 165, yPos);
+
+      // Separator
+      doc.setDrawColor(226, 232, 240);
+      doc.line(15, yPos + 4, 195, yPos + 4);
+      yPos += 10;
+
+      // Row elements
+      filtered.forEach((d) => {
+        // Page break if we reach the end
+        if (yPos > 270) {
+          doc.addPage();
+          yPos = 25;
+          // Redraw table headers on new page
+          doc.setFillColor(241, 245, 249);
+          doc.rect(15, yPos - 5, 180, 8, "F");
+          doc.setFont("Helvetica", "bold");
+          doc.text(safeText("Borç Adı"), 18, yPos);
+          doc.text(safeText("Kategori"), 70, yPos);
+          doc.text(safeText("Son Ödeme"), 105, yPos);
+          doc.text(safeText("Tutar"), 140, yPos);
+          doc.text(safeText("Ödenen"), 165, yPos);
+          doc.line(15, yPos + 4, 195, yPos + 4);
+          yPos += 10;
+        }
+
+        doc.setFont("Helvetica", "normal");
+        doc.setTextColor(30, 41, 59);
+        doc.text(safeText(d.name), 18, yPos);
+        doc.text(safeText(d.category), 70, yPos);
+        doc.text(safeText(d.dueDate || "Belirtilmemis"), 105, yPos);
+        doc.text(format(d.amount), 140, yPos);
+        doc.text(format(d.paid), 165, yPos);
+
+        // Underline row
+        doc.setDrawColor(241, 245, 249);
+        doc.line(15, yPos + 3, 195, yPos + 3);
+        yPos += 8;
+      });
+
+      // Totals Box
+      if (yPos > 250) {
+        doc.addPage();
+        yPos = 25;
+      }
+
+      yPos += 5;
+      doc.setFillColor(248, 250, 252); // slate-50
+      doc.rect(15, yPos - 4, 180, 22, "F");
+      doc.setFont("Helvetica", "bold");
+      doc.setDrawColor(203, 213, 225);
+      doc.rect(15, yPos - 4, 180, 22, "S");
+
+      doc.setFontSize(9);
+      doc.setTextColor(15, 23, 42);
+      const totalAmount = filtered.reduce((s, d) => s + d.amount, 0);
+      const totalPaid = filtered.reduce((s, d) => s + d.paid, 0);
+      const totalRemaining = totalAmount - totalPaid;
+
+      doc.text(safeText("TOPLAM BORÇ:"), 18, yPos + 2);
+      doc.text(format(totalAmount), 50, yPos + 2);
+
+      doc.text(safeText("TOPLAM ÖDENEN:"), 18, yPos + 9);
+      doc.text(format(totalPaid), 50, yPos + 9);
+
+      doc.text(safeText("KALAN ÖDENECEK BORÇ:"), 105, yPos + 5);
+      doc.setFontSize(11);
+      doc.setTextColor(220, 38, 38); // red-600
+      doc.text(format(totalRemaining), 105, yPos + 12);
+
+      // Footnote
+      doc.setFontSize(8);
+      doc.setTextColor(100, 116, 139);
+      doc.text(safeText("Butcem Pro Akıllı Finans Yonetim Sistemi | v5.0 Ultimate"), 15, 285);
+
+      doc.save("Butcem_Pro_Borc_Raporu.pdf");
+      return;
+    }
 
     const html = `
       <html>
@@ -506,12 +641,32 @@ export const DebtList: React.FC<DebtListProps> = ({
       </html>
     `;
 
-    printWin.document.write(html);
-    printWin.document.close();
-    
-    setTimeout(() => {
-      printWin.print();
-    }, 300);
+    // Invisible printing iframe to bypass popup blocker fully in any webview environment
+    const printFrame = document.createElement("iframe");
+    printFrame.style.position = "fixed";
+    printFrame.style.right = "0";
+    printFrame.style.bottom = "0";
+    printFrame.style.width = "0";
+    printFrame.style.height = "0";
+    printFrame.style.border = "0";
+    document.body.appendChild(printFrame);
+
+    const doc = printFrame.contentWindow?.document || printFrame.contentDocument;
+    if (doc) {
+      doc.write(html);
+      doc.close();
+      setTimeout(() => {
+        try {
+          printFrame.contentWindow?.focus();
+          printFrame.contentWindow?.print();
+        } catch (e) {
+          console.error("Iframe print triggered but encountered system handler missing:", e);
+        }
+        setTimeout(() => {
+          document.body.removeChild(printFrame);
+        }, 1500);
+      }, 500);
+    }
   };
 
   return (
