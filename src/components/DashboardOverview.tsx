@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect, useRef } from "react";
-import { Sparkles, PlusCircle, ArrowUpRight, TrendingUp, ShieldAlert, Award, HelpingHand, Bell, Coins, Edit, Check, X, Info, Settings, RefreshCw, CalendarDays, ClipboardCheck, Trash2, StickyNote } from "lucide-react";
+import { Sparkles, PlusCircle, ArrowUpRight, TrendingUp, ShieldAlert, Award, HelpingHand, Bell, Coins, Edit, Check, X, Info, Settings, RefreshCw, CalendarDays, ClipboardCheck, Trash2, StickyNote, Calendar } from "lucide-react";
 import { motion } from "motion/react";
 import { FinancialStats, Income, Expense, ExpenseCategory } from "../types";
 import { BarChart, DoughnutChart, LineChart } from "./BudgetCharts";
@@ -21,6 +21,11 @@ interface DashboardOverviewProps {
   incomes?: Income[];
   expenses?: Expense[];
   expenseCategories?: ExpenseCategory[];
+  selectedMonth: number | null;
+  selectedYear: number | null;
+  setSelectedMonth: (m: number | null) => void;
+  setSelectedYear: (y: number | null) => void;
+  colorTheme?: string;
 }
 
 export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
@@ -33,6 +38,11 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
   incomes = [],
   expenses = [],
   expenseCategories = [],
+  selectedMonth,
+  selectedYear,
+  setSelectedMonth,
+  setSelectedYear,
+  colorTheme = "indigo",
 }) => {
   const { format, currencySymbol, rates, setRates, activeCurrency, isFetching, lastUpdated, updateRatesFromAPI } = useCurrency();
   const [budgetGoal, setBudgetGoal] = useState<number>(() => {
@@ -224,6 +234,152 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
           </p>
         </motion.div>
       </div>
+
+      {/* Relocated Filter Section on overview screen (placed below header banner as requested) */}
+      {(() => {
+        let themeCardBg = "bg-white dark:bg-slate-800";
+        let themeBorder = "border-slate-200/60 dark:border-slate-700/60";
+        let themeIconBg = "bg-indigo-50 dark:bg-slate-900";
+        let themeIconText = "text-indigo-500";
+        let themeFocusRing = "focus:ring-indigo-500";
+        let themeBtnHover = "hover:bg-indigo-50 hover:text-indigo-600 dark:hover:bg-indigo-950/30 dark:hover:text-indigo-400";
+        
+        if (colorTheme === "green") {
+          themeCardBg = "bg-emerald-500/[0.04] dark:bg-emerald-950/10";
+          themeBorder = "border-emerald-500/20 dark:border-emerald-800/40";
+          themeIconBg = "bg-emerald-500/20 dark:bg-emerald-950/60";
+          themeIconText = "text-emerald-600 dark:text-emerald-400";
+          themeFocusRing = "focus:ring-emerald-500";
+          themeBtnHover = "hover:bg-emerald-500/10 dark:hover:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400";
+        } else if (colorTheme === "purple") {
+          themeCardBg = "bg-purple-500/[0.04] dark:bg-purple-950/10";
+          themeBorder = "border-purple-500/20 dark:border-purple-800/40";
+          themeIconBg = "bg-purple-500/20 dark:bg-purple-950/60";
+          themeIconText = "text-purple-600 dark:text-purple-400";
+          themeFocusRing = "focus:ring-purple-500";
+          themeBtnHover = "hover:bg-purple-500/10 dark:hover:bg-purple-950/30 text-purple-600 dark:text-purple-400";
+        } else if (colorTheme === "orange") {
+          themeCardBg = "bg-amber-500/[0.04] dark:bg-amber-950/10";
+          themeBorder = "border-amber-500/20 dark:border-amber-800/40";
+          themeIconBg = "bg-amber-500/20 dark:bg-amber-950/60";
+          themeIconText = "text-amber-600 dark:text-amber-400";
+          themeFocusRing = "focus:ring-amber-500";
+          themeBtnHover = "hover:bg-amber-500/10 dark:hover:bg-amber-950/30 text-amber-600 dark:text-amber-400";
+        } else {
+          themeCardBg = "bg-indigo-500/[0.04] dark:bg-indigo-950/10";
+          themeBorder = "border-indigo-500/20 dark:border-indigo-805/40";
+          themeIconBg = "bg-indigo-500/20 dark:bg-indigo-950/60";
+          themeIconText = "text-indigo-600 dark:text-indigo-400";
+        }
+
+        return (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className={`p-4 rounded-3xl border ${themeCardBg} ${themeBorder} shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3 text-xs transition-all duration-350 relative overflow-hidden`}
+          >
+            {/* Decorative dynamic neon fluid bubble backing */}
+            <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 dark:bg-indigo-500/10 rounded-full blur-2xl pointer-events-none" />
+
+            <div className="flex items-center gap-3 relative z-10">
+              <div className={`p-2.5 rounded-2xl shrink-0 transition-colors duration-300 ${themeIconBg} ${themeIconText}`}>
+                <Calendar className="w-5 h-5 animate-pulse" />
+              </div>
+              <div>
+                <span className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 block leading-none tracking-widest mb-1">FİLTRELENEN DÖNEM</span>
+                <span className="font-extrabold text-slate-800 dark:text-slate-100 uppercase tracking-wide flex items-center gap-2">
+                  {selectedMonth !== null && selectedYear !== null 
+                    ? `${["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"][selectedMonth]} ${selectedYear}`
+                    : "🔒 TÜM ZAMANLAR BİRİKİMLİ"}
+                  <span className="inline-flex w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+                </span>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-end relative z-10">
+              <button
+                type="button"
+                onClick={() => {
+                  if (selectedMonth === null || selectedYear === null) {
+                    const now = new Date();
+                    setSelectedMonth(now.getMonth());
+                    setSelectedYear(now.getFullYear());
+                  } else if (selectedMonth === 0) {
+                    setSelectedMonth(11);
+                    setSelectedYear(selectedYear - 1);
+                  } else {
+                    setSelectedMonth(selectedMonth - 1);
+                  }
+                }}
+                disabled={selectedMonth === null}
+                className={`px-3 py-1.5 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 rounded-xl cursor-pointer disabled:opacity-40 select-none text-[10.5px] font-extrabold transition-all duration-300 ${themeBtnHover}`}
+              >
+                ← Önceki
+              </button>
+
+              <select
+                value={selectedMonth === null ? "all" : selectedMonth}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val === "all") {
+                    setSelectedMonth(null);
+                  } else {
+                    setSelectedMonth(parseInt(val));
+                    if (selectedYear === null) setSelectedYear(new Date().getFullYear());
+                  }
+                }}
+                className={`px-3 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/80 rounded-xl font-extrabold text-slate-700 dark:text-slate-200 cursor-pointer text-[10.5px] focus:outline-none focus:ring-1 ${themeFocusRing}`}
+              >
+                <option value="all">Tüm Dönemler</option>
+                {["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"].map((m, idx) => (
+                  <option key={idx} value={idx}>{m}</option>
+                ))}
+              </select>
+
+              <select
+                value={selectedYear === null ? "all" : selectedYear}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val === "all") {
+                    setSelectedYear(null);
+                    setSelectedMonth(null);
+                  } else {
+                    setSelectedYear(parseInt(val));
+                    if (selectedMonth === null) setSelectedMonth(new Date().getMonth());
+                  }
+                }}
+                disabled={selectedMonth === null}
+                className={`px-3 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/85 rounded-xl font-extrabold text-slate-700 dark:text-slate-200 disabled:opacity-40 cursor-pointer text-[10.5px] focus:outline-none focus:ring-1 ${themeFocusRing}`}
+              >
+                <option value="all">Yıl</option>
+                {[2025, 2026, 2027, 2028].map((y) => (
+                  <option key={y} value={y}>{y}</option>
+                ))}
+              </select>
+
+              <button
+                type="button"
+                onClick={() => {
+                  if (selectedMonth === null || selectedYear === null) {
+                    const now = new Date();
+                    setSelectedMonth(now.getMonth());
+                    setSelectedYear(now.getFullYear());
+                  } else if (selectedMonth === 11) {
+                    setSelectedMonth(0);
+                    setSelectedYear(selectedYear + 1);
+                  } else {
+                    setSelectedMonth(selectedMonth + 1);
+                  }
+                }}
+                disabled={selectedMonth === null}
+                className={`px-3 py-1.5 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-655 dark:text-slate-300 rounded-xl cursor-pointer disabled:opacity-40 select-none text-[10.5px] font-extrabold transition-all duration-300 ${themeBtnHover}`}
+              >
+                Sonraki →
+              </button>
+            </div>
+          </motion.div>
+        );
+      })()}
 
       {/* 4x Grid Stats */}
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">

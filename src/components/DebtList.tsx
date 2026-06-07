@@ -6,7 +6,7 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { PlusCircle, Printer, FileText, CheckCircle2, Circle, AlertCircle, Edit, Trash2, Calendar, ClipboardList, ArrowUpDown, Sparkles, Camera } from "lucide-react";
-import { Debt, InstallmentDebt } from "../types";
+import { Debt, InstallmentDebt, Expense } from "../types";
 import { useCurrency } from "../utils/CurrencyContext";
 import { DoughnutChart, BarChart } from "./BudgetCharts";
 import { AdMobBanner } from "./AdMobBanner";
@@ -16,6 +16,7 @@ import { jsPDF } from "jspdf";
 
 interface DebtListProps {
   debts: Debt[];
+  expenses?: Expense[];
   totalIncome?: number;
   onSaveDebt: (debt: Partial<Debt>, createAlarm?: boolean) => void;
   onDeleteDebt: (id: number) => void;
@@ -37,6 +38,7 @@ interface DebtListProps {
 
 export const DebtList: React.FC<DebtListProps> = ({
   debts,
+  expenses = [],
   totalIncome = 0,
   onSaveDebt,
   onDeleteDebt,
@@ -577,6 +579,239 @@ export const DebtList: React.FC<DebtListProps> = ({
       doc.text(format(totalRemaining), 105, yPos + 12);
 
       // Footnote
+      doc.setFontSize(8);
+      doc.setTextColor(100, 116, 139);
+      doc.text(safeText("Butcem Pro Akıllı Finans Yonetim Sistemi | v5.0 Ultimate"), 15, 285);
+
+      // --- PAGE 2: TAKSITLI ALISVERISLER VE KREDILER ---
+      doc.addPage();
+      
+      // Header Banner Box (Slate Accent)
+      doc.setFillColor(15, 23, 42); // slate-900
+      doc.rect(0, 0, 210, 24, "F");
+      doc.setTextColor(255, 255, 255);
+      doc.setFont("Helvetica", "bold");
+      doc.setFontSize(14);
+      doc.text("Butcem Pro - Taksitli Alisverisler ve Krediler", 15, 15);
+      
+      doc.setFontSize(10);
+      doc.setFont("Helvetica", "bold");
+      doc.setTextColor(15, 23, 42);
+      
+      let periodStr = selectedMonth !== null && selectedYear !== null 
+        ? `${selectedMonth + 1} / ${selectedYear}` 
+        : "Tum Zamanlar (Filtresiz)";
+      doc.text(safeText(`Secilen Donem Taksit Detaylari (${periodStr})`), 15, 38);
+      
+      doc.setDrawColor(148, 163, 184);
+      doc.setLineWidth(0.5);
+      doc.line(15, 41, 195, 41);
+      
+      let tYPos = 49;
+      
+      // Headers
+      doc.setFillColor(241, 245, 249);
+      doc.rect(15, tYPos - 5, 180, 8, "F");
+      doc.setFontSize(9);
+      doc.setFont("Helvetica", "bold");
+      doc.setTextColor(51, 65, 85);
+      doc.text(safeText("Taksit / Kredi Adı"), 18, tYPos);
+      doc.text(safeText("Baslangic"), 75, tYPos);
+      doc.text(safeText("Taksit Durumu"), 105, tYPos);
+      doc.text(safeText("Aylik Taksit"), 140, tYPos);
+      doc.text(safeText("Toplam Tutar"), 165, tYPos);
+      
+      doc.setDrawColor(226, 232, 240);
+      doc.line(15, tYPos + 4, 195, tYPos + 4);
+      tYPos += 10;
+      
+      // Get active list
+      let instList: any[] = [];
+      if (selectedMonth !== null && selectedYear !== null) {
+        instList = installmentDebts.map((inst) => {
+          const startDate = new Date(inst.firstDueDate || "");
+          const startYear = startDate.getFullYear();
+          const startMonth = startDate.getMonth();
+          const monthDiff = (selectedYear - startYear) * 12 + (selectedMonth - startMonth);
+          const isActive = monthDiff >= 0 && monthDiff < inst.installmentCount;
+          const isPaid = inst.paidInstallmentCount > monthDiff;
+          const installmentNoStr = isActive ? `${monthDiff + 1} / ${inst.installmentCount}` : "Pasif/Bitti";
+          const paymentThisMonth = isActive ? (inst.totalAmount / (inst.installmentCount || 1)) : 0;
+          return {
+            ...inst,
+            isActive,
+            isPaid,
+            installmentNoStr,
+            paymentThisMonth
+          };
+        }).filter(item => item.isActive);
+      } else {
+        // All installments
+        instList = installmentDebts.map((inst) => {
+          return {
+            ...inst,
+            isActive: true,
+            isPaid: inst.paidInstallmentCount >= inst.installmentCount,
+            installmentNoStr: `${inst.paidInstallmentCount} / ${inst.installmentCount}`,
+            paymentThisMonth: inst.totalAmount / (inst.installmentCount || 1)
+          };
+        });
+      }
+      
+      if (instList.length === 0) {
+        doc.setFont("Helvetica", "normal");
+        doc.setTextColor(100, 116, 139);
+        doc.text(safeText("Bu doneme ait aktif taksitli harcama veya taksitli kredi bulunmuyor."), 18, tYPos + 5);
+        tYPos += 15;
+      } else {
+        instList.forEach((inst) => {
+          if (tYPos > 260) {
+            doc.addPage();
+            tYPos = 25;
+            // Redraw header
+            doc.setFillColor(241, 245, 249);
+            doc.rect(15, tYPos - 5, 180, 8, "F");
+            doc.setFont("Helvetica", "bold");
+            doc.text(safeText("Taksit / Kredi Adı"), 18, tYPos);
+            doc.text(safeText("Baslangic"), 75, tYPos);
+            doc.text(safeText("Taksit Durumu"), 105, tYPos);
+            doc.text(safeText("Aylik Taksit"), 140, tYPos);
+            doc.text(safeText("Toplam Tutar"), 165, tYPos);
+            doc.line(15, tYPos + 4, 195, tYPos + 4);
+            tYPos += 10;
+          }
+          
+          doc.setFont("Helvetica", "normal");
+          doc.setTextColor(30, 41, 59);
+          doc.text(safeText(inst.name || "Taksit"), 18, tYPos);
+          doc.text(safeText(inst.firstDueDate || "-"), 75, tYPos);
+          
+          const statusText = inst.isPaid ? "Odenmis" : `${inst.installmentNoStr}`;
+          doc.text(safeText(statusText), 105, tYPos);
+          
+          const monthlyPay = inst.totalAmount / (inst.installmentCount || 1);
+          doc.text(format(monthlyPay), 140, tYPos);
+          doc.text(format(inst.totalAmount), 165, tYPos);
+          
+          doc.setDrawColor(241, 245, 249);
+          doc.line(15, tYPos + 3, 195, tYPos + 3);
+          tYPos += 9;
+        });
+      }
+      
+      // Totals of active installments
+      const totalInstallmentsSum = instList.reduce((sum, item) => sum + (item.paymentThisMonth || 0), 0);
+      doc.setFillColor(248, 250, 252);
+      doc.rect(15, tYPos, 180, 12, "F");
+      doc.setDrawColor(203, 213, 225);
+      doc.rect(15, tYPos, 180, 12, "S");
+      doc.setFont("Helvetica", "bold");
+      doc.setTextColor(15, 23, 42);
+      doc.text(safeText("SECILEN DONEM TOPLAM TAKSIT ODEMESI:"), 18, tYPos + 8);
+      doc.text(format(totalInstallmentsSum), 140, tYPos + 8);
+      
+      doc.setFontSize(8);
+      doc.setTextColor(100, 116, 139);
+      doc.text(safeText("Butcem Pro Akıllı Finans Yonetim Sistemi | v5.0 Ultimate"), 15, 285);
+
+      // --- PAGE 3: DONEM GIDER DETAYLARI VE HARCAMALAR ---
+      doc.addPage();
+      
+      // Header Banner Box (Amber/Charcoal Accent)
+      doc.setFillColor(15, 23, 42); // slate-900
+      doc.rect(0, 0, 210, 24, "F");
+      doc.setTextColor(255, 255, 255);
+      doc.setFont("Helvetica", "bold");
+      doc.setFontSize(14);
+      doc.text("Butcem Pro - Harcamalar ve Donemsel Giderler", 15, 15);
+      
+      doc.setFontSize(10);
+      doc.setFont("Helvetica", "bold");
+      doc.setTextColor(15, 23, 42);
+      doc.text(safeText(`Secilen Donem Harcama ve Gider Raporu (${periodStr})`), 15, 38);
+      
+      doc.setDrawColor(148, 163, 184);
+      doc.setLineWidth(0.5);
+      doc.line(15, 41, 195, 41);
+      
+      let eYPos = 49;
+      
+      // Headers
+      doc.setFillColor(241, 245, 249);
+      doc.rect(15, eYPos - 5, 180, 8, "F");
+      doc.setFontSize(9);
+      doc.setFont("Helvetica", "bold");
+      doc.setTextColor(51, 65, 85);
+      doc.text(safeText("Gider Basligi"), 18, eYPos);
+      doc.text(safeText("Gider Kategorisi"), 80, eYPos);
+      doc.text(safeText("Harcama Tarihi"), 120, eYPos);
+      doc.text(safeText("Tutar"), 165, eYPos);
+      
+      doc.setDrawColor(226, 232, 240);
+      doc.line(15, eYPos + 4, 195, eYPos + 4);
+      eYPos += 10;
+      
+      // Filter expenses
+      let filteredExpensesList: any[] = [];
+      if (selectedMonth !== null && selectedYear !== null) {
+        filteredExpensesList = expenses.filter((e) => {
+          if (!e.date) return false;
+          try {
+            const expDate = new Date(e.date);
+            return expDate.getMonth() === selectedMonth && expDate.getFullYear() === selectedYear;
+          } catch {
+            return false;
+          }
+        });
+      } else {
+        filteredExpensesList = [...expenses];
+      }
+      
+      if (filteredExpensesList.length === 0) {
+        doc.setFont("Helvetica", "normal");
+        doc.setTextColor(100, 116, 139);
+        doc.text(safeText("Bu doneme ait kayitli harcama veya bütce gideri bulunmuyor."), 18, eYPos + 5);
+        eYPos += 15;
+      } else {
+        filteredExpensesList.forEach((exp) => {
+          if (eYPos > 260) {
+            doc.addPage();
+            eYPos = 25;
+            doc.setFillColor(241, 245, 249);
+            doc.rect(15, eYPos - 5, 180, 8, "F");
+            doc.setFont("Helvetica", "bold");
+            doc.text(safeText("Gider Basligi"), 18, eYPos);
+            doc.text(safeText("Gider Kategorisi"), 80, eYPos);
+            doc.text(safeText("Harcama Tarihi"), 120, eYPos);
+            doc.text(safeText("Tutar"), 165, eYPos);
+            doc.line(15, eYPos + 4, 195, eYPos + 4);
+            eYPos += 10;
+          }
+          
+          doc.setFont("Helvetica", "normal");
+          doc.setTextColor(30, 41, 59);
+          doc.text(safeText(exp.title || exp.description || "Gider"), 18, eYPos);
+          doc.text(safeText(exp.category || "Genel"), 80, eYPos);
+          doc.text(safeText(exp.date || "-"), 120, eYPos);
+          doc.text(format(exp.amount), 165, eYPos);
+          
+          doc.setDrawColor(241, 245, 249);
+          doc.line(15, eYPos + 3, 195, eYPos + 3);
+          eYPos += 9;
+        });
+      }
+      
+      // Totals of filtered expenses
+      const totalExpensesSum = filteredExpensesList.reduce((sum, item) => sum + (item.amount || 0), 0);
+      doc.setFillColor(248, 250, 252);
+      doc.rect(15, eYPos, 180, 12, "F");
+      doc.setDrawColor(203, 213, 225);
+      doc.rect(15, eYPos, 180, 12, "S");
+      doc.setFont("Helvetica", "bold");
+      doc.setTextColor(15, 23, 42);
+      doc.text(safeText("SECILEN DONEM TOPLAM KAYITLI GIDER TUTARI:"), 18, eYPos + 8);
+      doc.text(format(totalExpensesSum), 140, eYPos + 8);
+      
       doc.setFontSize(8);
       doc.setTextColor(100, 116, 139);
       doc.text(safeText("Butcem Pro Akıllı Finans Yonetim Sistemi | v5.0 Ultimate"), 15, 285);
