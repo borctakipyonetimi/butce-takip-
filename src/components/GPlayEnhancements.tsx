@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
+import { auth } from "../utils/firebase";
+import { GoogleAuthProvider, signInWithPopup, signOut } from "firebase/auth";
 import {
   Cloud,
   Languages,
@@ -19,10 +21,19 @@ import {
   BellRing,
   Check,
   Globe2,
-  CheckCircle
+  CheckCircle,
+  XCircle,
+  LogOut
 } from "lucide-react";
 import { Debt, Income, Expense, InstallmentDebt, ExpenseCategory } from "../types";
 import { translations } from "../utils/translations";
+
+interface DriveBackup {
+  id: string;
+  name: string;
+  size: string;
+  createdTime: string;
+}
 
 interface GPlayEnhancementsProps {
   language: "tr" | "en";
@@ -43,6 +54,7 @@ interface GPlayEnhancementsProps {
   debts: Debt[];
   installmentDebts: InstallmentDebt[];
   format: (val: number) => string;
+  onRestoreBackup?: (data: any) => void;
 }
 
 export const GPlayEnhancements: React.FC<GPlayEnhancementsProps> = ({
@@ -56,32 +68,200 @@ export const GPlayEnhancements: React.FC<GPlayEnhancementsProps> = ({
   triggerToast,
   debts,
   installmentDebts,
-  format
+  format,
+  onRestoreBackup
 }) => {
   const [activeTab, setActiveTab] = useState<"drive" | "limits" | "currency">("drive");
   const t = (key: keyof typeof translations.tr) => {
     return translations[language][key] || translations.tr[key];
   };
 
-  // Google Drive Simulation State
-  const [isDriveConnected, setIsDriveConnected] = useState(() => {
-    return localStorage.getItem("gdrive_connected") === "1";
-  });
+  // Google Drive Real Integration State
+  const [accessToken, setAccessToken] = useState<string | null>(null);
+  const [driveUser, setDriveUser] = useState<any>(null);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [driveBackups, setDriveBackups] = useState<DriveBackup[]>([]);
   const [autoBackup, setAutoBackup] = useState(() => {
     return localStorage.getItem("gdrive_auto_backup") === "1";
   });
-  const [lastSyncDate, setLastSyncDate] = useState(() => {
-    return localStorage.getItem("gdrive_last_sync_date") || "-";
-  });
-  const [driveBackups, setDriveBackups] = useState<Array<{ name: string; date: string; size: string }>>(() => {
-    const saved = localStorage.getItem("gdrive_simulated_backups");
-    if (saved) return JSON.parse(saved);
-    return [
-      { name: "ButcemPro_AutoBackup_2026-06-01.json", date: "2026-06-01 14:32", size: "12 KB" },
-      { name: "ButcemPro_ManualBackup_2026-06-05.json", date: "2026-06-05 09:15", size: "14 KB" }
-    ];
-  });
+
+  // Load token if exists (in a real app, you might want to check auth state)
+  // For simplicity here, we'll rely on the user clicking "Connect" to get the token.
+
+  const fetchDriveUser = async (token: string) => {
+    try {
+      const res = await fetch("/api/drive/user", {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setDriveUser(data);
+      }
+    } catch (e) {
+      console.error("Fetch drive user error:", e);
+    }
+  };
+
+  const fetchBackups = async (token: string) => {
+    setIsSyncing(true);
+    try {
+      const res = await fetch("/api/drive/backups", {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setDriveBackups(data.files || []);
+      }
+    } catch (e) {
+      console.error("Fetch backups error:", e);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const handleDriveConnect = async () => {
+    const provider = new GoogleAuthProvider();
+    provider.addScope("https://www.googleapis.com/auth/drive.appdata");
+    // Force consent screen to ensure the user can select the drive scope checkbox
+    provider.setCustomParameters({ 
+      prompt: "select_account consent",
+      access_type: "offline"
+    });
+    
+    try {
+      setIsSyncing(true);
+      console.log("Starting Google Auth popup with scopes...");
+      const result = await signInWithPopup(auth, provider);
+      const credential = GoogleAuthProvider.credentialFromResult(result);
+      
+      if (credential?.accessToken) {
+        setAccessToken(credential.accessToken);
+        console.log("Token obtained successfully.");
+        await fetchDriveUser(credential.accessToken);
+        await fetchBackups(credential.accessToken);
+        triggerToast(language === "tr" ? "Google Drive hesabı başarıyla bağlandı! ☁️" : "Google Drive account linked successfully! ☁️");
+      } else {
+        throw new Error("Access Token not found in Firebase response.");
+      }
+    } catch (e: any) {
+      console.error("Firebase Auth Error:", e);
+      let errorMsg = e.message;
+      
+      if (e.code === "auth/popup-blocked") {
+        errorMsg = language === "tr" ? "Popup engelleyiciyi kapatın." : "Please disable your popup blocker.";
+      } else if (e.code === "auth/unauthorized-domain") {
+        errorMsg = language === "tr" 
+          ? "Bu alan adı Firebase ayarlarında yetkilendirilmemiş. Lütfen yöneticiye başvurun." 
+          : "This domain is not authorized in Firebase settings.";
+      } else if (e.code === "auth/cancelled-popup-request" || e.code === "auth/popup-closed-by-user") {
+        errorMsg = language === "tr" ? "Giriş işlemi iptal edildi." : "Login cancelled.";
+      }
+      
+      triggerToast(language === "tr" ? `Bağlantı hatası: ${errorMsg}` : `Connection error: ${errorMsg}`);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const handleDriveDisconnect = async () => {
+    try {
+      await signOut(auth);
+      setAccessToken(null);
+      setDriveUser(null);
+      setDriveBackups([]);
+      triggerToast(language === "tr" ? "Oturum kapatıldı. Yeni bir hesap seçmek için tekrar bağlanın." : "Logged out. Connect again to select a different account.");
+    } catch (e) {
+      console.error("Logout error:", e);
+    }
+  };
+
+  // Create real backup
+  const handleCreateDriveBackup = async () => {
+    if (!accessToken) return;
+    setIsSyncing(true);
+    try {
+      const now = new Date();
+      // Format filename with local date/time for user recognition
+      const datePart = now.toLocaleDateString("tr-TR").replace(/\./g, "-");
+      const timePart = now.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" }).replace(":", "");
+      const fileName = `ButcemPro_Yedek_${datePart}_${timePart}.json`;
+      
+      const backupData = {
+        expenses,
+        debts,
+        installmentDebts,
+        expenseCategories,
+        statsBag,
+        version: "2.0.0",
+        timestamp: now.toISOString()
+      };
+
+      const res = await fetch("/api/drive/upload", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`
+        },
+        body: JSON.stringify({
+          fileName,
+          content: backupData
+        })
+      });
+
+      if (res.ok) {
+        await fetchBackups(accessToken);
+        triggerToast(t("drive_success"));
+      } else {
+        const errorData = await res.json();
+        throw new Error(errorData.error?.message || "Upload failed");
+      }
+    } catch (e: any) {
+      triggerToast(language === "tr" ? `Yükleme hatası: ${e.message}` : `Upload error: ${e.message}`);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const handleDeleteBackup = async (fileId: string) => {
+    if (!accessToken) return;
+    try {
+      const res = await fetch(`/api/drive/backups/${fileId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${accessToken}` }
+      });
+      if (res.ok) {
+        await fetchBackups(accessToken);
+        triggerToast(language === "tr" ? "Yedek silindi." : "Backup deleted.");
+      }
+    } catch (e) {
+      console.error("Delete backup error:", e);
+    }
+  };
+
+  const handleRestoreFromDrive = async (fileId: string, fileName: string) => {
+    if (!accessToken) return;
+    setIsSyncing(true);
+    try {
+      // In a real app we'd fetch the file content. 
+      // For this implementation, we'll fetch the content from Drive
+      const res = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
+        headers: { Authorization: `Bearer ${accessToken}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (onRestoreBackup) {
+          onRestoreBackup(data);
+          triggerToast(language === "tr" ? `${fileName} başarıyla geri yüklendi!` : `${fileName} restored successfully!`);
+        } else {
+          triggerToast(language === "tr" ? "Geri yükleme motoru aktif değil." : "Restore engine is not active.");
+        }
+      }
+    } catch (e: any) {
+      triggerToast(language === "tr" ? `Geri yükleme hatası: ${e.message}` : `Restore error: ${e.message}`);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   // Category Limit Settings State
   const [selectedCatId, setSelectedCatId] = useState<number | null>(null);
@@ -106,62 +286,8 @@ export const GPlayEnhancements: React.FC<GPlayEnhancementsProps> = ({
 
   // Sync back auto backup settings to local browser
   useEffect(() => {
-    localStorage.setItem("gdrive_connected", isDriveConnected ? "1" : "0");
     localStorage.setItem("gdrive_auto_backup", autoBackup ? "1" : "0");
-    localStorage.setItem("gdrive_simulated_backups", JSON.stringify(driveBackups));
-  }, [isDriveConnected, autoBackup, driveBackups]);
-
-  // Handle Simulated Google Drive Connection
-  const handleDriveConnectionToggle = () => {
-    if (!isDriveConnected) {
-      setIsSyncing(true);
-      setTimeout(() => {
-        setIsDriveConnected(true);
-        setIsSyncing(false);
-        triggerToast(language === "tr" ? "Google Drive hesabı başarıyla bağlandı! ☁️" : "Google Drive account linked successfully! ☁️");
-      }, 1500);
-    } else {
-      setIsDriveConnected(false);
-      triggerToast(language === "tr" ? "Google Drive bağlantısı kesildi." : "Google Drive connection severed.");
-    }
-  };
-
-  // Handle Simulated Drive Backup Creation
-  const handleCreateDriveBackup = () => {
-    if (!isDriveConnected) {
-      triggerToast(language === "tr" ? "Hata: Önce Google Drive bağlantısını etkinleştirmelisiniz!" : "Error: Link your Google Drive account first!");
-      return;
-    }
-    setIsSyncing(true);
-    setTimeout(() => {
-      const dateStr = new Date().toISOString().replace("T", " ").slice(0, 16);
-      const fileName = `ButcemPro_ManualBackup_${new Date().toISOString().slice(0, 10)}.json`;
-      const newBackup = { name: fileName, date: dateStr, size: "16 KB" };
-      
-      const updated = [newBackup, ...driveBackups];
-      setDriveBackups(updated);
-      setLastSyncDate(dateStr);
-      localStorage.setItem("gdrive_last_sync_date", dateStr);
-      setIsSyncing(false);
-      triggerToast(t("drive_success"));
-    }, 1800);
-  };
-
-  // Handle simulated backup restore
-  const handleRestoreFromDrive = (bName: string) => {
-    setIsSyncing(true);
-    setTimeout(() => {
-      setIsSyncing(false);
-      triggerToast(language === "tr" ? `${bName} yedek dosyası başarıyla geri yüklendi! 📊` : `${bName} restored successfully! 📊`);
-    }, 1200);
-  };
-
-  // Handle simulated backup delete
-  const handleDeleteDriveBackup = (index: number) => {
-    const updated = driveBackups.filter((_, idx) => idx !== index);
-    setDriveBackups(updated);
-    triggerToast(language === "tr" ? "Bulut yedeği silindi." : "Cloud backup deleted.");
-  };
+  }, [autoBackup]);
 
   // Handle Live Currency Market Conversion
   const handleConvert = () => {
@@ -182,55 +308,18 @@ export const GPlayEnhancements: React.FC<GPlayEnhancementsProps> = ({
   const handleRefreshRates = async () => {
     setIsRefreshingRates(true);
     try {
-      const res = await fetch("https://open.er-api.com/v6/latest/USD");
-      if (!res.ok) throw new Error("API network error");
+      const res = await fetch("/api/rates");
       const data = await res.json();
-      if (data && data.rates && data.rates.TRY) {
-        const tryRate = data.rates.TRY; // e.g., 34.85
-        const eurInUsd = data.rates.EUR; // e.g., 0.93
-        const gbpInUsd = data.rates.GBP; // e.g., 0.79
-        
-        const newRates = {
-          USD: parseFloat(tryRate.toFixed(2)),
-          EUR: parseFloat((tryRate / eurInUsd).toFixed(2)),
-          GBP: parseFloat((tryRate / gbpInUsd).toFixed(2)),
-          BTC: parseFloat((tryRate * (1 / (data.rates.BTC || 0.000015))).toFixed(0)) || 3365000,
-          TRY: 1.0
-        };
-        
-        // If BTC feels too low or wrong, let's keep it near realistic ~$67,000 to TRY
-        if (newRates.BTC < 100000) {
-          newRates.BTC = Math.round(tryRate * 67500);
-        }
-        
-        setExchangeRates(newRates);
+      if (data && data.rates) {
+        setExchangeRates(data.rates);
         triggerToast(
           language === "tr"
-            ? "Piyasa döviz kurları canlı olarak API üzerinden güncellendi! 💱"
-            : "Market exchange rates updated live via API! 💱"
+            ? "Piyasa döviz kurları canlı olarak güncellendi! 💱"
+            : "Market exchange rates updated live! 💱"
         );
-      } else {
-        throw new Error("Invalid schema");
       }
     } catch (err) {
-      console.warn("Failed to fetch live FX rates, using custom dynamic rates:", err);
-      // Simulate real TCMB live rate adjustments up to 1.5% volatility
-      const adjust = (val: number) => {
-        const factor = 1 + (Math.random() * 0.015 - 0.0075);
-        return parseFloat((val * factor).toFixed(2));
-      };
-      setExchangeRates({
-        USD: adjust(34.85),
-        EUR: adjust(37.40),
-        GBP: adjust(44.15),
-        BTC: Math.round(adjust(3365000)),
-        TRY: 1.0
-      });
-      triggerToast(
-        language === "tr"
-          ? "Canlı piyasa kurları güncellendi! 💱"
-          : "Market currency exchange rates updated! 💱"
-      );
+      console.warn("Failed to fetch live FX rates:", err);
     } finally {
       setIsRefreshingRates(false);
     }
@@ -249,7 +338,6 @@ export const GPlayEnhancements: React.FC<GPlayEnhancementsProps> = ({
       if (c.id === catId) {
         return { 
           ...c, 
-          // Use bracket-safe property inject to support both schemas
           limitAmount: limit,
           warningThreshold: alertThreshold
         };
@@ -259,6 +347,27 @@ export const GPlayEnhancements: React.FC<GPlayEnhancementsProps> = ({
     onUpdateAllCategories(updated);
     setSelectedCatId(null);
     triggerToast(language === "tr" ? "Kategori bütçe limiti kaydedildi!" : "Category budget ceiling saved!");
+  };
+
+  // Formatting Drive Size
+  const formatSize = (bytes: string | undefined) => {
+    if (!bytes) return "0 KB";
+    const b = parseInt(bytes);
+    if (b < 1024) return b + " B";
+    if (b < 1024 * 1024) return (b / 1024).toFixed(1) + " KB";
+    return (b / (1024 * 1024)).toFixed(1) + " MB";
+  };
+
+  // Formatting Drive Date
+  const formatDate = (iso: string) => {
+    const date = new Date(iso);
+    return date.toLocaleString(language === "tr" ? "tr-TR" : "en-US", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit"
+    });
   };
 
   return (
@@ -347,7 +456,7 @@ export const GPlayEnhancements: React.FC<GPlayEnhancementsProps> = ({
 
               {/* Connected Badge */}
               <div>
-                {isDriveConnected ? (
+                {accessToken ? (
                   <span className="px-3 py-1 bg-emerald-50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 rounded-full font-black text-[9.5px] flex items-center gap-1 uppercase">
                     <CheckCircle className="w-3.5 h-3.5" /> GDrive Active
                   </span>
@@ -359,7 +468,7 @@ export const GPlayEnhancements: React.FC<GPlayEnhancementsProps> = ({
               </div>
             </div>
 
-            {/* Simulated Account Link Action Cards */}
+            {/* Real Account Link Action Cards */}
             <div className="grid md:grid-cols-2 gap-5 items-stretch">
               <div className="p-5 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700/60 space-y-4">
                 <span className="text-[9px] font-black uppercase text-indigo-500 block tracking-widest leading-none">
@@ -373,15 +482,19 @@ export const GPlayEnhancements: React.FC<GPlayEnhancementsProps> = ({
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    {isDriveConnected ? (
+                    {accessToken ? (
                       <div className="space-y-2">
                         <div className="p-3.5 bg-white dark:bg-slate-800 rounded-xl flex items-center justify-between text-xs font-bold border border-slate-150 dark:border-slate-700">
                           <div className="flex items-center gap-2">
-                            <span className="w-6 h-6 rounded-full bg-indigo-500 text-white flex items-center justify-center font-black text-[10px]">
-                              N
-                            </span>
+                            {driveUser?.picture ? (
+                              <img src={driveUser.picture} className="w-6 h-6 rounded-full" alt="Profile" referrerPolicy="no-referrer" />
+                            ) : (
+                              <span className="w-6 h-6 rounded-full bg-indigo-500 text-white flex items-center justify-center font-black text-[10px]">
+                                {driveUser?.name?.[0] || "U"}
+                              </span>
+                            )}
                             <div>
-                              <p className="text-slate-800 dark:text-slate-100">nettenkazanma2@gmail.com</p>
+                              <p className="text-slate-800 dark:text-slate-100">{driveUser?.email || "Connected"}</p>
                               <p className="text-[9px] text-slate-400 uppercase leading-none">OAuth Google Scope: GDrive.AppData</p>
                             </div>
                           </div>
@@ -394,14 +507,15 @@ export const GPlayEnhancements: React.FC<GPlayEnhancementsProps> = ({
                             onClick={handleCreateDriveBackup}
                             className="flex-1 py-2 px-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-black transition flex items-center justify-center gap-1.5 cursor-pointer uppercase"
                           >
-                            <HardDriveUpload className="w-3.5 h-3.5" /> Google Drive'a Eşitle
+                            <HardDriveUpload className="w-3.5 h-3.5" /> Google Drive'a Yedekle
                           </button>
                           <button
                             type="button"
-                            onClick={handleDriveConnectionToggle}
-                            className="py-2 px-3 bg-slate-200 dark:bg-slate-800 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950/20 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-extrabold transition cursor-pointer"
+                            onClick={handleDriveDisconnect}
+                            className="p-2 bg-slate-200 dark:bg-slate-800 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950/20 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-extrabold transition cursor-pointer flex items-center gap-1"
+                            title="Oturumu Kapat / Hesap Değiştir"
                           >
-                            {t("drive_disconnect")}
+                            <LogOut className="w-4 h-4" />
                           </button>
                         </div>
                       </div>
@@ -414,7 +528,7 @@ export const GPlayEnhancements: React.FC<GPlayEnhancementsProps> = ({
                         </p>
                         <button
                           type="button"
-                          onClick={handleDriveConnectionToggle}
+                          onClick={handleDriveConnect}
                           className="py-2.5 px-5 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-850 text-white rounded-xl text-xs font-black tracking-wide transition active:scale-95 inline-flex items-center gap-2 cursor-pointer shadow-sm shadow-indigo-500/10 uppercase"
                         >
                           <Cloud className="w-4 h-4 animate-pulse" /> {t("drive_connect")}
@@ -437,7 +551,7 @@ export const GPlayEnhancements: React.FC<GPlayEnhancementsProps> = ({
                       onChange={(e) => setAutoBackup(e.target.checked)}
                       className="sr-only peer"
                     />
-                    <div className="w-9 h-5 bg-slate-200 dark:bg-slate-750 peer-focus:outline-hidden rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-350 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500"></div>
+                    <div className="w-9 h-5 bg-slate-200 dark:bg-slate-755 peer-focus:outline-hidden rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-350 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500"></div>
                   </label>
                 </div>
               </div>
@@ -449,21 +563,28 @@ export const GPlayEnhancements: React.FC<GPlayEnhancementsProps> = ({
                     <span className="text-[9px] font-black uppercase text-indigo-500 block tracking-widest leading-none">
                       {t("drive_files")}
                     </span>
-                    <span className="text-[9.5px] font-bold font-mono text-slate-400">
-                      Cloud Sync: {lastSyncDate}
-                    </span>
+                    <button
+                      onClick={() => accessToken && fetchBackups(accessToken)}
+                      className="text-[9.5px] font-bold text-slate-400 hover:text-indigo-500 flex items-center gap-1 transition"
+                    >
+                      <RefreshCw className={`w-2.5 h-2.5 ${isSyncing ? "animate-spin" : ""}`} /> YENİLE
+                    </button>
                   </div>
 
-                  {!isDriveConnected ? (
+                  {!accessToken ? (
                     <div className="text-center py-10 text-slate-400 font-bold text-[11px] flex flex-col items-center gap-1.5">
                       <FolderSync className="w-8 h-8 text-slate-300" />
                       <span>{language === "tr" ? "Bulut kayıt listesi için hesabınızı bağlayın." : "Sign in to query backups."}</span>
                     </div>
+                  ) : driveBackups.length === 0 ? (
+                      <div className="text-center py-10 text-slate-400 font-bold text-[11px]">
+                         Yedek bulunamadı.
+                      </div>
                   ) : (
                     <div className="space-y-2 max-h-[140px] overflow-y-auto pr-1">
-                      {driveBackups.map((bk, bIdx) => (
+                      {driveBackups.map((bk) => (
                         <div
-                          key={bIdx}
+                          key={bk.id}
                           className="px-3 py-2 bg-white dark:bg-slate-800 border border-slate-150 dark:border-slate-700 rounded-xl flex items-center justify-between text-xs"
                         >
                           <div className="min-w-0 flex-1">
@@ -471,19 +592,19 @@ export const GPlayEnhancements: React.FC<GPlayEnhancementsProps> = ({
                               {bk.name}
                             </p>
                             <p className="text-[9px] text-slate-400 font-bold font-mono">
-                              {bk.date} &bull; {bk.size}
+                              {formatDate(bk.createdTime)} &bull; {formatSize(bk.size)}
                             </p>
                           </div>
                           <div className="flex gap-1 shrink-0 ml-2">
                             <button
-                              onClick={() => handleRestoreFromDrive(bk.name)}
+                              onClick={() => handleRestoreFromDrive(bk.id, bk.name)}
                               className="p-1 px-1.5 bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-400 rounded-lg hover:scale-105 active:scale-95 transition text-[9px] font-black border border-transparent"
                               title="Buluttan Geri Yükle"
                             >
                               YÜKLE
                             </button>
                             <button
-                              onClick={() => handleDeleteDriveBackup(bIdx)}
+                              onClick={() => handleDeleteBackup(bk.id)}
                               className="p-1 bg-rose-50 text-rose-600 dark:bg-rose-955/20 rounded-lg hover:scale-105 active:scale-95 transition text-[9px] font-black"
                               title="Yedeği Sil"
                             >
@@ -496,10 +617,10 @@ export const GPlayEnhancements: React.FC<GPlayEnhancementsProps> = ({
                   )}
                 </div>
 
-                <div className="p-3 bg-indigo-50/60 dark:bg-indigo-950/20 text-indigo-800 dark:text-indigo-300 rounded-xl text-[10px] leading-relaxed flex gap-2 border border-indigo-100 dark:border-indigo-950/30 font-bold mt-3">
-                  <Info className="w-3.5 h-3.5 shrink-0 text-indigo-600" />
+                <div className="p-3 bg-amber-50/60 dark:bg-amber-955/20 text-amber-800 dark:text-amber-300 rounded-xl text-[10px] leading-relaxed flex gap-2 border border-amber-100 dark:border-amber-955/30 font-bold mt-3">
+                  <Info className="w-3.5 h-3.5 shrink-0 text-amber-600" />
                   <span>
-                    Google Drive AppData API klasörü korumalı yapıda olup diğer tüm uygulamaların erişime kapalıdır, tam güvenlik sunar.
+                    Google Drive AppData klasörü korumalı yapıda olup diğer tüm uygulamaların erişime kapalıdır. Bu klasör Drive ana listesinde görünmez, tam güvenlik sunar.
                   </span>
                 </div>
               </div>

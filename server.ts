@@ -26,6 +26,126 @@ app.use((req, res, next) => {
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
+// Google Drive API Proxy endpoints
+app.get("/api/drive/backups", async (req, res) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader) return res.status(401).json({ error: "Unauthorized" });
+
+  try {
+    const listUrl = "https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&fields=files(id,name,size,createdTime)&orderBy=createdTime desc";
+    const response = await fetch(listUrl, {
+      headers: { Authorization: authHeader }
+    });
+
+    if (!response.ok) {
+      const err = await response.json();
+      return res.status(response.status).json(err);
+    }
+    
+    const data = await response.json();
+    res.json(data);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post("/api/drive/upload", async (req, res) => {
+  const authHeader = req.headers.authorization;
+  const { fileName, content } = req.body;
+  if (!authHeader) return res.status(401).json({ error: "Unauthorized" });
+
+  try {
+    const metadata = {
+      name: fileName,
+      parents: ["appDataFolder"]
+    };
+
+    // Google Drive multipart upload requires a very specific RFC 2387 structure
+    const boundary = "-------314159265358979323846";
+    
+    // Prepare the metadata and content JSON
+    const metadataStr = JSON.stringify(metadata);
+    const contentStr = JSON.stringify(content);
+
+    // Use Buffer to handle potential multi-byte characters (UTF-8) correctly in content-length calculation
+    const multipartBody = Buffer.concat([
+      Buffer.from(`--${boundary}\r\n`),
+      Buffer.from("Content-Type: application/json; charset=UTF-8\r\n\r\n"),
+      Buffer.from(metadataStr),
+      Buffer.from(`\r\n--${boundary}\r\n`),
+      Buffer.from("Content-Type: application/json\r\n\r\n"),
+      Buffer.from(contentStr),
+      Buffer.from(`\r\n--${boundary}--`)
+    ]);
+
+    const response = await fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart", {
+      method: "POST",
+      headers: {
+        Authorization: authHeader,
+        "Content-Type": `multipart/related; boundary=${boundary}`,
+        "Content-Length": multipartBody.length.toString()
+      },
+      body: multipartBody
+    });
+
+    if (!response.ok) {
+      const err = await response.json();
+      console.error("Gdrive Upload Error Detail:", JSON.stringify(err, null, 2));
+      return res.status(response.status).json(err);
+    }
+
+    const data = await response.json();
+    res.json(data);
+  } catch (err: any) {
+    console.error("Gdrive Proxy Exception:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete("/api/drive/backups/:fileId", async (req, res) => {
+  const authHeader = req.headers.authorization;
+  const { fileId } = req.params;
+  if (!authHeader) return res.status(401).json({ error: "Unauthorized" });
+
+  try {
+    const response = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}`, {
+      method: "DELETE",
+      headers: { Authorization: authHeader }
+    });
+
+    if (!response.ok) {
+       if (response.status === 404) return res.json({ success: true, message: "Already deleted" });
+       const err = await response.json();
+       return res.status(response.status).json(err);
+    }
+
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get("/api/drive/user", async (req, res) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader) return res.status(401).json({ error: "Unauthorized" });
+
+  try {
+    const response = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
+      headers: { Authorization: authHeader }
+    });
+
+    if (!response.ok) {
+      const err = await response.json();
+      return res.status(response.status).json(err);
+    }
+
+    const data = await response.json();
+    res.json(data);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Initialize Gemini dynamically and lazily with proper User-Agent header and environment reloading support
 let cachedApiKey: string | undefined = undefined;
 let cachedAi: GoogleGenAI | null = null;

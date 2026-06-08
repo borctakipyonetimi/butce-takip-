@@ -1332,6 +1332,42 @@ export default function App() {
     }
   };
 
+  const handleRestoreBackup = (data: any) => {
+    if (!data) return;
+    
+    // Attempt robust structural mapping for various backup versions
+    const bDebts = data.debts || data.borclar || [];
+    const bIncomes = data.incomes || data.gelirler || [];
+    const bAlarms = data.alarms || data.hatirlaticilar || [];
+    const bNotifs = data.notifications || data.bildirimler || [];
+    const bInstallments = data.installmentDebts || data.taksitli_borclar || [];
+    const bPayments = data.payments || data.odemeler || [];
+    const bExpenses = data.expenses || data.harcamalar || [];
+    const bCategories = data.expenseCategories || data.kategoriler || [];
+
+    setDebts(bDebts);
+    setIncomes(bIncomes);
+    setAlarms(bAlarms);
+    setNotifications(bNotifs);
+    setInstallmentDebts(bInstallments);
+    setPayments(bPayments);
+    setExpenses(bExpenses);
+    setExpenseCategories(bCategories);
+
+    saveAllToUser(
+      bDebts,
+      bIncomes,
+      bAlarms,
+      bNotifs,
+      bInstallments,
+      bPayments,
+      bExpenses,
+      bCategories
+    );
+    
+    triggerToast("Bulut yedeği başarıyla geri yüklendi! 📊");
+  };
+
   // Helper ID generators
   const generateId = (items: { id: number }[]) => {
     return items.length ? Math.max(...items.map((x) => x.id)) + 1 : 1;
@@ -4173,6 +4209,7 @@ export default function App() {
             debts={debts}
             installmentDebts={installmentDebts}
             format={format}
+            onRestoreBackup={handleRestoreBackup}
           />
         )}
 
