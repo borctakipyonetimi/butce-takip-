@@ -57,26 +57,24 @@ app.post("/api/drive/upload", async (req, res) => {
   try {
     const metadata = {
       name: fileName,
-      parents: ["appDataFolder"]
+      parents: ["appDataFolder"],
+      mimeType: "application/json"
     };
 
-    // Google Drive multipart upload requires a very specific RFC 2387 structure
-    const boundary = "-------314159265358979323846";
-    
-    // Prepare the metadata and content JSON
-    const metadataStr = JSON.stringify(metadata);
-    const contentStr = JSON.stringify(content);
+    // Construct the multipart body strictly according to Google Drive API requirements
+    const boundary = "ais_multipart_boundary_5228182";
+    const delimiter = `--${boundary}`;
+    const closeDelimiter = `--${boundary}--`;
 
-    // Use Buffer to handle potential multi-byte characters (UTF-8) correctly in content-length calculation
-    const multipartBody = Buffer.concat([
-      Buffer.from(`--${boundary}\r\n`),
-      Buffer.from("Content-Type: application/json; charset=UTF-8\r\n\r\n"),
-      Buffer.from(metadataStr),
-      Buffer.from(`\r\n--${boundary}\r\n`),
-      Buffer.from("Content-Type: application/json\r\n\r\n"),
-      Buffer.from(contentStr),
-      Buffer.from(`\r\n--${boundary}--`)
-    ]);
+    const parts = [
+      Buffer.from(`${delimiter}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n`),
+      Buffer.from(JSON.stringify(metadata)),
+      Buffer.from(`\r\n${delimiter}\r\nContent-Type: application/json\r\n\r\n`),
+      Buffer.from(JSON.stringify(content)),
+      Buffer.from(`\r\n${closeDelimiter}`)
+    ];
+
+    const multipartBody = Buffer.concat(parts);
 
     const response = await fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart", {
       method: "POST",
@@ -90,15 +88,18 @@ app.post("/api/drive/upload", async (req, res) => {
 
     if (!response.ok) {
       const err = await response.json();
-      console.error("Gdrive Upload Error Detail:", JSON.stringify(err, null, 2));
-      return res.status(response.status).json(err);
+      console.error("Gdrive Upload Failed - Raw Error:", JSON.stringify(err, null, 2));
+      return res.status(response.status).json({
+        error: err.error || err,
+        message: err.error?.message || "Google Drive upload failed."
+      });
     }
 
     const data = await response.json();
     res.json(data);
   } catch (err: any) {
-    console.error("Gdrive Proxy Exception:", err);
-    res.status(500).json({ error: err.message });
+    console.error("Gdrive Proxy Server Exception:", err);
+    res.status(500).json({ error: { message: err.message } });
   }
 });
 

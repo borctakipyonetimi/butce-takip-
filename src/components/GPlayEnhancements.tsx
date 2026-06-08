@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { auth } from "../utils/firebase";
-import { GoogleAuthProvider, signInWithPopup, signOut } from "firebase/auth";
+import { GoogleAuthProvider, signInWithPopup, signOut, signInWithRedirect, getRedirectResult } from "firebase/auth";
 import {
   Cloud,
   Languages,
@@ -87,6 +87,27 @@ export const GPlayEnhancements: React.FC<GPlayEnhancementsProps> = ({
 
   // Load token if exists (in a real app, you might want to check auth state)
   // For simplicity here, we'll rely on the user clicking "Connect" to get the token.
+  useEffect(() => {
+    // Check for redirect result on mount
+    const checkRedirect = async () => {
+      try {
+        const result = await getRedirectResult(auth);
+        if (result) {
+          const credential = GoogleAuthProvider.credentialFromResult(result);
+          if (credential?.accessToken) {
+            setAccessToken(credential.accessToken);
+            console.log("Token obtained via redirect.");
+            await fetchDriveUser(credential.accessToken);
+            await fetchBackups(credential.accessToken);
+            triggerToast(language === "tr" ? "Giriş başarılı! ☁️" : "Login successful! ☁️");
+          }
+        }
+      } catch (e: any) {
+        console.error("Redirect result error:", e);
+      }
+    };
+    checkRedirect();
+  }, []);
 
   const fetchDriveUser = async (token: string) => {
     try {
@@ -121,40 +142,65 @@ export const GPlayEnhancements: React.FC<GPlayEnhancementsProps> = ({
 
   const handleDriveConnect = async () => {
     const provider = new GoogleAuthProvider();
+    // Add necessary scopes for AppData and basic drive access
     provider.addScope("https://www.googleapis.com/auth/drive.appdata");
-    // Force consent screen to ensure the user can select the drive scope checkbox
+    
+    // Use prompt: 'consent' to force the Google consent screen every time during connection debugging
     provider.setCustomParameters({ 
-      prompt: "select_account consent",
+      prompt: "consent",
       access_type: "offline"
     });
     
     try {
       setIsSyncing(true);
-      console.log("Starting Google Auth popup with scopes...");
+      console.log("Initiating Google Auth popup...");
+      
       const result = await signInWithPopup(auth, provider);
       const credential = GoogleAuthProvider.credentialFromResult(result);
       
       if (credential?.accessToken) {
         setAccessToken(credential.accessToken);
-        console.log("Token obtained successfully.");
-        await fetchDriveUser(credential.accessToken);
-        await fetchBackups(credential.accessToken);
-        triggerToast(language === "tr" ? "Google Drive hesabı başarıyla bağlandı! ☁️" : "Google Drive account linked successfully! ☁️");
+        console.log("Access Token received.");
+        
+        // Fetch user info and backups
+        try {
+          await fetchDriveUser(credential.accessToken);
+          await fetchBackups(credential.accessToken);
+          triggerToast(language === "tr" ? "Bulut hesabı bağlandı! ☁️" : "Cloud account linked! ☁️");
+        } catch (fetchErr: any) {
+          console.error("Post-auth fetch error:", fetchErr);
+          triggerToast(language === "tr" ? "Bağlantı başarılı ancak veri alınamadı." : "Linked successfully but failed to fetch data.");
+        }
       } else {
-        throw new Error("Access Token not found in Firebase response.");
+        throw new Error("Missing Access Token in Google credential.");
       }
     } catch (e: any) {
-      console.error("Firebase Auth Error:", e);
+      console.error("Firebase/Google Connection Crash:", e);
+      
+      // Fallback to redirect if popup is failing/blocked in certain environments
+      if (e.code === "auth/popup-blocked" || e.code === "auth/popup-closed-by-user") {
+          try {
+              triggerToast(language === "tr" ? "Popup engellendi, yönlendirme deneniyor..." : "Popup blocked, trying redirect...");
+              await signInWithRedirect(auth, provider);
+              return;
+          } catch (reErr: any) {
+              console.error("Redirect attempt failed:", reErr);
+          }
+      }
+
       let errorMsg = e.message;
       
+      // Map common Firebase Auth errors to user-friendly messages
       if (e.code === "auth/popup-blocked") {
-        errorMsg = language === "tr" ? "Popup engelleyiciyi kapatın." : "Please disable your popup blocker.";
+        errorMsg = language === "tr" ? "Lütfen tarayıcı popup engelleyicisini kapatın." : "Please disable popup blocker.";
       } else if (e.code === "auth/unauthorized-domain") {
         errorMsg = language === "tr" 
-          ? "Bu alan adı Firebase ayarlarında yetkilendirilmemiş. Lütfen yöneticiye başvurun." 
-          : "This domain is not authorized in Firebase settings.";
-      } else if (e.code === "auth/cancelled-popup-request" || e.code === "auth/popup-closed-by-user") {
-        errorMsg = language === "tr" ? "Giriş işlemi iptal edildi." : "Login cancelled.";
+          ? "Bu alan adı yetkilendirilmemiş. Firebase Console'dan eklenmesi gerekebilir." 
+          : "Domain not authorized in Firebase settings.";
+      } else if (e.code === "auth/popup-closed-by-user") {
+        errorMsg = language === "tr" ? "Giriş penceresi kapatıldı." : "Login window closed.";
+      } else if (e.code === "auth/internal-error") {
+        errorMsg = language === "tr" ? "Firebase dahili sunucu hatası oluştu." : "Firebase internal server error.";
       }
       
       triggerToast(language === "tr" ? `Bağlantı hatası: ${errorMsg}` : `Connection error: ${errorMsg}`);
@@ -533,6 +579,9 @@ export const GPlayEnhancements: React.FC<GPlayEnhancementsProps> = ({
                         >
                           <Cloud className="w-4 h-4 animate-pulse" /> {t("drive_connect")}
                         </button>
+                        <p className="text-[9px] text-slate-400 font-bold uppercase mt-1">
+                          Hata alırsanız uygulamayı yeni sekmede açıp deneyin.
+                        </p>
                       </div>
                     )}
                   </div>
