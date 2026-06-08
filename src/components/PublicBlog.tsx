@@ -226,10 +226,10 @@ export const PublicBlog: React.FC<PublicBlogProps> = ({
             <Home className="w-4 h-4 text-indigo-500" />
           </button>
           <div className="text-left">
-            <h1 className="text-sm sm:text-base font-black tracking-widest uppercase text-slate-900 dark:text-white flex items-center gap-1.5">
+            <div className="text-sm sm:text-base font-black tracking-widest uppercase text-slate-900 dark:text-white flex items-center gap-1.5">
               <span>BÜTÇEM PRO</span>
               <span className="text-[9px] px-1.5 py-0.5 bg-indigo-100 dark:bg-indigo-950/20 text-indigo-600 dark:text-indigo-400 rounded-md font-bold uppercase tracking-widest border border-indigo-200/20">FİNANS BLOGU</span>
-            </h1>
+            </div>
           </div>
         </div>
 
@@ -384,9 +384,9 @@ export const PublicBlog: React.FC<PublicBlogProps> = ({
                       </span>
                     </div>
 
-                    <h2 className="text-xl sm:text-3xl font-black text-slate-900 dark:text-white leading-tight">
+                    <h1 className="text-xl sm:text-3xl font-black text-slate-900 dark:text-white leading-tight">
                       {currentPost.title}
-                    </h2>
+                    </h1>
                   </div>
 
                   {/* Rich Intro Block */}

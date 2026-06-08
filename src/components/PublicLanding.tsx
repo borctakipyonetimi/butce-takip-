@@ -121,14 +121,14 @@ export const PublicLanding: React.FC<PublicLandingProps> = ({
             <span>YENİ NESİL KİŞİSEL FİNANS MOTORU</span>
           </motion.div>
 
-          <motion.h2 
+          <motion.h1 
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1, duration: 0.5 }}
             className="text-3xl sm:text-5xl md:text-6xl font-black tracking-tight text-slate-900 dark:text-white max-w-3xl mx-auto leading-tight"
           >
             Bütçenizi Kontrol Edin, <span className="bg-gradient-to-r from-indigo-600 via-purple-600 to-emerald-500 dark:from-indigo-400 dark:via-purple-400 dark:to-emerald-400 bg-clip-text text-transparent">Geleceğinizi Güvenceye</span> Alın!
-          </motion.h2>
+          </motion.h1>
 
           <motion.p 
             initial={{ opacity: 0, y: 15 }}

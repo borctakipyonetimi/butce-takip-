@@ -56,4 +56,11 @@
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
+  <!-- Bütçe Sızıntısı Makalesi -->
+  <url>
+    <loc>https://butcempro.com/?page=blog-post&amp;id=budget-leak</loc>
+    <lastmod>2026-06-07</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
 </urlset>

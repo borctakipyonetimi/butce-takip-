@@ -1,6 +1,6 @@
 {
   "name": "Bütçem Pro",
-  "description": "Yapay zeka asistanlı ve gelişmiş bütçe yönetimli, kategorili borç ve gelir/gider takip uygulaması.",
+  "description": "Bütçem Pro: Yapay zeka destekli bütçe yönetimi, borç takibi ve finansal analiz uygulaması. Kartopu ve Çığ yöntemleri ile borçlarınızı bilimsel olarak eritin.",
   "requestFramePermissions": ["camera"],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
