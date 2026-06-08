@@ -2538,7 +2538,7 @@ export default function App() {
     { id: "income", label: "GELİRLER", icon: Wallet },
     { id: "expenses", label: "GİDERLER", icon: ShoppingCart },
     { id: "installments", label: "TAKSİTLİ BORÇLAR", icon: Calendar },
-    { id: "gplay_enhancements", label: "PRO BULUT & WIDGET", icon: Sparkles, isPro: true },
+    { id: "gplay_enhancements", label: "PRO BULUT & ARAÇLAR", icon: Sparkles, isPro: true },
     { id: "notifications", label: "BİLDİRİM & GÜVENLİK", icon: Shield },
     { id: "aiStrategy", label: "YAPAY ZEKA ASİSTAN", icon: Sparkles, isPro: true },
     { id: "financialTools", label: "FİNANSAL ARAÇLAR", icon: TrendingUp, isPro: true },

@@ -57,15 +57,6 @@ export const translations = {
     limit_warning_badge: "BÜTÇE TEHLİKEDE",
     limit_safe: "BÜTÇE GÜVENLİ",
 
-    // Widget Setup
-    widget_title: "Masaüstü Ekran (Home Screen) Widget'ları",
-    widget_desc: "Cihazınızın ana ekranından kalan paranızı, bütçe oranınızı ve borçlarınızı uygulamayı açmadan anlık olarak izleyin. Widget tasarımınızı aşağıdan özelleştirin:",
-    widget_size: "Widget Düzeni Seçin",
-    widget_color: "Arka Plan Degradesi & Görünüm",
-    widget_preview: "Telefon Ana Ekran Önizlemesi",
-    widget_sync_code: "Widget Senkronizasyon Token Kodu",
-    widget_active_desc: "Tasarımınız cihaz arayüzü ve widget motoruyla entegrasyona hazır durumda.",
-
     // Currency Rates and Converter
     currency_title: "Canlı Piyasa Döviz Kurları ve Çevirici",
     currency_desc: "Anlık serbest piyasa ve TCMB verileriyle entegre bütçe hesaplayıcı. Döviz varlıklarınızı tek tıkla ana bütçe biriminize dönüştürün.",
@@ -76,11 +67,6 @@ export const translations = {
     currency_result: "Döviz Hesaplama Sonucu",
     currency_live_rates: "Anlık Canlı Piyasa Döviz Kurları",
     currency_refresh: "Kurları Piyasadan Güncelle",
-
-    // Widget Instructions
-    widget_instruction_title: "📱 Widget Cihaza Nasıl Eklenir?",
-    widget_instruction_android: "Android: Ana ekranda boş bir yere basılı tutun > Widget'lar > Bütçem Pro seçin > Ekran Kodunuzu girin.",
-    widget_instruction_ios: "iOS: Ana ekranda boş bir yere basılı tutun > sol üstteki '+' butonuna tıklayın > Bütçem Pro arayın > Ekle deyin.",
 
     // General app actions
     export_backup: "Yedek İndir (.JSON)",
@@ -151,15 +137,6 @@ export const translations = {
     limit_warning_badge: "BUDGET ENDANGERED",
     limit_safe: "BUDGET SAFE",
 
-    // Widget Setup
-    widget_title: "Phone Desktop (Home Screen) Widgets",
-    widget_desc: "Monitor your net assets, upcoming installments, and budget limits straight from your smartphone home screen. Customize appearance below:",
-    widget_size: "Select Widget Dimensions",
-    widget_color: "Gradient Theme & Looks",
-    widget_preview: "Device Home Grid Preview",
-    widget_sync_code: "Widget Access Sync Key Token",
-    widget_active_desc: "Your design configuration is ready to integrate with device widget engine.",
-
     // Currency Rates and Converter
     currency_title: "Live Market Exchange Rates & Converter",
     currency_desc: "Stay organized with live market and official TCMB data feeds. Easily convert foreign currency entries into your local tracking format.",
@@ -170,11 +147,6 @@ export const translations = {
     currency_result: "Calculated Asset Value",
     currency_live_rates: "Real-Time Exchange Rates",
     currency_refresh: "Refresh Market Values",
-
-    // Widget Instructions
-    widget_instruction_title: "📱 How to add the widget on mobile?",
-    widget_instruction_android: "Android: Long press an empty area on home screen > Widgets > Select Bütçem Pro > Enter screen sync code.",
-    widget_instruction_ios: "iOS: Long press an empty area on home screen > Tap '+' at top left > Search Bütçem Pro > Tap Add Widget.",
 
     // General app actions
     export_backup: "Download local backup (.JSON)",

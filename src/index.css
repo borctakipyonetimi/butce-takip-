@@ -7,12 +7,17 @@
 body {
   background-color: #f8fafc;
   color: #0f172a;
-  transition: background-color 0.3s ease, color 0.3s ease;
+  transition: background-color 0.4s cubic-bezier(0.4, 0, 0.2, 1), color 0.4s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.4s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 body.dark {
   background-color: #0f172a;
   color: #f1f5f9;
+}
+
+/* Global fluidity for all components during theme switch */
+* {
+  transition: background-color 0.4s cubic-bezier(0.4, 0, 0.2, 1), color 0.4s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* Theme overrides mapping Indigo scale to the selected user theme style */
