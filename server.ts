@@ -1,5 +1,6 @@
 import express from "express";
 import path from "path";
+import fs from "fs";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI, ThinkingLevel, Type } from "@google/genai";
 import dotenv from "dotenv";
@@ -1051,6 +1052,32 @@ app.post("/api/pair/approve", (req, res) => {
 
   console.log(`[Pairing Engine] Code ${code} approved for user: ${email}`);
   res.json({ success: true, message: "Cihaz başarıyla yetkilendirildi. Giriş bilgileri APK cihazına aktarıldı." });
+});
+
+// Privacy Policy routing support for Google Play Compliance and immediate browser access
+const privacyPaths = [
+  "/privacy",
+  "/privacy-policy",
+  "/privacy.html",
+  "/privacy-policy.html",
+  "/gizlilik",
+  "/gizlilik-politikasi",
+  "/gizlilik-politikasi.html"
+];
+
+app.get(privacyPaths, (req, res) => {
+  const possibleFiles = [
+    path.join(process.cwd(), "dist", "privacy-policy.html"),
+    path.join(process.cwd(), "public", "privacy-policy.html"),
+    path.join(process.cwd(), "privacy-policy.html")
+  ];
+  
+  for (const fp of possibleFiles) {
+    if (fs.existsSync(fp)) {
+      return res.sendFile(fp);
+    }
+  }
+  res.status(404).send("Gizlilik politikası dosyası bulunamadı. Lütfen /public/privacy-policy.html dosyasının varlığından emin olun.");
 });
 
 // Vite middleware flow

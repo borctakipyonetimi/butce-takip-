@@ -935,6 +935,54 @@ export const GPlayEnhancements: React.FC<GPlayEnhancementsProps> = ({
               </div>
 
             </div>
+
+            {/* Widget Troubleshoot Help */}
+            <div className="p-5 bg-amber-500/5 dark:bg-amber-500/10 rounded-3xl border border-amber-500/20 dark:border-amber-500/35 space-y-3.5 text-xs text-left max-w-4xl mx-auto">
+              <div className="flex items-center gap-2 text-amber-650 dark:text-amber-400 font-extrabold text-[13px]">
+                <AlertTriangle className="w-5 h-5 shrink-0 text-amber-500 animate-bounce" />
+                <span className="uppercase tracking-wide font-sans">⚠️ UYARI: TELEFONDA BASILI TUTUNCA WIDGET GÖRÜNMÜYOR MU?</span>
+              </div>
+              
+              <div className="space-y-3 text-slate-700 dark:text-slate-300 leading-relaxed font-semibold">
+                <p className="text-[11px] sm:text-xs">
+                  Mobil cihazınızda uygulamayı standart bir mobil tarayıcı (Chrome, Safari, Firefox vb.) sekmesinde çalıştırdığınız sürece, telefonunuzun ana ekran launcher'ı bunu yüklü bir sistem uygulaması olarak tanımayabilir. Bu nedenle ana ekranda boşluğa basılı tuttuğunuzda çıkan widget listesinde "Bütçem Pro" listelenmez. Bu sorunu aşmak için lütfen aşağıdaki adımları uygulayın:
+                </p>
+                
+                <div className="space-y-3 border-t border-slate-200/50 dark:border-slate-800/80 pt-3">
+                  <div className="flex gap-2.5 items-start text-[11px] sm:text-xs">
+                    <span className="p-1 px-1.5 bg-amber-500/15 dark:bg-amber-500/20 rounded-lg text-amber-650 dark:text-amber-400 shrink-0 font-extrabold font-mono text-[9px] mt-0.5">1 ADIM</span>
+                    <div>
+                      <strong>Uygulamayı PWA (Progressive Web App) Olarak Ana Ekranınıza Kurun:</strong>
+                      <p className="font-medium text-slate-500 dark:text-slate-400 mt-1">
+                        Android cihazlarda (Chrome/Edge): Tarayıcı menüsünü açıp <strong className="text-slate-850 dark:text-slate-200">"Ana Ekrana Ekle"</strong> veya <strong className="text-slate-850 dark:text-slate-200">"Uygulamayı Yükle"</strong> seçeneğini seçin. <br />
+                        iOS Safari cihazlarda (iPhone): Paylaş butonuna (aşağı rızık simgesi) tıklayarak gelen listeden <strong className="text-slate-850 dark:text-slate-200">"Ana Ekrana Ekle"</strong> seçeneğini seçin. Böylece uygulama telefona bağımsız uygulama gibi kurulacak ve ana ekranınızda widget ekleme paneli tetiklenecektir.
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex gap-2.5 items-start text-[11px] sm:text-xs">
+                    <span className="p-1 px-1.5 bg-indigo-500/15 dark:bg-indigo-500/20 rounded-lg text-indigo-650 dark:text-indigo-400 shrink-0 font-extrabold font-mono text-[9px] mt-0.5">2 ADIM</span>
+                    <div>
+                      <strong>Bütçem Pro Resmi Companion Mobil APK Sürümünü Kurun:</strong>
+                      <p className="font-medium text-slate-500 dark:text-slate-400 mt-1">
+                        Daha zengin özelliklere sahip, her an telefonun kendi sistemiyle %100 senkronize çalışan gerçek Android/iOS masaüstü widget'larını çalıştırmak için size özel derlenmiş <strong className="text-slate-850 dark:text-slate-200">Companion Mobil APK uygulamasını</strong> indirip telefonunuza kurmalısınız. APK'yı kurduktan sonra yukarıda yer alan <strong className="text-slate-850 dark:text-slate-200">"Widget Senkronizasyon Kodu"</strong> ile veritabanınızı eşleştirebilirsiniz. Bu eşleşmenin ardından ekrana basılı tutarak Bütçem Pro Widget'ını anında masaüstünüze ekleyebilirsiniz.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2.5 items-start text-[11px] sm:text-xs">
+                    <span className="p-1 px-1.5 bg-slate-500/15 dark:bg-slate-500/20 rounded-lg text-slate-600 dark:text-slate-400 shrink-0 font-extrabold font-mono text-[9px] mt-0.5">3 ADIM</span>
+                    <div>
+                      <strong>Tarayıcı Widget Ekleme İzinlerini Kontrol Edin:</strong>
+                      <p className="font-medium text-slate-500 dark:text-slate-400 mt-1">
+                        Telefon ayarlarınızdan <strong className="text-slate-850 dark:text-slate-200">Ayarlar &gt; Uygulamalar &gt; Chrome (veya Safari) &gt; Diğer İzinler</strong> sekmesine girerek <strong className="text-slate-850 dark:text-slate-200">"Ana Ekran Kısayolları"</strong> ve <strong className="text-slate-850 dark:text-slate-200">"Widget Ekleme"</strong> izinlerinin sağlandığından emin olun. Bazı launcher arayüzleri bu izni güvenlik amacıyla kapalı tutar.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
           </div>
         )}
 
