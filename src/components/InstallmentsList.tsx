@@ -4,13 +4,14 @@
  */
 
 import React, { useState } from "react";
-import { PlusCircle, CalendarDays, Wallet, Edit, Trash2, Calendar, RotateCcw } from "lucide-react";
+import { PlusCircle, CalendarDays, Wallet, Edit, Trash2, Calendar, RotateCcw, Printer, FileText } from "lucide-react";
 import { motion } from "motion/react";
 import { InstallmentDebt } from "../types";
 import { useCurrency } from "../utils/CurrencyContext";
 import { AdMobBanner } from "./AdMobBanner";
 import { InstallmentsPortalChart } from "./BudgetCharts";
 import { t } from "../utils/translations";
+import { jsPDF } from "jspdf";
 
 interface InstallmentsListProps {
   installmentDebts: InstallmentDebt[];
@@ -118,6 +119,89 @@ export const InstallmentsList: React.FC<InstallmentsListProps> = ({
     return sum + (inst.installmentCount - inst.paidInstallmentCount) * single;
   }, 0);
 
+  const handlePrint = (isPdf = false) => {
+    if (installmentDebts.length === 0) {
+      alert("Yazdırılacak taksit kaydı bulunamadı.");
+      return;
+    }
+
+    if (isPdf) {
+      const doc = new jsPDF();
+      const safeText = (text: string) => {
+        if (!text) return "";
+        const map: { [key: string]: string } = {
+          'ç': 'c', 'Ç': 'C', 'ğ': 'g', 'Ğ': 'G', 'ı': 'i', 'İ': 'I',
+          'ö': 'o', 'Ö': 'O', 'ş': 's', 'Ş': 'S', 'ü': 'u', 'Ü': 'U'
+        };
+        return text.replace(/[çÇğĞıİöÖşŞüÜ]/g, (match) => map[match] || match);
+      };
+
+      doc.setFillColor(30, 41, 59);
+      doc.rect(0, 0, 210, 32, "F");
+      doc.setTextColor(255, 255, 255);
+      doc.setFont("Helvetica", "bold");
+      doc.setFontSize(18);
+      doc.text("Butcem Pro - Taksitli Borc Raporu", 15, 18);
+      doc.setFontSize(9);
+      doc.text(`Tarih: ${new Date().toLocaleDateString("tr-TR")}`, 15, 26);
+
+      let yPos = 45;
+      doc.setTextColor(15, 23, 42);
+      doc.setFontSize(11);
+      doc.text(safeText("Aktif Taksit Planları Listesi"), 15, yPos);
+      doc.line(15, yPos + 3, 195, yPos + 3);
+      yPos += 12;
+
+      doc.setFillColor(241, 245, 249);
+      doc.rect(15, yPos - 5, 180, 8, "F");
+      doc.setFontSize(9);
+      doc.text(safeText("Plan Adı"), 18, yPos);
+      doc.text(safeText("Tutar"), 80, yPos);
+      doc.text(safeText("Taksit"), 120, yPos);
+      doc.text(safeText("Kalan"), 160, yPos);
+      yPos += 10;
+
+      installmentDebts.forEach((inst) => {
+        if (yPos > 270) { doc.addPage(); yPos = 25; }
+        doc.setFont("Helvetica", "normal");
+        const single = inst.totalAmount / inst.installmentCount;
+        const remaining = (inst.installmentCount - inst.paidInstallmentCount) * single;
+        doc.text(safeText(inst.name), 18, yPos);
+        doc.text(format(inst.totalAmount), 80, yPos);
+        doc.text(`${inst.paidInstallmentCount}/${inst.installmentCount}`, 120, yPos);
+        doc.text(format(remaining), 160, yPos);
+        yPos += 8;
+      });
+
+      doc.save("Taksitli_Borc_Raporu.pdf");
+      return;
+    }
+
+    const html = `
+      <html><head><title>Taksitli Borç Raporu</title><style>
+      body{font-family:sans-serif;padding:20px;color:#1e293b}
+      table{width:100%;border-collapse:collapse;margin-top:15px}
+      th,td{border:1px solid #cbd5e1;padding:8px;text-align:left;font-size:12px}
+      th{background:#f1f5f9}</style></head><body>
+      <h2>🗓️ Taksitli Borç Raporu</h2>
+      <p>Tarih: ${new Date().toLocaleDateString("tr-TR")}</p>
+      <table><thead><tr><th>Plan Adı</th><th>Toplam</th><th>Taksit</th><th>Kalan</th></tr></thead>
+      <tbody>${installmentDebts.map(inst => `<tr><td>${inst.name}</td><td>${format(inst.totalAmount)}</td><td>${inst.paidInstallmentCount}/${inst.installmentCount}</td><td>${format((inst.installmentCount - inst.paidInstallmentCount) * (inst.totalAmount / inst.installmentCount))}</td></tr>`).join("")}</tbody>
+      </table></body></html>`;
+
+    const printFrame = document.createElement("iframe");
+    printFrame.style.position = "fixed"; printFrame.style.width = "0"; printFrame.style.height = "0"; printFrame.style.border = "0";
+    document.body.appendChild(printFrame);
+    const docFrame = printFrame.contentWindow?.document || printFrame.contentDocument;
+    if (docFrame) {
+      docFrame.write(html); docFrame.close();
+      setTimeout(() => {
+        printFrame.contentWindow?.focus(); printFrame.contentWindow?.print();
+        setTimeout(() => document.body.removeChild(printFrame), 1500);
+      }, 500);
+    }
+  };
+
   return (
     <div className="space-y-4">
       {/* Centered & Animated Page Title */}
@@ -132,13 +216,27 @@ export const InstallmentsList: React.FC<InstallmentsListProps> = ({
         <div className="w-16 h-1 bg-indigo-500 rounded-full mt-2 opacity-80" />
       </div>
 
-      <div className="flex items-center justify-center">
-        <button
-          onClick={handleOpenAdd}
-          className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 transition active:scale-95 shadow-sm"
-        >
-          <PlusCircle className="w-4 h-4" /> Taksit Planı Ekle
-        </button>
+      <div className="flex flex-col gap-3 justify-center sm:flex-row sm:items-center">
+        <div className="flex items-center justify-center gap-2 flex-wrap">
+          <button
+            onClick={() => handlePrint(false)}
+            className="px-3 py-1.5 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-semibold flex items-center gap-1 hover:bg-slate-50 transition"
+          >
+            <Printer className="w-3.5 h-3.5" /> Yazdır
+          </button>
+          <button
+            onClick={() => handlePrint(true)}
+            className="px-3 py-1.5 bg-amber-500 text-white rounded-xl text-xs font-bold flex items-center gap-1 hover:bg-amber-600 transition"
+          >
+            <FileText className="w-3.5 h-3.5" /> PDF Al
+          </button>
+          <button
+            onClick={handleOpenAdd}
+            className="px-3 py-1.5 bg-indigo-600 text-white rounded-xl text-xs font-bold flex items-center gap-1 hover:bg-indigo-700 transition shadow-sm"
+          >
+            <PlusCircle className="w-4 h-4" /> Taksit Planı Ekle
+          </button>
+        </div>
       </div>
 
       <div className="p-4 bg-indigo-50/50 dark:bg-indigo-950/20 text-indigo-950 dark:text-indigo-300 rounded-2xl grid gap-3 sm:grid-cols-2 font-bold text-xs">

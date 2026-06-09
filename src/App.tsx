@@ -460,14 +460,14 @@ export default function App() {
           triggerToast("Sistem Bildirimleri Etkinleştirildi! 🔔");
           sendSystemNotification(
             "Anlık Bildirimler Aktif!", 
-            "Bütçem Pro artık ödeme hatırlatıcı ve alarmları telefonunuza anında iletecek."
+            "Bütçem artık ödeme hatırlatıcı ve alarmları telefonunuza anında iletecek."
           );
         } else {
           // Graceful fallback for WebView/APK limitations instead of warning
           setHasNotificationPermission("granted");
           triggerToast("Gelişmiş Mobil Hatırlatıcılar Aktif Edildi! 🔔");
           sendSystemNotification(
-            "Bütçem Pro Bildirim Paneli Aktif!", 
+            "Bütçem Bildirim Paneli Aktif!", 
             "Alarmlarınız ve ödeme günündeki tüm borçlarınız için size bildirim ulaştıracağız."
           );
         }
@@ -477,7 +477,7 @@ export default function App() {
         triggerToast("Gelişmiş Mobil Hatırlatıcılar Aktif Edildi! 🔔");
         sendSystemNotification(
           "Anlık Bildirimler Aktif!", 
-          "Bütçem Pro artık alarm ve ödemelerinizi telefonunuza anında iletecek."
+          "Bütçem artık alarm ve ödemelerinizi telefonunuza anında iletecek."
         );
       }
     } catch (e) {
@@ -1996,13 +1996,14 @@ export default function App() {
   const handleSaveIncome = (incData: Partial<Income>) => {
     let updated: Income[] = [];
     if (incData.id) {
-      updated = incomes.map((i) => (i.id === incData.id ? (incData as Income) : i));
+      updated = incomes.map((i) => (i.id === incData.id ? { ...i, ...incData } as Income : i));
     } else {
       const newI: Income = {
         id: generateId(incomes),
         name: incData.name || "Ek Gelir",
         amount: incData.amount || 0,
-        date: incData.date || new Date().toISOString()
+        date: incData.date || new Date().toISOString(),
+        isRecurring: incData.isRecurring
       };
       updated = [...incomes, newI];
     }
@@ -2564,6 +2565,13 @@ export default function App() {
     );
   };
 
+  // Handle external navigation events (from child components)
+  useEffect(() => {
+    const handleNavToAi = () => setActiveTab("aiStrategy");
+    window.addEventListener("nav-to-ai", handleNavToAi);
+    return () => window.removeEventListener("nav-to-ai", handleNavToAi);
+  }, []);
+
   // Navigation target mappings
   const sidebarItems = [
     { id: "overview", label: "GENEL BAKIŞ", icon: LayoutDashboard },
@@ -2574,10 +2582,10 @@ export default function App() {
     { id: "income", label: "GELİRLER", icon: Wallet },
     { id: "expenses", label: "GİDERLER", icon: ShoppingCart },
     { id: "installments", label: "TAKSİTLİ BORÇLAR", icon: Calendar },
-    { id: "gplay_enhancements", label: "PRO BULUT & ARAÇLAR", icon: Sparkles, isPro: true },
-    { id: "notifications", label: "BİLDİRİM & GÜVENLİK", icon: Shield },
-    { id: "aiStrategy", label: "YAPAY ZEKA ASİSTAN", icon: Sparkles, isPro: true },
-    { id: "financialTools", label: "FİNANSAL ARAÇLAR", icon: TrendingUp, isPro: true },
+    { id: "gplay_enhancements", label: "PRO ÖZELLİKLER", icon: Sparkles, isPro: true },
+    { id: "notifications", label: "BİLDİRİM AYARLARI", icon: Bell, isPro: true },
+    { id: "aiStrategy", label: "AKILLI ASİSTAN (AI)", icon: Sparkles, isPro: true },
+    { id: "financialTools", label: "FİNANSAL ANALİZ", icon: TrendingUp, isPro: true },
     { id: "help", label: "KULLANIM REHBERİ", icon: HelpCircle },
     { id: "blog", label: "FİNANS KILAVUZLARI", icon: BookOpen },
     { id: "feedback", label: "GERİ BİLDİRİM", icon: MessageSquare },
@@ -2894,7 +2902,7 @@ export default function App() {
 
             {/* Footer info lock */}
             <div className="absolute bottom-6 text-[9px] text-slate-400 tracking-widest uppercase font-black text-center space-y-0.5">
-              <div>Bütçem Pro v5.0 Ultimate Edition</div>
+              <div>Bütçem v5.0 Ultimate Edition</div>
               <div className="text-[7.5px] text-slate-500 font-mono tracking-normal text-center">Secure AES-256 Workspace Ingress • Verified</div>
             </div>
           </motion.div>
@@ -3008,8 +3016,8 @@ export default function App() {
                 </span>
                 <span>
                   BÜTÇEM
-                </span> 
-                <span className="text-[8px] sm:text-[10px] md:text-xs px-1.5 py-0.5 bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 rounded-lg font-black tracking-widest uppercase animate-pulse">
+                </span>
+                <span className="text-[8px] sm:text-[10px] md:text-xs px-1.5 py-0.5 bg-amber-500/20 border border-amber-500/40 text-amber-500 rounded-lg font-black tracking-widest uppercase animate-pulse shadow-[0_0_8px_rgba(245,158,11,0.2)]">
                   PRO
                 </span>
               </h1>
@@ -3024,8 +3032,8 @@ export default function App() {
                     </>
                   )}
                 </span>
-                <span className="hidden sm:inline">{isOfflineMode ? "ÇEVRİMDIŞI MOD (YEREL VERİ GÜVENLİĞİ)" : "BÜTÇEM PRO & AKILLI FINANSAL TAKİP"}</span>
-                <span className="sm:hidden">{isOfflineMode ? "ÇEVRİMDIŞI" : "AKILLI FINANS TAKİBİ"}</span>
+                <span className="hidden sm:inline">{isOfflineMode ? "ÇEVRİMDIŞI (GÜVENLİ)" : "FİNANSAL ÖZGÜRLÜĞÜNÜZÜ BİZİMLE KEŞFEDİN"}</span>
+                <span className="sm:hidden">{isOfflineMode ? "GÜVENLİ" : "AKILLI ASİSTAN"}</span>
               </p>
             </div>
           </div>
@@ -3061,8 +3069,8 @@ export default function App() {
         </div>
 
         {/* Right side navigation toolbar / tools */}
-        <div className="flex items-center overflow-x-auto scrollbar-none gap-2 shrink-0 relative z-10 w-full md:w-auto border-t md:border-t-0 border-white/5 pt-3 md:pt-0 justify-between md:justify-end">
-          <div className="flex items-center gap-1.5 sm:gap-2 select-none shrink-0">
+        <div className="flex items-center overflow-x-auto scrollbar-none gap-1.5 sm:gap-2 shrink-0 relative z-10 w-full md:w-auto border-t md:border-t-0 border-white/5 pt-2.5 md:pt-0 justify-between md:justify-end">
+          <div className="flex items-center gap-1 sm:gap-1.5 md:gap-2 select-none shrink-0">
             {/* Animated Contacts Directory Logo */}
             <motion.button
               onClick={() => {
@@ -3104,30 +3112,27 @@ export default function App() {
 
             <button
               onClick={() => {
-                const nextPrem = !isPremium;
-                setIsPremium(nextPrem);
-                localStorage.setItem("is_premium", nextPrem ? "true" : "false");
-                triggerToast(nextPrem ? "👑 Bütçem Pro Premium Sürüm Etkin!" : "⭐ Ücretsiz Sürüm (Reklamlı) Aktif!");
+                setIsUpgradeModalOpen(true);
               }}
-              title="Test için Sürümü Değiştir"
+              title="Premium Sürüme Yükselt"
               className={`p-1.5 sm:p-2 lg:p-2.5 rounded-xl border transition-all flex items-center justify-center space-x-1 duration-300 cursor-pointer shrink-0 active:scale-95 ${
                 isPremium 
-                  ? "bg-amber-500/15 hover:bg-amber-500/25 text-amber-500 border-amber-500/30 shadow-xs" 
-                  : "bg-slate-500/10 hover:bg-slate-500/20 text-slate-400 border-slate-500/20"
+                  ? "bg-amber-500/20 hover:bg-amber-500/30 text-amber-500 border-amber-500/40 shadow-sm" 
+                  : "bg-indigo-600 hover:bg-indigo-700 text-white border-indigo-500 shadow-md shadow-indigo-600/20"
               }`}
             >
-              <span className="text-[9px] sm:text-[10px] font-black tracking-wide uppercase">
-                {isPremium ? "🏆 PREMİUM SÜRÜM" : "⭐ ÜCRETSİZ SÜRÜM"}
+              <Sparkles className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+              <span className="text-[8px] sm:text-[9px] font-black tracking-wide uppercase">
+                {isPremium ? "PREMIUM" : "PRO'YA GEÇ"}
               </span>
             </button>
 
             <button
               onClick={() => setIsSecurityModalOpen(true)}
-              title="Güvenlik ve Kilit Ayarları"
-              className="p-1.5 sm:p-2 lg:p-2.5 bg-indigo-600/15 hover:bg-indigo-600/25 border border-indigo-600/30 text-indigo-400 dark:text-indigo-300 active:scale-95 rounded-xl transition-all flex items-center justify-center space-x-1 duration-300 cursor-pointer shrink-0"
+              title="Güvenlik"
+              className="p-1.5 sm:p-2 lg:p-2.5 bg-indigo-600/15 hover:bg-indigo-600/25 border border-indigo-600/30 text-indigo-400 dark:text-indigo-300 active:scale-95 rounded-xl transition-all flex items-center justify-center duration-300 cursor-pointer shrink-0"
             >
-              <Settings className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-indigo-400 animate-spin [animation-duration:30s]" />
-              <span className="hidden sm:inline text-[9px] sm:text-[10px] font-black tracking-wide uppercase text-indigo-300">Güvenlik</span>
+              <Settings className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-indigo-400" />
             </button>
 
 
@@ -3551,26 +3556,46 @@ export default function App() {
           <div className="grid grid-cols-2 gap-1.5 text-[9px] font-bold">
             <button
               onClick={() => {
+                if (!isPremium) {
+                  setPromoFeature("Veri Dışa Aktarma");
+                  setIsUpgradeModalOpen(true);
+                  return;
+                }
                 handleExportBackup();
               }}
-              className="py-1.5 px-2 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg flex items-center justify-center gap-1 active:scale-95 transition"
+              className="py-1.5 px-2 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg flex items-center justify-center gap-1 active:scale-95 transition relative overflow-hidden"
             >
               <Download className="w-3 h-3" /> DIŞA AKTAR
+              {!isPremium && <span className="absolute top-0 right-0 bg-amber-500 text-[6px] text-white px-1 font-black transform rotate-45 translate-x-2 -translate-y-0.5">PRO</span>}
             </button>
             <button
               onClick={() => {
+                if (!isPremium) {
+                  setPromoFeature("Veri İçe Aktarma");
+                  setIsUpgradeModalOpen(true);
+                  return;
+                }
                 handleImportBackup();
               }}
-              className="py-1.5 px-2 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg flex items-center justify-center gap-1 active:scale-95 transition"
+              className="py-1.5 px-2 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg flex items-center justify-center gap-1 active:scale-95 transition relative overflow-hidden"
             >
               <Upload className="w-3 h-3" /> İÇE AKTAR
+              {!isPremium && <span className="absolute top-0 right-0 bg-amber-500 text-[6px] text-white px-1 font-black transform rotate-45 translate-x-2 -translate-y-0.5">PRO</span>}
             </button>
           </div>
           <button
-            onClick={() => setIsCsvModalOpen(true)}
-            className="w-full py-2 bg-gradient-to-tr from-emerald-600 to-teal-500 hover:from-emerald-700 hover:to-teal-600 text-white rounded-lg text-[10px] font-black flex items-center justify-center gap-1.5 active:scale-95 transition-all shadow-xs hover:shadow-xs cursor-pointer uppercase tracking-tight"
+            onClick={() => {
+              if (!isPremium) {
+                setPromoFeature("CSV Raporu");
+                setIsUpgradeModalOpen(true);
+                return;
+              }
+              setIsCsvModalOpen(true);
+            }}
+            className="w-full py-2 bg-gradient-to-tr from-emerald-600 to-teal-500 hover:from-emerald-700 hover:to-teal-600 text-white rounded-lg text-[10px] font-black flex items-center justify-center gap-1.5 active:scale-95 transition-all shadow-xs hover:shadow-xs cursor-pointer uppercase tracking-tight relative overflow-hidden"
           >
             <FileSpreadsheet className="w-3.5 h-3.5" /> FİNANSAL RAPORU İNDİR (.CSV)
+            {!isPremium && <span className="absolute -top-1 -right-4 px-5 py-2 bg-amber-500 text-[7px] text-white font-black transform rotate-12 shadow-sm border border-amber-300/30">PRO</span>}
           </button>
           <button
             onClick={handleResetAllData}
@@ -3578,158 +3603,11 @@ export default function App() {
           >
             <Trash2 className="w-3.5 h-3.5" /> TÜM VERİLERİ SIFIRLA
           </button>
-
-
         </div>
       </aside>
 
       {/* Central View Dashboard Grid content container */}
       <main className="max-w-3xl mx-auto px-4 py-6 pb-24">
-        {/* Global Month/Period Scoper Widget */}
-        {["debts", "income", "expenses", "installments"].includes(activeTab) && (() => {
-          let themeCardBg = "bg-white dark:bg-slate-800";
-          let themeBorder = "border-slate-200/60 dark:border-slate-700/60";
-          let themeIconBg = "bg-indigo-50 dark:bg-slate-900";
-          let themeIconText = "text-indigo-500";
-          let themeFocusRing = "focus:ring-indigo-500";
-          let themeBtnHover = "hover:bg-indigo-50 hover:text-indigo-600 dark:hover:bg-indigo-950/30 dark:hover:text-indigo-400";
-          
-          if (colorTheme === "green") {
-            themeCardBg = "bg-emerald-500/[0.04] dark:bg-emerald-950/10";
-            themeBorder = "border-emerald-500/20 dark:border-emerald-800/40";
-            themeIconBg = "bg-emerald-500/20 dark:bg-emerald-950/60";
-            themeIconText = "text-emerald-600 dark:text-emerald-400";
-            themeFocusRing = "focus:ring-emerald-500";
-            themeBtnHover = "hover:bg-emerald-500/10 dark:hover:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400";
-          } else if (colorTheme === "purple") {
-            themeCardBg = "bg-purple-500/[0.04] dark:bg-purple-950/10";
-            themeBorder = "border-purple-500/20 dark:border-purple-800/40";
-            themeIconBg = "bg-purple-500/20 dark:bg-purple-950/60";
-            themeIconText = "text-purple-600 dark:text-purple-400";
-            themeFocusRing = "focus:ring-purple-500";
-            themeBtnHover = "hover:bg-purple-500/10 dark:hover:bg-purple-950/30 text-purple-600 dark:text-purple-400";
-          } else if (colorTheme === "orange") {
-            themeCardBg = "bg-amber-500/[0.04] dark:bg-amber-950/10";
-            themeBorder = "border-amber-500/20 dark:border-amber-800/40";
-            themeIconBg = "bg-amber-500/20 dark:bg-amber-950/60";
-            themeIconText = "text-amber-600 dark:text-amber-400";
-            themeFocusRing = "focus:ring-amber-500";
-            themeBtnHover = "hover:bg-amber-500/10 dark:hover:bg-amber-950/30 text-amber-600 dark:text-amber-400";
-          } else {
-            themeCardBg = "bg-indigo-500/[0.04] dark:bg-indigo-950/10";
-            themeBorder = "border-indigo-500/20 dark:border-indigo-805/40";
-            themeIconBg = "bg-indigo-500/20 dark:bg-indigo-950/60";
-            themeIconText = "text-indigo-600 dark:text-indigo-400";
-          }
-
-          return (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.98 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className={`mb-5 p-4 rounded-3xl border ${themeCardBg} ${themeBorder} shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3 text-xs transition-all duration-300 relative overflow-hidden`}
-            >
-              {/* Decorative dynamic neon fluid bubble backing */}
-              <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 dark:bg-indigo-500/10 rounded-full blur-2xl pointer-events-none" />
-
-              <div className="flex items-center gap-3 relative z-10">
-                <div className={`p-2.5 rounded-2xl shrink-0 transition-colors duration-300 ${themeIconBg} ${themeIconText}`}>
-                  <Calendar className="w-5 h-5 animate-pulse" />
-                </div>
-                <div>
-                  <span className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 block leading-none tracking-widest mb-1">FİLTRELENEN DÖNEM</span>
-                  <span className="font-extrabold text-slate-800 dark:text-slate-100 uppercase tracking-wide flex items-center gap-2">
-                    {selectedMonth !== null && selectedYear !== null 
-                      ? `${["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"][selectedMonth]} ${selectedYear}`
-                      : "🔒 TÜM ZAMANLAR BİRİKİMLİ"}
-                    <span className="inline-flex w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
-                  </span>
-                </div>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-end relative z-10">
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (selectedMonth === null || selectedYear === null) {
-                      const now = new Date();
-                      setSelectedMonth(now.getMonth());
-                      setSelectedYear(now.getFullYear());
-                    } else if (selectedMonth === 0) {
-                      setSelectedMonth(11);
-                      setSelectedYear(selectedYear - 1);
-                    } else {
-                      setSelectedMonth(selectedMonth - 1);
-                    }
-                  }}
-                  disabled={selectedMonth === null}
-                  className={`px-3 py-1.5 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 rounded-xl cursor-pointer disabled:opacity-40 select-none text-[10.5px] font-extrabold transition-all duration-300 ${themeBtnHover}`}
-                >
-                  ← Önceki
-                </button>
-
-                <select
-                  value={selectedMonth === null ? "all" : selectedMonth}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    if (val === "all") {
-                      setSelectedMonth(null);
-                    } else {
-                      setSelectedMonth(parseInt(val));
-                      if (selectedYear === null) setSelectedYear(new Date().getFullYear());
-                    }
-                  }}
-                  className={`px-3 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/80 rounded-xl font-extrabold text-slate-700 dark:text-slate-200 cursor-pointer text-[10.5px] focus:outline-none focus:ring-1 ${themeFocusRing}`}
-                >
-                  <option value="all">Tüm Dönemler</option>
-                  {["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"].map((m, idx) => (
-                    <option key={idx} value={idx}>{m}</option>
-                  ))}
-                </select>
-
-                <select
-                  value={selectedYear === null ? "all" : selectedYear}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    if (val === "all") {
-                      setSelectedYear(null);
-                      setSelectedMonth(null);
-                    } else {
-                      setSelectedYear(parseInt(val));
-                      if (selectedMonth === null) setSelectedMonth(new Date().getMonth());
-                    }
-                  }}
-                  disabled={selectedMonth === null}
-                  className={`px-3 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/85 rounded-xl font-extrabold text-slate-700 dark:text-slate-200 disabled:opacity-40 cursor-pointer text-[10.5px] focus:outline-none focus:ring-1 ${themeFocusRing}`}
-                >
-                  <option value="all">Yıl</option>
-                  {[2025, 2026, 2027, 2028].map((y) => (
-                    <option key={y} value={y}>{y}</option>
-                  ))}
-                </select>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (selectedMonth === null || selectedYear === null) {
-                      const now = new Date();
-                      setSelectedMonth(now.getMonth());
-                      setSelectedYear(now.getFullYear());
-                    } else if (selectedMonth === 11) {
-                      setSelectedMonth(0);
-                      setSelectedYear(selectedYear + 1);
-                    } else {
-                      setSelectedMonth(selectedMonth + 1);
-                    }
-                  }}
-                  disabled={selectedMonth === null}
-                  className={`px-3 py-1.5 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-655 dark:text-slate-300 rounded-xl cursor-pointer disabled:opacity-40 select-none text-[10.5px] font-extrabold transition-all duration-300 ${themeBtnHover}`}
-                >
-                  Sonraki →
-                </button>
-              </div>
-            </motion.div>
-          );
-        })()}
 
         {activeTab === "overview" && (
           <DashboardOverview
@@ -3814,6 +3692,10 @@ export default function App() {
             isPremium={isPremium}
             onUpgradeClick={() => setIsUpgradeModalOpen(true)}
             carryOverBalance={statsBag.carryOverBalance}
+            selectedMonth={selectedMonth}
+            selectedYear={selectedYear}
+            setSelectedMonth={setSelectedMonth}
+            setSelectedYear={setSelectedYear}
             language={language}
           />
         )}
@@ -3854,7 +3736,7 @@ export default function App() {
                 transition={{ repeat: Infinity, duration: 4.5, ease: "easeInOut" }}
                 className="text-lg font-bold flex items-center gap-2 text-slate-800 dark:text-slate-100 uppercase tracking-wide"
               >
-                <Bell className="w-5 h-5 text-indigo-500 animate-swing" /> Alarmlar ve Bildirimler
+                <Bell className="w-5 h-5 text-indigo-500 animate-swing" /> BİLDİRİM AYARLARI
               </motion.h2>
               <div className="flex gap-2">
                 <button
@@ -3959,7 +3841,7 @@ export default function App() {
                   <button
                     onClick={() => sendSystemNotification(
                       "Test Hatırlatıcısı 🚀",
-                      "Bütçem Pro sesli bildirim sinyali başarıyla alındı! Ödeme vadelerinde ve önemli alarmlarda bu uyarıyı alacaksınız."
+                      "Bütçem sesli bildirim sinyali başarıyla alındı! Ödeme vadelerinde ve önemli alarmlarda bu uyarıyı alacaksınız."
                     )}
                     className="px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/10 text-xs font-black rounded-xl flex items-center gap-2 cursor-pointer transition active:scale-95 text-slate-100"
                   >
@@ -4210,6 +4092,7 @@ export default function App() {
             installmentDebts={installmentDebts}
             format={format}
             onRestoreBackup={handleRestoreBackup}
+            onNavigate={handleNavClick}
           />
         )}
 
@@ -4390,7 +4273,7 @@ export default function App() {
 
                 {/* Twitter Share */}
                 <motion.a
-                  href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(window.location.href)}&text=${encodeURIComponent("Kişisel finans bütçemi yapay zeka destekli Bütçem Pro ile tam kontrol altına aldım! Mutlaka inceleyin:")}`}
+                  href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(window.location.href)}&text=${encodeURIComponent("Kişisel finans bütçemi yapay zeka destekli Bütçem ile tam kontrol altına aldım! Mutlaka inceleyin:")}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   whileHover={{ 
@@ -4410,7 +4293,7 @@ export default function App() {
 
                 {/* Telegram Share */}
                 <motion.a
-                  href={`https://t.me/share/url?url=${encodeURIComponent(window.location.href)}&text=${encodeURIComponent("Bütçem Pro ile bütçeni ve borçlarını kolayca kontrol altına al!")}`}
+                  href={`https://t.me/share/url?url=${encodeURIComponent(window.location.href)}&text=${encodeURIComponent("Bütçem ile bütçeni ve borçlarını kolayca kontrol altına al!")}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   whileHover={{ 
@@ -4452,7 +4335,7 @@ export default function App() {
                 <motion.button
                   onClick={() => {
                     navigator.clipboard.writeText(window.location.href);
-                    triggerToast("Bütçem Pro web site bağlantısı panoya kopyalandı! 🔗");
+                    triggerToast("Bütçem web site bağlantısı panoya kopyalandı! 🔗");
                   }}
                   whileHover={{ 
                     scale: 1.18, 
@@ -4906,74 +4789,49 @@ export default function App() {
                 )}
 
                 {/* Features list */}
-                <div className="p-4 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3">
-                  <div className="flex items-start gap-3">
-                    <span className="p-1.5 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 rounded-lg text-xs leading-none shrink-0 font-bold">📸</span>
-                    <div className="space-y-0.5">
-                      <p className="text-xs font-extrabold text-slate-800 dark:text-slate-200">
-                        Kamera / AI Fiş & Makbuz Taraması
-                      </p>
-                      <p className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold leading-normal">
-                        Kameradan veya dosya yükleme ile bütçe girdilerinizi yapay zeka yardımıyla anında otomatik oluşturun.
-                      </p>
+                <div className="p-4 bg-slate-50 dark:bg-slate-950 rounded-3xl border border-slate-200 dark:border-slate-800 space-y-3">
+                  {[
+                    { icon: "🤖", title: "AI Finansal Koç", desc: "Harcamalarınızı yapay zeka ile analiz edin ve tasarruf stratejileri geliştirin." },
+                    { icon: "💹", title: "Canlı Borsa & Döviz", desc: "Tüm finansal verilerinizi anlık kurlar üzerinden takip edin." },
+                    { icon: "📈", title: "Sınırsız PDF/Excel Rapor", desc: "Finansal verilerinizi dilediğiniz an profesyonel raporlara dönüştürün." },
+                    { icon: "☁️", title: "Google Drive Yedek", desc: "Tüm verilerinizi Drive ile şifreli ve güvenli olarak yedekleyin." },
+                    { icon: "🔐", title: "Biyometrik Güvenlik", desc: "Parmak izi veya FaceID ile bütçe verilerinizi güvence altına alın." },
+                    { icon: "📅", title: "Ödeme Takvimi & Planlar", desc: "Borç vadelerini ve faturaları interaktif takvimden izleyin." },
+                    { icon: "🚫", title: "%100 Reklamsız Deneyim", desc: "Tüm reklamları ve sponsorlu her şeyi tamamen kaldırın." }
+                  ].map((f, i) => (
+                    <div key={i} className="flex items-start gap-3 p-1.5 rounded-xl hover:bg-white dark:hover:bg-slate-900 transition-colors">
+                      <span className="p-2 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 rounded-xl text-lg leading-none shrink-0 font-bold">{f.icon}</span>
+                      <div className="space-y-0.5">
+                        <p className="text-[11px] font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight leading-none">{f.title}</p>
+                        <p className="text-[10px] text-slate-500 dark:text-slate-400 font-bold leading-normal">{f.desc}</p>
+                      </div>
                     </div>
-                  </div>
-
-                  <div className="flex items-start gap-3 pt-2.5 border-t border-slate-200/40 dark:border-slate-800/60">
-                    <span className="p-1.5 bg-amber-500/10 text-amber-600 dark:text-amber-400 rounded-lg text-xs leading-none shrink-0 font-bold">📄</span>
-                    <div className="space-y-0.5">
-                      <p className="text-xs font-extrabold text-slate-800 dark:text-slate-200">
-                        Yazıcı & Sınırsız PDF Dışa Aktarma
-                      </p>
-                      <p className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold leading-normal">
-                        Borç raporlarınızı, ödeme geçmişinizi ve bütçenizi tek tıkla resmi, temiz ve paylaşılabilir PDF raporu yapın.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-3 pt-2.5 border-t border-slate-200/40 dark:border-slate-800/60">
-                    <span className="p-1.5 bg-teal-500/10 text-teal-600 dark:text-teal-400 rounded-lg text-xs leading-none shrink-0 font-bold">☁️</span>
-                    <div className="space-y-0.5">
-                      <p className="text-xs font-extrabold text-slate-800 dark:text-slate-200">
-                        Güvenli Bulut ve Widget Entegrasyonu
-                      </p>
-                      <p className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold leading-normal">
-                        Verilerinizi Google Drive ile senkronize edin ve telefon ekranınıza bütçe takip araçları (Widget'lar) ekleyin.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-3 pt-2.5 border-t border-slate-200/40 dark:border-slate-800/60">
-                    <span className="p-1.5 bg-rose-500/10 text-rose-600 dark:text-rose-400 rounded-lg text-xs leading-none shrink-0 font-bold">🚫</span>
-                    <div className="space-y-0.5">
-                      <p className="text-xs font-extrabold text-slate-800 dark:text-slate-200">
-                        %100 Reklamsız Kullanım
-                      </p>
-                      <p className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold leading-normal">
-                        Uygulama genelindeki sponsorlu banka reklam panolarını ve yönlendirmeleri tamamen gizleyin.
-                      </p>
-                    </div>
-                  </div>
+                  ))}
                 </div>
 
                 {/* Simulated Plans Select / Activation block */}
-                <div className="space-y-2">
-                  <p className="text-[10px] font-black uppercase text-slate-400 tracking-wider text-center">
-                    Fiyatlandırma Paketleri
+                <div className="space-y-4">
+                  <p className="text-[11px] font-black uppercase text-amber-600 dark:text-amber-500 tracking-widest text-center flex items-center justify-center gap-2">
+                    <span className="w-6 h-px bg-amber-500/30" /> 👑 PREMİUM PLANLAR <span className="w-6 h-px bg-amber-500/30" />
                   </p>
-                  <div className="grid grid-cols-3 gap-2">
-                    <div className="p-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl text-center">
-                      <p className="text-[9px] font-extrabold text-slate-400 uppercase">AYLIK</p>
-                      <p className="text-xs font-black text-slate-800 dark:text-slate-200 mt-0.5">₺29,99</p>
+                  <div className="grid grid-cols-3 gap-2.5">
+                    <div className="p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl text-center shadow-sm relative group overflow-hidden">
+                      <div className="absolute inset-0 bg-slate-100/50 dark:bg-slate-800/50 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      <p className="text-[9px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-tight relative z-10">AYLIK</p>
+                      <p className="text-base font-black text-slate-900 dark:text-white mt-1 relative z-10">₺29,99</p>
+                      <div className="w-8 h-1 bg-slate-300 dark:bg-slate-700 mx-auto mt-2 rounded-full relative z-10" />
                     </div>
-                    <div className="p-2 bg-amber-500/5 dark:bg-amber-500/10 border-2 border-amber-500/60 rounded-2xl text-center relative overflow-hidden">
-                      <span className="absolute top-0 right-0 left-0 bg-amber-500 text-white text-[6px] font-black py-0.5">EN İYİSİ</span>
-                      <p className="text-[9px] font-extrabold text-amber-600 dark:text-amber-400 uppercase pt-1.5 font-sans">YILLIK</p>
-                      <p className="text-xs font-black text-slate-800 dark:text-slate-202 mt-0.5">₺199,99</p>
+                    <div className="p-3 bg-amber-500/10 dark:bg-amber-500/20 border-2 border-amber-500 rounded-2xl text-center relative overflow-hidden ring-4 ring-amber-500/10 scale-[1.08] z-20 shadow-xl shadow-amber-500/10">
+                      <div className="absolute top-0 right-0 left-0 bg-amber-500 text-white text-[8px] font-black py-0.5 uppercase tracking-widest">EN POPÜLER</div>
+                      <p className="text-[9px] font-black text-amber-600 dark:text-amber-400 uppercase pt-2.5 tracking-tight">YILLIK</p>
+                      <p className="text-base font-black text-slate-950 dark:text-white mt-1 border-b border-amber-500/30 pb-1">₺299,99</p>
+                      <p className="text-[8px] font-black text-amber-500 uppercase mt-1 leading-none">Tasurruf: %45</p>
                     </div>
-                    <div className="p-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl text-center">
-                      <p className="text-[9px] font-extrabold text-slate-400 uppercase">ÖMÜR BOYU</p>
-                      <p className="text-xs font-black text-slate-800 dark:text-slate-202 mt-0.5">₺299,99</p>
+                    <div className="p-3 bg-indigo-600 text-white border-2 border-indigo-400 rounded-2xl text-center shadow-lg relative group overflow-hidden">
+                      <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      <p className="text-[9px] font-black text-indigo-150 uppercase tracking-tight relative z-10">LİMİTSİZ</p>
+                      <p className="text-base font-black text-white mt-1 relative z-10">₺599,99</p>
+                      <p className="text-[8px] font-black text-white/80 uppercase mt-1 leading-none relative z-10">TEK ÖDEME</p>
                     </div>
                   </div>
                 </div>

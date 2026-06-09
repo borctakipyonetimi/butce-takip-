@@ -54,12 +54,12 @@ export const PublicLanding: React.FC<PublicLandingProps> = ({
 
   const faqItems = [
     {
-      q: "Bütçem Pro nedir ve finansal durumumu nasıl iyileştirir?",
-      a: "Bütçem Pro, gelirlerinizi, giderlerinizi, borçlarınızı ve düzenli taksitlerinizi tek bir çatı altında takip etmenizi sağlayan bütüncül bir kişisel finans yönetim uygulamasıdır. Gelişmiş limit uyarıları, yapay zeka destekli bütçe analiz raporları ve akıllı borç ödeme planları ile paranızı nerede harcadığınızı kolayca görür, birikim oranınızı artırırsınız."
+      q: "Bütçem nedir ve finansal durumumu nasıl iyileştirir?",
+      a: "Bütçem, gelirlerinizi, giderlerinizi, borçlarınızı ve düzenli taksitlerinizi tek bir çatı altında takip etmenizi sağlayan bütüncül bir kişisel finans yönetim uygulamasıdır. Gelişmiş limit uyarıları, yapay zeka destekli bütçe analiz raporları ve akıllı borç ödeme planları ile paranızı nerede harcadığınızı kolayca görür, birikim oranınızı artırırsınız."
     },
     {
       q: "Uygulamayı kullanmak için kayıt veya şifre zorunlu mu? Verilerim nerede saklanıyor?",
-      a: "Kesinlikle zorunlu değildir! Bütçem Pro çevrimdışı öncelikli (offline-first) bir felsefeyle çalışır. Verileriniz tamamen cihazınızın güvenli yerel tarayıcı belleğinde (localStorage) saklanır ve hiçbir sunucuya izniniz olmaksızın aktarılmaz. Dilerseniz güvenli e-posta veya Google bulut giriş seçeneklerini aktif ederek, verilerinizi bulutta da yedekleyebilirsiniz."
+      a: "Kesinlikle zorunlu değildir! Bütçem çevrimdışı öncelikli (offline-first) bir felsefeyle çalışır. Verileriniz tamamen cihazınızın güvenli yerel tarayıcı belleğinde (localStorage) saklanır ve hiçbir sunucuya izniniz olmaksızın aktarılmaz. Dilerseniz güvenli e-posta veya Google bulut giriş seçeneklerini aktif ederek, verilerinizi bulutta da yedekleyebilirsiniz."
     },
     {
       q: "Kartopu (Snowball) ve Çığ (Avalanche) borç ödeme yöntemleri nedir?",
@@ -136,7 +136,7 @@ export const PublicLanding: React.FC<PublicLandingProps> = ({
             transition={{ delay: 0.2, duration: 0.5 }}
             className="text-sm sm:text-lg text-slate-500 dark:text-slate-400 font-medium max-w-2xl mx-auto leading-relaxed"
           >
-            Bütçem Pro ile gelir-gider dengenizi hesaplayın, birikim hedefleri oluşturun ve borçlarınızı bilimsel stratejilerle (Kartopu ve Çığ metodları) eritin. Yapay zeka bütçenizi analiz etsin!
+            Bütçem ile gelir-gider dengenizi hesaplayın, birikim hedefleri oluşturun ve borçlarınızı bilimsel stratejilerle (Kartopu ve Çığ metodları) eritin. Yapay zeka bütçenizi analiz etsin!
           </motion.p>
 
           <motion.div 
@@ -288,7 +288,7 @@ export const PublicLanding: React.FC<PublicLandingProps> = ({
       >
         <div className="text-center space-y-2">
           <h3 className="text-xs font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest">TEKNOLOJİK ÖZELLİKLER</h3>
-          <h2 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">Neden Bütçem Pro?</h2>
+          <h2 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">Neden Bütçem?</h2>
           <p className="text-sm text-slate-500 dark:text-slate-400 font-medium max-w-lg mx-auto">Sistemimiz sıradan gider listelerinin ötesinde, yapay zekalı asistanlığı mobil estetikle birleştirir.</p>
         </div>
 
@@ -552,13 +552,13 @@ export const PublicLanding: React.FC<PublicLandingProps> = ({
       {/* Footer Branding Area */}
       <footer className="py-12 bg-slate-900 text-slate-400 border-t border-slate-800 text-center text-xs space-y-3">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 space-y-2">
-          <h4 className="text-white font-black tracking-widest text-sm uppercase">💰 BÜTÇEM PRO</h4>
+          <h4 className="text-white font-black tracking-widest text-sm uppercase">💰 BÜTÇEM</h4>
           <p className="text-[11px] font-semibold text-slate-500 leading-relaxed max-w-md mx-auto">
             Harcama alışkanlıklarınızı dönüştürün, borçlarınızı bilimsel olarak yönetin ve finansal bağımsızlığın tadını çıkarın. %100 güvenli, yerel öncelikli bütçeleme platformu.
           </p>
         </div>
         <div className="pt-6 border-t border-slate-800 text-[10px] font-bold text-slate-500 tracking-wider">
-          © 2026 BÜTÇEM PRO • TÜM HAKLARI SAKLIDIR.
+          © 2026 BÜTÇEM • TÜM HAKLARI SAKLIDIR.
         </div>
       </footer>
     </div>

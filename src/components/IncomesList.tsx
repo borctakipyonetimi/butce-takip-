@@ -11,6 +11,8 @@ import { DoughnutChart, LineChart } from "./BudgetCharts";
 import { useCurrency } from "../utils/CurrencyContext";
 import { t } from "../utils/translations";
 
+import { PeriodFilter } from "./PeriodFilter";
+
 interface IncomesListProps {
   incomes: Income[];
   onSaveIncome: (income: Partial<Income>) => void;
@@ -19,6 +21,10 @@ interface IncomesListProps {
   onUpgradeClick?: () => void;
   carryOverBalance?: number;
   language?: "tr" | "en";
+  selectedMonth: number | null;
+  selectedYear: number | null;
+  setSelectedMonth: (month: number | null) => void;
+  setSelectedYear: (year: number | null) => void;
 }
 
 export const IncomesList: React.FC<IncomesListProps> = ({
@@ -29,6 +35,10 @@ export const IncomesList: React.FC<IncomesListProps> = ({
   onUpgradeClick,
   carryOverBalance,
   language = "tr",
+  selectedMonth,
+  selectedYear,
+  setSelectedMonth,
+  setSelectedYear,
 }) => {
   const translate = (txt: string) => t(txt, language as "tr" | "en");
   const { format, currencySymbol } = useCurrency();
@@ -109,6 +119,14 @@ export const IncomesList: React.FC<IncomesListProps> = ({
         </motion.h2>
         <div className="w-16 h-1 bg-emerald-500 rounded-full mt-2 opacity-80" />
       </div>
+
+      <PeriodFilter
+        selectedMonth={selectedMonth}
+        selectedYear={selectedYear}
+        setSelectedMonth={setSelectedMonth}
+        setSelectedYear={setSelectedYear}
+        themeColor="green"
+      />
 
       <div className="flex items-center justify-center">
         <button

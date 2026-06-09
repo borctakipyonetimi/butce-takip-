@@ -362,6 +362,24 @@ export const SecuritySettingsPanel: React.FC<SecuritySettingsPanelProps> = ({ on
           )}
         </AnimatePresence>
 
+        {/* Coming Soon: Biometric & Face ID */}
+        <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-dashed border-slate-300 dark:border-slate-700 relative overflow-hidden group">
+          <div className="absolute top-0 right-0 p-2">
+            <span className="px-2 py-0.5 bg-amber-500 text-white text-[8px] font-black rounded-lg uppercase tracking-widest shadow-sm">YAKINDA</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-slate-200 dark:bg-slate-800 rounded-full flex items-center justify-center text-slate-400">
+              <Key className="w-5 h-5 opacity-50" />
+            </div>
+            <div>
+              <h4 className="text-xs font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight">BİOMETRİK & YÜZ TANIMA</h4>
+              <p className="text-[10px] text-slate-500 dark:text-slate-400 font-bold leading-tight mt-0.5">
+                Parmak izi ve Face ID ile şifresiz, tek dokunuşla güvenli giriş özelliği çok yakında tüm PRO kullanıcıları için aktif olacak.
+              </p>
+            </div>
+          </div>
+        </div>
+
         {/* Informative guidelines */}
         <div className="p-4 bg-slate-50 dark:bg-slate-900/80 rounded-2xl border border-slate-100 dark:border-slate-800 flex gap-2 text-xs text-slate-600 dark:text-slate-300 leading-normal font-medium">
           <HelpCircle className="w-5 h-5 mt-0.5 shrink-0 text-slate-500" />

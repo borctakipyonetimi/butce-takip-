@@ -15,6 +15,8 @@ import { DebtTimelineChart } from "./DebtTimelineChart";
 import { jsPDF } from "jspdf";
 import { t } from "../utils/translations";
 
+import { PeriodFilter } from "./PeriodFilter";
+
 interface DebtListProps {
   debts: Debt[];
   expenses?: Expense[];
@@ -165,7 +167,7 @@ export const DebtList: React.FC<DebtListProps> = ({
 
       // 2. Period filter
       if (selectedMonth !== null && selectedYear !== null) {
-        if (!d.dueDate) return false;
+        if (!d.dueDate) return true;
         try {
           const dDate = new Date(d.dueDate);
           const dMonth = dDate.getMonth();
@@ -180,7 +182,7 @@ export const DebtList: React.FC<DebtListProps> = ({
           const isUnpaid = d.paid < d.amount;
           return selectedTime > dueTime && isUnpaid;
         } catch {
-          return false;
+          return true;
         }
       }
       return true;
@@ -226,11 +228,11 @@ export const DebtList: React.FC<DebtListProps> = ({
 
   const debtsInPeriod = debts.filter((d) => {
     if (selectedMonth === null || selectedYear === null) return true;
-    if (!d.dueDate) return false;
+    if (!d.dueDate) return true;
     try {
       const dDate = new Date(d.dueDate);
       return dDate.getMonth() === selectedMonth && dDate.getFullYear() === selectedYear;
-    } catch { return false; }
+    } catch { return true; }
   });
 
   const installmentsInPeriod = installmentDebts.map((inst) => {
@@ -298,7 +300,7 @@ export const DebtList: React.FC<DebtListProps> = ({
   const allTimeRemaining = allTimeTotalAmount - allTimeTotalPaid;
 
   const simpleDebtsDueThisMonth = debts.filter(d => {
-    if (!d.dueDate) return false;
+    if (!d.dueDate) return d.paid < d.amount;
     try {
       const dDate = new Date(d.dueDate);
       const dMonth = dDate.getMonth();
@@ -312,7 +314,7 @@ export const DebtList: React.FC<DebtListProps> = ({
       const isOverdue = selectedTime > dueTime && isUnpaid;
       
       return isDueThisMonth || isOverdue;
-    } catch { return false; }
+    } catch { return d.paid < d.amount; }
   });
   const simpleDueThisMonthAmount = simpleDebtsDueThisMonth.reduce((sum, d) => sum + (d.amount - d.paid), 0);
 
@@ -432,6 +434,10 @@ export const DebtList: React.FC<DebtListProps> = ({
         });
       }
     } else {
+      if (createAlarm && !dueDate) {
+        alert("Klasik alarm kurulabilmesi için lütfen geçerli bir Vade Tarihi seçiniz.");
+        return;
+      }
       onSaveDebt({
         id: debtId,
         name: name.trim(),
@@ -439,7 +445,7 @@ export const DebtList: React.FC<DebtListProps> = ({
         paid: parsedPaid,
         category,
         dueDate,
-      }, false);
+      }, createAlarm);
     }
 
     setIsModalOpen(false);
@@ -921,6 +927,14 @@ export const DebtList: React.FC<DebtListProps> = ({
         </motion.h2>
         <div className="w-16 h-1 bg-indigo-500 rounded-full mt-2 opacity-80" />
       </div>
+
+      <PeriodFilter
+        selectedMonth={selectedMonth}
+        selectedYear={selectedYear}
+        setSelectedMonth={setSelectedMonth}
+        setSelectedYear={setSelectedYear}
+        themeColor="blue"
+      />
 
       {/* Mini Stats and Title Button Bar */}
       <div className="flex flex-col gap-3 justify-center sm:flex-row sm:items-center">
@@ -1448,19 +1462,20 @@ export const DebtList: React.FC<DebtListProps> = ({
               </div>
               {debtId === undefined && (
                 <div className="space-y-3.5 bg-slate-50/50 dark:bg-slate-900/30 p-3 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700/80">
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      id="installment_check"
-                      checked={isInstallment}
-                      onChange={(e) => setIsInstallment(e.target.checked)}
-                      className="w-4 h-4 accent-indigo-600 rounded cursor-pointer"
-                    />
-                    <label htmlFor="installment_check" className="text-xs font-bold text-slate-600 dark:text-slate-300 select-none cursor-pointer">
-                      📊 Taksitli Olarak Kaydet (Taksitler Bölümü)
-                    </label>
+                  <div className="flex items-center gap-2 cursor-pointer select-none" onClick={() => setCreateAlarm(!createAlarm)}>
+                    <div className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all ${createAlarm ? "bg-indigo-600 border-indigo-600 text-white" : "border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900"}`}>
+                      {createAlarm && <CheckCircle2 className="w-3.5 h-3.5" />}
+                    </div>
+                    <span className="text-[10px] font-bold text-slate-600 dark:text-slate-300">ÖDEME HATIRLATICI ALARMI KUR</span>
                   </div>
                   
+                  <div className="flex items-center gap-2 cursor-pointer select-none" onClick={() => setIsInstallment(!isInstallment)}>
+                    <div className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all ${isInstallment ? "bg-indigo-600 border-indigo-600 text-white" : "border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900"}`}>
+                      {isInstallment && <CheckCircle2 className="w-3.5 h-3.5" />}
+                    </div>
+                    <span className="text-[10px] font-bold text-slate-600 dark:text-slate-300">BU BORÇ TAKSİTLİ Mİ? (PLAN OLUŞTUR)</span>
+                  </div>
+
                   {isInstallment && (
                     <div className="space-y-1 animate-fade-in pl-6">
                       <label className="text-[10px] font-bold text-indigo-500 block mb-1">TAKSİT SAYISI (VADE AYI)</label>
@@ -1477,7 +1492,6 @@ export const DebtList: React.FC<DebtListProps> = ({
                 </div>
               )}
             </div>
-
             <div className="flex gap-2 pt-2">
               <button
                 onClick={() => setIsModalOpen(false)}
