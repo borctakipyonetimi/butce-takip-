@@ -58,7 +58,10 @@ import {
   TrendingUp,
   Compass,
   X,
-  Info
+  Info,
+  Fuel,
+  Coffee,
+  Utensils
 } from "lucide-react";
 import {
   Debt,
@@ -2694,41 +2697,121 @@ export default function App() {
             <div className="absolute bottom-1/4 right-1/4 w-96 h-96 rounded-full bg-emerald-500/10 blur-[130px] pointer-events-none animate-pulse [animation-delay:2s]" />
 
             <div className="text-center space-y-6 max-w-sm w-full relative z-10">
-              {/* Golden Rotating Coin & Neon Multi-Ring Loader */}
-              <div className="relative inline-flex items-center justify-center mx-auto mb-2">
-                {/* Outer pulsing ring shadow */}
-                <div className="absolute inset-0 bg-indigo-500/15 rounded-full blur-3xl scale-150 animate-pulse pointer-events-none" />
+              {/* Premium Animated 4-Quadrant Logo Loader (Matching user's reference exactly) */}
+              <div className="relative inline-flex flex-col items-center justify-center mx-auto mb-10">
+                {/* Ambient glowing back shadow */}
+                <div className="absolute inset-0 bg-indigo-500/10 rounded-full blur-3xl scale-150 animate-pulse pointer-events-none" />
                 
-                {/* Outer spinning ring (Clockwise) with dashes */}
+                {/* Outer spinning ring (Clockwise) */}
                 <motion.div
                   animate={{ rotate: 360 }}
-                  transition={{ repeat: Infinity, duration: 8, ease: "linear" }}
-                  className="w-28 h-28 border border-dashed border-indigo-500/40 rounded-full absolute"
+                  transition={{ repeat: Infinity, duration: 15, ease: "linear" }}
+                  className="w-36 h-36 border border-dashed border-indigo-500/30 rounded-full absolute"
                 />
 
-                {/* Middle fast counter-spinning ring with dots */}
+                {/* Middle fast counter-spinning ring */}
                 <motion.div
                   animate={{ rotate: -360 }}
-                  transition={{ repeat: Infinity, duration: 12, ease: "linear" }}
-                  className="w-24 h-24 border-2 border-dotted border-emerald-500/30 rounded-full absolute"
+                  transition={{ repeat: Infinity, duration: 20, ease: "linear" }}
+                  className="w-32 h-32 border-2 border-dotted border-emerald-500/20 rounded-full absolute"
                 />
 
-                {/* Inner glowing element */}
+                {/* Main 4-Quadrant Circle Container */}
                 <motion.div 
-                  whileHover={{ scale: 1.05, rotate: 10 }}
-                  transition={{ type: "spring", stiffness: 300 }}
-                  className="relative w-20 h-20 bg-slate-900 border border-indigo-500/30 rounded-full flex items-center justify-center cursor-pointer shadow-inner shadow-indigo-500/50"
+                  className="grid grid-cols-2 gap-1 w-[100px] h-[100px] relative z-10"
                 >
-                  <Coins className="w-10 h-10 text-indigo-400 rotate-12 drop-shadow-[0_0_12px_rgba(139,92,246,0.5)]" />
-                  
-                  {/* Concentric shining dot */}
-                  <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,1)]" />
+                  {/* Top-Left: Blue (Shopping Cart) - Steps: Active at 0.15 */}
+                  <motion.div
+                    animate={{
+                      scale: [1, 1.15, 1, 1, 1, 1],
+                      filter: ["brightness(0.7)", "brightness(1.5)", "brightness(0.7)", "brightness(0.7)", "brightness(0.7)", "brightness(0.7)"]
+                    }}
+                    transition={{
+                      duration: 3,
+                      repeat: Infinity,
+                      ease: "easeInOut",
+                      times: [0, 0.15, 0.35, 0.55, 0.75, 1]
+                    }}
+                    whileHover={{ scale: 1.18 }}
+                    className="bg-[#0284c7] rounded-tl-full flex items-end justify-end p-2 pb-[8px] pr-[8px] relative overflow-hidden shadow-lg cursor-pointer group"
+                  >
+                    <ShoppingCart className="w-[20px] h-[20px] text-white drop-shadow-[0_1.5px_3px_rgba(0,0,0,0.35)]" />
+                  </motion.div>
+
+                  {/* Top-Right: Pink (Fuel Gas Pump) - Steps: Active at 0.35 */}
+                  <motion.div
+                    animate={{
+                      scale: [1, 1, 1.15, 1, 1, 1],
+                      filter: ["brightness(0.7)", "brightness(0.7)", "brightness(1.5)", "brightness(0.7)", "brightness(0.7)", "brightness(0.7)"]
+                    }}
+                    transition={{
+                      duration: 3,
+                      repeat: Infinity,
+                      ease: "easeInOut",
+                      times: [0, 0.15, 0.35, 0.55, 0.75, 1]
+                    }}
+                    whileHover={{ scale: 1.18 }}
+                    className="bg-[#ec4899] rounded-tr-full flex items-end justify-start p-2 pb-[8px] pl-[8px] relative overflow-hidden shadow-lg cursor-pointer group"
+                  >
+                    <Fuel className="w-[20px] h-[20px] text-white drop-shadow-[0_1.5px_3px_rgba(0,0,0,0.35)]" />
+                  </motion.div>
+
+                  {/* Bottom-Left: Green (Utensils Cutlery) - Steps: Active at 0.75 */}
+                  <motion.div
+                    animate={{
+                      scale: [1, 1, 1, 1, 1.15, 1],
+                      filter: ["brightness(0.7)", "brightness(0.7)", "brightness(0.7)", "brightness(0.7)", "brightness(1.5)", "brightness(0.7)"]
+                    }}
+                    transition={{
+                      duration: 3,
+                      repeat: Infinity,
+                      ease: "easeInOut",
+                      times: [0, 0.15, 0.35, 0.55, 0.75, 1]
+                    }}
+                    whileHover={{ scale: 1.18 }}
+                    className="bg-[#22c55e] rounded-bl-full flex items-start justify-end p-2 pt-[8px] pr-[8px] relative overflow-hidden shadow-lg cursor-pointer group"
+                  >
+                    <Utensils className="w-[20px] h-[20px] text-white drop-shadow-[0_1.5px_3px_rgba(0,0,0,0.35)]" />
+                  </motion.div>
+
+                  {/* Bottom-Right: Yellow (Coffee Cup) - Steps: Active at 0.55 */}
+                  <motion.div
+                    animate={{
+                      scale: [1, 1, 1, 1.15, 1, 1],
+                      filter: ["brightness(0.7)", "brightness(0.7)", "brightness(0.7)", "brightness(1.5)", "brightness(0.7)", "brightness(0.7)"]
+                    }}
+                    transition={{
+                      duration: 3,
+                      repeat: Infinity,
+                      ease: "easeInOut",
+                      times: [0, 0.15, 0.35, 0.55, 0.75, 1]
+                    }}
+                    whileHover={{ scale: 1.18 }}
+                    className="bg-[#eab308] rounded-br-full flex items-start justify-start p-2 pt-[8px] pl-[8px] relative overflow-hidden shadow-lg cursor-pointer group"
+                  >
+                    <Coffee className="w-[20px] h-[20px] text-white drop-shadow-[0_1.5px_3px_rgba(0,0,0,0.35)]" />
+                  </motion.div>
+
+                  {/* Central Hole ring */}
+                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-5.5 h-5.5 bg-slate-950 rounded-full border border-slate-900 shadow-inner flex items-center justify-center z-20">
+                    <div className="w-2 h-2 rounded-full bg-slate-900 border border-slate-800" />
+                  </div>
                 </motion.div>
-                
-                {/* Absolute center ring */}
-                <div className="absolute flex items-center justify-center pointer-events-none">
-                  <span className="w-4 h-4 rounded-full bg-emerald-400/20 animate-ping absolute" />
-                  <span className="w-3 h-3 rounded-full bg-emerald-400 relative" />
+
+                {/* Smiling blue arc line beneath the logo */}
+                <div className="absolute top-[102px]">
+                  <svg width="112" height="24" viewBox="0 0 112 24" className="text-[#0284c7] overflow-visible">
+                    <motion.path
+                      d="M10,2 Q56,22 102,2"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="3.5"
+                      strokeLinecap="round"
+                      initial={{ pathLength: 0, opacity: 0 }}
+                      animate={{ pathLength: 1, opacity: 1 }}
+                      transition={{ delay: 0.6, duration: 1.2, ease: "easeOut" }}
+                    />
+                  </svg>
                 </div>
               </div>
               
