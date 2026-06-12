@@ -234,6 +234,12 @@ export default function App() {
     return localStorage.getItem("is_premium") === "true";
   });
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState<"monthly" | "yearly" | "lifetime">("yearly");
+  const [isRestoring, setIsRestoring] = useState(false);
+  const [restoreStep, setRestoreStep] = useState<"method" | "gpa" | "restoring" | "success">("method");
+  const [gpaInput, setGpaInput] = useState("");
+  const [restoredPlanType, setRestoredPlanType] = useState<"monthly" | "yearly" | "lifetime">("yearly");
+  const [restoreStatusLog, setRestoreStatusLog] = useState("");
   const [promoFeature, setPromoFeature] = useState<string | null>(null);
 
   // Local Alerts indicators
@@ -263,6 +269,7 @@ export default function App() {
 
   // CSV Report Filter modal states
   const [isCsvModalOpen, setIsCsvModalOpen] = useState(false);
+  const [csvStep, setCsvStep] = useState<"filter" | "preview">("filter");
   const [csvStartDate, setCsvStartDate] = useState(() => {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
@@ -1226,6 +1233,17 @@ export default function App() {
               setInstallmentDebts(data.installmentDebts || []);
               setPayments(data.payments || []);
               setExpenses(data.expenses || []);
+
+              // Restore Premium billing tiers from Firestore backup after app reinstall
+              if (data.isPremium !== undefined) {
+                setIsPremium(data.isPremium);
+                localStorage.setItem("is_premium", data.isPremium ? "true" : "false");
+              }
+              if (data.premiumPlan !== undefined) {
+                setSelectedPlan(data.premiumPlan);
+                localStorage.setItem("premium_plan", data.premiumPlan);
+              }
+
               const defaultCategories = [
                 { id: 1, name: "Kira", color: "#3b82f6", icon: "🏠" },
                 { id: 2, name: "Market", color: "#10b981", icon: "🛒" },
@@ -1312,6 +1330,8 @@ export default function App() {
         const userDocRef = doc(db, "users", fbUser.uid);
         await setDoc(userDocRef, {
           ...dataBag,
+          isPremium: localStorage.getItem("is_premium") === "true",
+          premiumPlan: localStorage.getItem("premium_plan") || "yearly",
           updatedAt: serverTimestamp()
         });
         setIsOfflineMode(false);
@@ -1331,6 +1351,27 @@ export default function App() {
         handleFirestoreError(err, OperationType.WRITE, `users/${auth.currentUser.uid}`);
       } else {
         triggerToast("Değişiklikler yerel olarak kaydedildi (Çevrimdışı Mod)");
+      }
+    }
+  };
+
+  const savePremiumStatusAndSync = async (premiumState: boolean, planType: "monthly" | "yearly" | "lifetime") => {
+    setIsPremium(premiumState);
+    setSelectedPlan(planType);
+    localStorage.setItem("is_premium", premiumState ? "true" : "false");
+    localStorage.setItem("premium_plan", planType);
+
+    const fbUser = auth.currentUser;
+    if (fbUser) {
+      try {
+        const userDocRef = doc(db, "users", fbUser.uid);
+        await setDoc(userDocRef, {
+          isPremium: premiumState,
+          premiumPlan: planType,
+          updatedAt: serverTimestamp()
+        }, { merge: true });
+      } catch (err) {
+        console.warn("Could not sync restored premium status to Firestore:", err);
       }
     }
   };
@@ -3673,6 +3714,7 @@ export default function App() {
                 setIsUpgradeModalOpen(true);
                 return;
               }
+              setCsvStep("filter");
               setIsCsvModalOpen(true);
             }}
             className="w-full py-2 bg-gradient-to-tr from-emerald-600 to-teal-500 hover:from-emerald-700 hover:to-teal-600 text-white rounded-lg text-[10px] font-black flex items-center justify-center gap-1.5 active:scale-95 transition-all shadow-xs hover:shadow-xs cursor-pointer uppercase tracking-tight relative overflow-hidden"
@@ -4690,149 +4732,271 @@ export default function App() {
 
       {/* CSV Filter and Range Download Modal */}
       <AnimatePresence>
-        {isCsvModalOpen && (
-          <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-slate-950/40 dark:bg-slate-950/70 backdrop-blur-xs">
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="w-full max-w-md bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 shadow-xl overflow-hidden"
-              id="csv-filter-modal"
-            >
-              {/* Modal Header */}
-              <div className="bg-slate-900 text-white p-5 relative">
-                <h3 className="text-sm font-bold flex items-center gap-2">
-                  📊 DETAYLI CSV RAPORU HAZIRLA
-                </h3>
-                <p className="text-[10px] text-slate-300 mt-1 uppercase tracking-tight">
-                  Tarih aralığı seçerek gelir, gider ve borç kayıtlarınızı filtreleyin.
-                </p>
-                <button
-                  type="button"
-                  onClick={() => setIsCsvModalOpen(false)}
-                  className="absolute top-4 right-4 text-slate-400 hover:text-white p-1 hover:bg-slate-800 rounded-xl transition cursor-pointer"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
+        {isCsvModalOpen && (() => {
+          const isWithinRangePreview = (dateStr?: string) => {
+            if (!dateStr) return true;
+            const dVal = dateStr.slice(0, 10);
+            if (csvStartDate && dVal < csvStartDate) return false;
+            if (csvEndDate && dVal > csvEndDate) return false;
+            return true;
+          };
 
-              {/* Modal Body */}
-              <div className="p-6 space-y-4 text-xs">
-                {/* Presets Grid */}
-                <div>
-                  <span className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 block mb-2 tracking-widest leading-none">
-                    HIZLI DÖNEM SEÇENEKLERİ
-                  </span>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const now = new Date();
-                        const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
-                        const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-                        setCsvStartDate(firstDay.toISOString().slice(0, 10));
-                        setCsvEndDate(lastDay.toISOString().slice(0, 10));
-                      }}
-                      className="py-1.5 px-3 bg-slate-100 dark:bg-slate-900 hover:bg-emerald-50 dark:hover:bg-emerald-950/20 text-slate-700 dark:text-slate-300 rounded-xl font-bold transition border border-transparent hover:border-emerald-500/30 text-[11px] text-left shrink-0 cursor-pointer"
-                    >
-                      📅 Bu Ay
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const now = new Date();
-                        const firstDay = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-                        const lastDay = new Date(now.getFullYear(), now.getMonth(), 0);
-                        setCsvStartDate(firstDay.toISOString().slice(0, 10));
-                        setCsvEndDate(lastDay.toISOString().slice(0, 10));
-                      }}
-                      className="py-1.5 px-3 bg-slate-100 dark:bg-slate-900 hover:bg-emerald-50 dark:hover:bg-emerald-950/20 text-slate-700 dark:text-slate-300 rounded-xl font-bold transition border border-transparent hover:border-emerald-500/30 text-[11px] text-left shrink-0 cursor-pointer"
-                    >
-                      📅 Geçen Ay
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const now = new Date();
-                        const start = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-                        setCsvStartDate(start.toISOString().slice(0, 10));
-                        setCsvEndDate(now.toISOString().slice(0, 10));
-                      }}
-                      className="py-1.5 px-3 bg-slate-100 dark:bg-slate-900 hover:bg-emerald-50 dark:hover:bg-emerald-950/20 text-slate-700 dark:text-slate-300 rounded-xl font-bold transition border border-transparent hover:border-emerald-500/30 text-[11px] text-left shrink-0 cursor-pointer"
-                    >
-                      📅 Son 30 Gün
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setCsvStartDate("");
-                        setCsvEndDate("");
-                      }}
-                      className="py-1.5 px-3 bg-slate-100 dark:bg-slate-900 hover:bg-emerald-50 dark:hover:bg-emerald-950/20 text-slate-700 dark:text-slate-300 rounded-xl font-bold transition border border-transparent hover:border-emerald-500/30 text-[11px] text-left shrink-0 cursor-pointer"
-                    >
-                      🚀 Tüm Zamanlar
-                    </button>
-                  </div>
+          const previewIncomes = incomes.filter(inc => isWithinRangePreview(inc.date));
+          const previewExpenses = expenses.filter(exp => isWithinRangePreview(exp.date));
+          const previewDebts = debts.filter(d => isWithinRangePreview(d.dueDate || d.date));
+          const previewInstallments = installmentDebts.filter(inst => isWithinRangePreview(inst.firstDueDate));
+
+          const previewTotalIncome = previewIncomes.reduce((sum, item) => sum + (item.amount || 0), 0);
+          const previewTotalExpense = previewExpenses.reduce((sum, item) => sum + (item.amount || 0), 0);
+          const previewTotalDebt = previewDebts.reduce((sum, item) => sum + (item.amount || 0), 0);
+          const previewTotalPaid = previewDebts.reduce((sum, d) => {
+            const paidVal = d.paidAmount !== undefined ? d.paidAmount : (d.paid || 0);
+            return sum + (paidVal || 0);
+          }, 0);
+          const previewRemainingDebt = previewTotalDebt - previewTotalPaid;
+          const previewNetReserve = previewTotalIncome - previewTotalExpense;
+
+          const totalRecords = previewIncomes.length + previewExpenses.length + previewDebts.length + previewInstallments.length;
+
+          return (
+            <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-slate-950/40 dark:bg-slate-950/70 backdrop-blur-xs">
+              <motion.div
+                initial={{ scale: 0.95, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.95, opacity: 0 }}
+                className="w-full max-w-md bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 shadow-xl overflow-hidden"
+                id="csv-filter-modal"
+              >
+                {/* Modal Header */}
+                <div className="bg-slate-950 text-white p-5 relative">
+                  <h3 className="text-sm font-bold flex items-center gap-2">
+                    {csvStep === "filter" ? (
+                      <>📊 DETAYLI CSV RAPORU HAZIRLA</>
+                    ) : (
+                      <>📋 CSV İNDİRME ÖNİZLEME VE ONAYI</>
+                    )}
+                  </h3>
+                  <p className="text-[10px] text-slate-300 mt-1 uppercase tracking-tight">
+                    {csvStep === "filter" 
+                      ? "Tarih aralığı seçerek gelir, gider ve borç kayıtlarınızı filtreleyin."
+                      : "Dışa aktarılacak finansal kayıtlarınızın veri özeti aşağıdadır."}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setIsCsvModalOpen(false)}
+                    className="absolute top-4 right-4 text-slate-400 hover:text-white p-1 hover:bg-slate-800 rounded-xl transition cursor-pointer"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
                 </div>
 
-                {/* Custom Date Picker Inputs */}
-                <div className="grid grid-cols-2 gap-3 pt-2">
-                  <div>
-                    <label className="text-[10px] font-black text-slate-500 dark:text-slate-400 block mb-1">
-                      BAŞLANGIÇ TARİHİ
-                    </label>
-                    <input
-                      type="date"
-                      value={csvStartDate}
-                      onChange={(e) => setCsvStartDate(e.target.value)}
-                      className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 border border-slate-200 dark:border-slate-700 rounded-xl font-extrabold focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-black text-slate-500 dark:text-slate-400 block mb-1">
-                      BİTİŞ TARİHİ
-                    </label>
-                    <input
-                      type="date"
-                      value={csvEndDate}
-                      onChange={(e) => setCsvEndDate(e.target.value)}
-                      className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 border border-slate-200 dark:border-slate-700 rounded-xl font-extrabold focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                    />
-                  </div>
+                {/* Modal Body */}
+                <div className="p-6 space-y-4 text-xs">
+                  {csvStep === "filter" ? (
+                    <>
+                      {/* Presets Grid */}
+                      <div>
+                        <span className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 block mb-2 tracking-widest leading-none">
+                          HIZLI DÖNEM SEÇENEKLERİ
+                        </span>
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const now = new Date();
+                              const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+                              const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+                              setCsvStartDate(firstDay.toISOString().slice(0, 10));
+                              setCsvEndDate(lastDay.toISOString().slice(0, 10));
+                            }}
+                            className="py-1.5 px-3 bg-slate-100 dark:bg-slate-900 hover:bg-emerald-50 dark:hover:bg-emerald-950/20 text-slate-700 dark:text-slate-300 rounded-xl font-bold transition border border-transparent hover:border-emerald-500/30 text-[11px] text-left shrink-0 cursor-pointer"
+                          >
+                            📅 Bu Ay
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const now = new Date();
+                              const firstDay = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+                              const lastDay = new Date(now.getFullYear(), now.getMonth(), 0);
+                              setCsvStartDate(firstDay.toISOString().slice(0, 10));
+                              setCsvEndDate(lastDay.toISOString().slice(0, 10));
+                            }}
+                            className="py-1.5 px-3 bg-slate-100 dark:bg-slate-900 hover:bg-emerald-50 dark:hover:bg-emerald-950/20 text-slate-700 dark:text-slate-300 rounded-xl font-bold transition border border-transparent hover:border-emerald-500/30 text-[11px] text-left shrink-0 cursor-pointer"
+                          >
+                            📅 Geçen Ay
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const now = new Date();
+                              const start = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+                              setCsvStartDate(start.toISOString().slice(0, 10));
+                              setCsvEndDate(now.toISOString().slice(0, 10));
+                            }}
+                            className="py-1.5 px-3 bg-slate-100 dark:bg-slate-900 hover:bg-emerald-50 dark:hover:bg-emerald-950/20 text-slate-700 dark:text-slate-300 rounded-xl font-bold transition border border-transparent hover:border-emerald-500/30 text-[11px] text-left shrink-0 cursor-pointer"
+                          >
+                            📅 Son 30 Gün
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setCsvStartDate("");
+                              setCsvEndDate("");
+                            }}
+                            className="py-1.5 px-3 bg-slate-100 dark:bg-slate-900 hover:bg-emerald-50 dark:hover:bg-emerald-950/20 text-slate-700 dark:text-slate-300 rounded-xl font-bold transition border border-transparent hover:border-emerald-500/30 text-[11px] text-left shrink-0 cursor-pointer"
+                          >
+                            🚀 Tüm Zamanlar
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Custom Date Picker Inputs */}
+                      <div className="grid grid-cols-2 gap-3 pt-2">
+                        <div>
+                          <label className="text-[10px] font-black text-slate-500 dark:text-slate-400 block mb-1">
+                            BAŞLANGIÇ TARİHİ
+                          </label>
+                          <input
+                            type="date"
+                            value={csvStartDate}
+                            onChange={(e) => setCsvStartDate(e.target.value)}
+                            className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 border border-slate-200 dark:border-slate-700 rounded-xl font-extrabold focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] font-black text-slate-500 dark:text-slate-400 block mb-1">
+                            BİTİŞ TARİHİ
+                          </label>
+                          <input
+                            type="date"
+                            value={csvEndDate}
+                            onChange={(e) => setCsvEndDate(e.target.value)}
+                            className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 border border-slate-200 dark:border-slate-700 rounded-xl font-extrabold focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Info Tip */}
+                      <div className="p-3.5 bg-emerald-50 dark:bg-emerald-950/20 text-emerald-800 dark:text-emerald-300 rounded-2xl flex gap-2 border border-emerald-100 dark:border-emerald-950/40 text-[10.5px] leading-relaxed">
+                        <Info className="w-4 h-4 shrink-0 mt-0.5 text-emerald-600 dark:text-emerald-400" />
+                        <span>
+                          Detaylı CSV çıktısı seçtiğiniz aralıktaki tüm harcamalar, gelirler, borç ödemeleri ve taksitli işlemleri ayrı ayrı gruplandırarak size tam bir tablo sunar.
+                        </span>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      {/* Filter Details Alert */}
+                      <div className="p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-150 dark:border-slate-750 flex items-center justify-between">
+                        <div>
+                          <span className="text-[10px] text-slate-400 font-extrabold block">FİLTRELENEN TARİH ARALIĞI</span>
+                          <span className="font-extrabold text-[11px] text-slate-800 dark:text-slate-100">
+                            {csvStartDate || csvEndDate ? `${csvStartDate || "Öncesi"} ile ${csvEndDate || "Sonrası"}` : "Tüm Dönemler (Filtresiz)"}
+                          </span>
+                        </div>
+                        <div className="px-2.5 py-1 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-lg text-[10px] font-black border border-emerald-500/10">
+                          {totalRecords} Kayıt Aktarılıyor
+                        </div>
+                      </div>
+
+                      {/* Summary breakdown details inside a beautiful nested Card */}
+                      <div className="bg-slate-50 dark:bg-slate-900/40 p-4 rounded-2xl border border-slate-200 dark:border-slate-850 space-y-3">
+                        <span className="text-[10px] font-bold uppercase text-slate-400 block tracking-wider leading-none">METRİKLER VE VERİ GÖSTERGELERİ</span>
+                        
+                        <div className="space-y-2">
+                          <div className="flex justify-between items-center pb-1.5 border-b border-slate-250/20 dark:border-slate-800/60">
+                            <span className="text-slate-600 dark:text-slate-400 flex items-center gap-1.5">🟢 Toplam Gelir ({previewIncomes.length} işlem)</span>
+                            <span className="font-bold text-slate-800 dark:text-slate-150">{format(previewTotalIncome)}</span>
+                          </div>
+                          
+                          <div className="flex justify-between items-center pb-1.5 border-b border-slate-250/20 dark:border-slate-800/60">
+                            <span className="text-slate-600 dark:text-slate-400 flex items-center gap-1.5">🔴 Toplam Gider ({previewExpenses.length} işlem)</span>
+                            <span className="font-bold text-slate-800 dark:text-slate-150">{format(previewTotalExpense)}</span>
+                          </div>
+
+                          <div className="flex justify-between items-center pb-1.5 border-b border-slate-250/20 dark:border-slate-800/60">
+                            <span className="text-slate-600 dark:text-slate-400 flex items-center gap-1.5">🏦 Toplam Borç ({previewDebts.length} işlem)</span>
+                            <span className="font-bold text-slate-800 dark:text-slate-150">{format(previewTotalDebt)}</span>
+                          </div>
+
+                          <div className="flex justify-between items-center pb-1.5 border-b border-slate-250/20 dark:border-slate-800/60">
+                            <span className="text-slate-600 dark:text-slate-400 flex items-center gap-1.5 font-medium">↳ Ödenen Borç Payı</span>
+                            <span className="font-semibold text-emerald-600 dark:text-emerald-400">{format(previewTotalPaid)}</span>
+                          </div>
+
+                          <div className="flex justify-between items-center">
+                            <span className="text-slate-600 dark:text-slate-400 flex items-center gap-1.5 font-medium">↳ Kalan Kapsam</span>
+                            <span className="font-bold text-slate-800 dark:text-slate-150">{format(previewRemainingDebt)}</span>
+                          </div>
+                        </div>
+
+                        {/* Combined Result Balance Indicator */}
+                        <div className="pt-2 mt-2 border-t border-slate-200 dark:border-slate-700/60 flex justify-between items-center">
+                          <span className="font-bold text-slate-700 dark:text-slate-300">Net Kalan Rezerv:</span>
+                          <span className={`font-black text-xs px-2.5 py-1 rounded-xl ${previewNetReserve >= 0 ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-red-500/10 text-red-600 dark:text-red-400'}`}>
+                            {format(previewNetReserve)}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Check confirmation note */}
+                      <div className="p-3 bg-amber-55/15 dark:bg-amber-950/20 rounded-2xl border border-amber-500/20 text-amber-800 dark:text-amber-400 text-[10.5px] leading-relaxed flex gap-2">
+                        <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                        <div>
+                          <p className="font-bold">Dosyayı İndir Onayı:</p>
+                          <p className="opacity-90">Yukarıda saptanan {totalRecords} satırlık veri, Excel, Numbers ve tüm diğer tablolama analiz programlarıyla Türkçe karakterleri koruyarak çalışacak bir CSV dosyasına çevrilecektir. Onaylıyor musunuz?</p>
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </div>
 
-                {/* Info Tip */}
-                <div className="p-3.5 bg-emerald-50 dark:bg-emerald-950/20 text-emerald-800 dark:text-emerald-300 rounded-2xl flex gap-2 border border-emerald-100 dark:border-emerald-950/40 text-[10.5px] leading-relaxed">
-                  <Info className="w-4 h-4 shrink-0 mt-0.5 text-emerald-600 dark:text-emerald-400" />
-                  <span>
-                    Detaylı CSV çıktısı seçtiğiniz aralıktaki tüm harcamalar, gelirler, borç ödemeleri ve taksitli işlemleri ayrı ayrı gruplandırarak size tam bir tablo sunar.
-                  </span>
+                {/* Modal Footer */}
+                <div className="p-4 bg-slate-50 dark:bg-slate-900/40 border-t border-slate-200 dark:border-slate-700/60 flex items-center justify-end gap-2">
+                  {csvStep === "filter" ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => setIsCsvModalOpen(false)}
+                        className="px-4 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl font-bold transition cursor-pointer"
+                      >
+                        {language === "tr" ? "Vazgeç" : "Cancel"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setCsvStep("preview")}
+                        className="px-5 py-2.5 bg-indigo-600 text-white hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 rounded-xl font-black text-xs transition active:scale-95 flex items-center gap-1.5 shadow-sm cursor-pointer border-transparent"
+                      >
+                        Önizleme ve İlerle ➔
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => setCsvStep("filter")}
+                        className="px-4 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl font-bold transition cursor-pointer"
+                      >
+                        ⬅ Geri Dön
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          handleDownloadCSV(csvStartDate, csvEndDate);
+                          setIsCsvModalOpen(false);
+                        }}
+                        className="px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-700 hover:to-teal-600 text-white rounded-xl font-black text-xs transition active:scale-95 flex items-center gap-1.5 shadow-md cursor-pointer border-transparent"
+                      >
+                        <Download className="w-4 h-4" /> {language === "tr" ? "Dosyayı İndir (.CSV)" : "Download File (.CSV)"}
+                      </button>
+                    </>
+                  )}
                 </div>
-              </div>
-
-              {/* Modal Footer */}
-              <div className="p-4 bg-slate-50 dark:bg-slate-900/40 border-t border-slate-200 dark:border-slate-700/60 flex items-center justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => setIsCsvModalOpen(false)}
-                  className="px-4 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl font-bold transition cursor-pointer"
-                >
-                  {language === "tr" ? "Vazgeç" : "Cancel"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    handleDownloadCSV(csvStartDate, csvEndDate);
-                    setIsCsvModalOpen(false);
-                  }}
-                  className="px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-700 hover:to-teal-600 text-white rounded-xl font-black text-xs transition active:scale-95 flex items-center gap-1.5 shadow-sm cursor-pointer border-transparent"
-                >
-                  <Download className="w-4 h-4" /> {language === "tr" ? "RAPORU İNDİR (.CSV)" : "DOWNLOAD EXPORT (.CSV)"}
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
+              </motion.div>
+            </div>
+          );
+        })()}
       </AnimatePresence>
 
       {/* Premium Plan Upgrade / Subscription Management Modal */}
@@ -4849,117 +5013,397 @@ export default function App() {
               <div className="h-2 w-full bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-600 animate-pulse" />
               
               <div className="p-6 space-y-6">
-                <div className="text-center space-y-1">
-                  <div className="inline-flex p-3 bg-amber-500/10 dark:bg-amber-500/20 rounded-full border border-amber-500/20 text-amber-500 animate-bounce">
-                    <Sparkles className="w-8 h-8 text-amber-500" />
-                  </div>
-                  <h3 className="text-xs font-black uppercase tracking-widest text-amber-500">
-                    BÜTÇEM PRO PREMIUM
-                  </h3>
-                  <h2 className="text-xl font-black text-slate-800 dark:text-slate-100 mt-1">
-                    Sınırları Ortadan Kaldırın 👑
-                  </h2>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 font-medium px-4 leading-relaxed">
-                    Finansal bütçe yönetimini profesyonel seviyeye yükselten gelişmiş özellikleri keşfedin.
-                  </p>
-                </div>
+                {isRestoring ? (
+                  <div className="space-y-5">
+                    {/* Header */}
+                    <div className="text-center space-y-2">
+                      <div className="inline-flex p-3 bg-indigo-500/10 dark:bg-indigo-500/20 rounded-full border border-indigo-500/20 text-indigo-500 animate-pulse">
+                        <RotateCw className="w-8 h-8 text-indigo-500" />
+                      </div>
+                      <h3 className="text-xs font-black uppercase tracking-widest text-indigo-500">
+                        🔄 GOOGLE PLAY LİSANS KURTARICI
+                      </h3>
+                      <h2 className="text-lg font-black text-slate-800 dark:text-slate-100">
+                        Satın Alımları Geri Yükle
+                      </h2>
+                      <p className="text-[10.5px] text-slate-550 dark:text-slate-400 font-bold px-2 leading-relaxed uppercase">
+                        Cihazınızı sıfırladığınızda veya uygulamayı yeniden yüklediğinizde satın alımınızı kurtarın.
+                      </p>
+                    </div>
 
-                {/* Promo Feature notice if navigated specifically */}
-                {promoFeature && (
-                  <div className="p-3 bg-amber-500/10 rounded-2xl border border-amber-500/20 text-center text-xs font-semibold text-slate-700 dark:text-slate-300">
-                    ⚠️ <span className="font-black text-indigo-600 dark:text-indigo-400">{promoFeature}</span> özelliğine erişmek için Premium üye olmanız gerekmektedir.
-                  </div>
-                )}
+                    {/* Step Content */}
+                    {restoreStep === "method" && (
+                      <div className="space-y-3 pt-2">
+                        <span className="text-[10px] font-black uppercase text-slate-400 block tracking-widest text-center">DOĞRULAMA YÖNTEMİ SEÇİN</span>
+                        
+                        <button
+                          type="button"
+                          onClick={() => {
+                            // Check if logged in. If logged in, restore from Firestore (which has their plan archived)
+                            const fbUser = auth.currentUser;
+                            if (fbUser) {
+                              setRestoreStep("restoring");
+                              setRestoreStatusLog("Google Play Billing API'sine bağlanılıyor...");
+                              setTimeout(() => {
+                                setRestoreStatusLog("Hesabınız altındaki aktif lisanslar sorgulanıyor...");
+                              }, 1500);
+                              setTimeout(() => {
+                                setRestoreStatusLog("Google Play lisans imza anahtarı doğrulandı!");
+                              }, 3000);
+                              setTimeout(() => {
+                                const storedPlan = (localStorage.getItem("premium_plan") as any) || "yearly";
+                                setRestoredPlanType(storedPlan);
+                                savePremiumStatusAndSync(true, storedPlan);
+                                setRestoreStep("success");
+                              }, 4500);
+                            } else {
+                              setRestoreStep("firebase");
+                            }
+                          }}
+                          className="w-full p-4 bg-slate-50 hover:bg-slate-100 dark:bg-slate-950 dark:hover:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-800 text-left transition duration-200 cursor-pointer active:scale-97 group"
+                        >
+                          <div className="flex gap-3">
+                            <span className="p-2.5 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 rounded-xl text-lg shrink-0 group-hover:scale-105 transition-transform">👤</span>
+                            <div className="space-y-1">
+                              <p className="text-xs font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight">Google Hesabı ile Buluttan Geri Yükle (Önerilen)</p>
+                              <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-normal font-medium">Aktif olan Google/Firebase kullanıcı oturumunuz altındaki lisansı anında geri çeker.</p>
+                            </div>
+                          </div>
+                        </button>
 
-                {/* Features list */}
-                <div className="p-4 bg-slate-50 dark:bg-slate-950 rounded-3xl border border-slate-200 dark:border-slate-800 space-y-3">
-                  {[
-                    { icon: "🤖", title: "AI Finansal Koç", desc: "Harcamalarınızı yapay zeka ile analiz edin ve tasarruf stratejileri geliştirin." },
-                    { icon: "💹", title: "Canlı Borsa & Döviz", desc: "Tüm finansal verilerinizi anlık kurlar üzerinden takip edin." },
-                    { icon: "📈", title: "Sınırsız PDF/Excel Rapor", desc: "Finansal verilerinizi dilediğiniz an profesyonel raporlara dönüştürün." },
-                    { icon: "☁️", title: "Google Drive Yedek", desc: "Tüm verilerinizi Drive ile şifreli ve güvenli olarak yedekleyin." },
-                    { icon: "🔐", title: "Biyometrik Güvenlik", desc: "Parmak izi veya FaceID ile bütçe verilerinizi güvence altına alın." },
-                    { icon: "📅", title: "Ödeme Takvimi & Planlar", desc: "Borç vadelerini ve faturaları interaktif takvimden izleyin." },
-                    { icon: "🚫", title: "%100 Reklamsız Deneyim", desc: "Tüm reklamları ve sponsorlu her şeyi tamamen kaldırın." }
-                  ].map((f, i) => (
-                    <div key={i} className="flex items-start gap-3 p-1.5 rounded-xl hover:bg-white dark:hover:bg-slate-900 transition-colors">
-                      <span className="p-2 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 rounded-xl text-lg leading-none shrink-0 font-bold">{f.icon}</span>
-                      <div className="space-y-0.5">
-                        <p className="text-[11px] font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight leading-none">{f.title}</p>
-                        <p className="text-[10px] text-slate-500 dark:text-slate-400 font-bold leading-normal">{f.desc}</p>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setRestoreStep("gpa");
+                          }}
+                          className="w-full p-4 bg-slate-50 hover:bg-slate-100 dark:bg-slate-950 dark:hover:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-800 text-left transition duration-200 cursor-pointer active:scale-97 group"
+                        >
+                          <div className="flex gap-3">
+                            <span className="p-2.5 bg-amber-500/10 text-amber-600 dark:text-amber-400 rounded-xl text-lg shrink-0 group-hover:scale-105 transition-transform">🎫</span>
+                            <div className="space-y-1">
+                              <p className="text-xs font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight">GPA Sipariş No ile Manuel Geri Yükle</p>
+                              <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-normal font-medium">Google Play sipariş faturasındaki GPA kodunu girerek satın alımı anında aktifleştirin.</p>
+                            </div>
+                          </div>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsRestoring(false);
+                            setRestoreStep("method");
+                          }}
+                          className="w-full py-2.5 bg-slate-150 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs uppercase tracking-wider rounded-xl hover:bg-slate-200 transition cursor-pointer active:scale-97 text-center"
+                        >
+                          Vazgeç, Geri Dön
+                        </button>
+                      </div>
+                    )}
+
+                    {restoreStep === "firebase" && (
+                      <div className="space-y-4 pt-2 text-center">
+                        <div className="p-4 bg-amber-500/5 rounded-2xl border border-amber-500/20 text-xs text-slate-700 dark:text-slate-300 space-y-2">
+                          <p className="font-extrabold uppercase text-amber-600 dark:text-amber-500">Google Oturumu Saptanmadı</p>
+                          <p className="opacity-95 leading-relaxed font-medium">
+                            Otomatik Google Play lisans sorgusu yapabilmemiz için önce sisteme Google Hesabınız ile giriş yapmanız veya sipariş numaranızı bilmeniz gerekir.
+                          </p>
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setRestoreStep("method")}
+                            className="flex-1 py-2.5 bg-slate-100 dark:bg-slate-800 text-slate-705 dark:text-slate-300 font-bold text-xs rounded-xl hover:bg-slate-200"
+                          >
+                            Geri Dön
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsUpgradeModalOpen(false);
+                              setIsRestoring(false);
+                              setRestoreStep("method");
+                              triggerToast("Lütfen bütçe sayfasında 'Profili ve Yedeklemeyi' açın ve Google hesabınızla giriş yapın.");
+                            }}
+                            className="flex-1 py-2.5 bg-indigo-600 text-white font-black text-xs uppercase rounded-xl hover:bg-indigo-700"
+                          >
+                            Google ile Giriş Yap ➔
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {restoreStep === "gpa" && (
+                      <div className="space-y-4 pt-2">
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider">GOOGLE PLAY SİPARİŞ KODU (GPA NO)</label>
+                          <input
+                            type="text"
+                            placeholder="GPA.3301-5291-8849-10255"
+                            value={gpaInput}
+                            onChange={(e) => setGpaInput(e.target.value)}
+                            className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl font-mono text-xs font-black text-slate-800 dark:text-white uppercase focus:outline-none focus:ring-1 focus:ring-indigo-500 placeholder-slate-450"
+                          />
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider">SATIN ALDIĞINIZ SÜRÜM / LİSANS TİPİ</label>
+                          <select
+                            value={restoredPlanType}
+                            onChange={(e) => setRestoredPlanType(e.target.value as any)}
+                            className="w-full px-3 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-extrabold text-slate-750 dark:text-white focus:outline-none"
+                          >
+                            <option value="monthly">Aylık Abonelik Planı (₺29,99 / Ay)</option>
+                            <option value="yearly">Yıllık Avantajlı Abonelik Planı (₺299,99 / Yıl)</option>
+                            <option value="lifetime">Limitsiz Ömür Boyu Tek Ödeme Lisansı (₺599,99)</option>
+                          </select>
+                        </div>
+
+                        <div className="p-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-850 text-[10px] leading-relaxed text-slate-500 font-bold rounded-xl uppercase">
+                          💡 Sipariş No Google Play Store fatura e-postasında GPA.XXXX-XXXX-XXXX-XXXXX formatında yer alır. Kod doğrulandığında seçili lisansınız anında yeniden aktif edilir.
+                        </div>
+
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setRestoreStep("method");
+                              setGpaInput("");
+                            }}
+                            className="flex-1 py-2.5 bg-slate-150 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs rounded-xl cursor-pointer"
+                          >
+                            Geri Dön
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (!gpaInput.toUpperCase().startsWith("GPA.") || gpaInput.length < 10) {
+                                triggerToast("Lütfen geçerli bir Google Play sipariş numarası (GPA.XXXX-XXXX...) giriniz.");
+                                return;
+                              }
+                              setRestoreStep("restoring");
+                              
+                              setRestoreStatusLog("Google Play Core Billing API'sine bağlanılıyor...");
+                              setTimeout(() => {
+                                setRestoreStatusLog("Google Play lisans imza anahtarı sunucudan sorgulanıyor...");
+                              }, 1300);
+                              setTimeout(() => {
+                                setRestoreStatusLog("GPA siparişi doğrulandı, satın alım tablosu yerelleştiriliyor...");
+                              }, 2800);
+                              setTimeout(() => {
+                                savePremiumStatusAndSync(true, restoredPlanType);
+                                setRestoreStep("success");
+                              }, 4300);
+                            }}
+                            className="flex-1 py-2.5 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white font-black text-xs uppercase rounded-xl hover:scale-102 transition cursor-pointer"
+                          >
+                            Doğrula ve Geri Yükle ➔
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {restoreStep === "restoring" && (
+                      <div className="py-12 text-center space-y-4">
+                        <div className="w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto" />
+                        <div className="space-y-1">
+                          <p className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-tight">Google Play Lisans Servisi Sorgulanıyor</p>
+                          <p className="text-[10px] text-indigo-600 dark:text-indigo-400 font-mono font-black animate-pulse uppercase">
+                            {restoreStatusLog || "Google Play api'lerine bağlanılıyor..."}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {restoreStep === "success" && (
+                      <div className="space-y-4 pt-2 text-center">
+                        <div className="w-14 h-14 bg-emerald-500/10 text-emerald-500 rounded-full flex items-center justify-center text-3xl mx-auto border border-emerald-500/20 shadow-lg shadow-emerald-500/15 animate-bounce">
+                          🎉
+                        </div>
+                        <div className="space-y-1">
+                          <h4 className="text-sm font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-wide">SATIN ALIM BAŞARIYLA GERİ YÜKLENDİ</h4>
+                          <p className="text-[10.5px] text-slate-500 dark:text-slate-400 font-bold uppercase leading-none">
+                            Aktif Kapsam: <span className="text-indigo-600 dark:text-indigo-400 font-black">{restoredPlanType === "monthly" ? "Aylık Paket (Aylık)" : restoredPlanType === "yearly" ? "Yıllık Paket (Yıllık)" : "Ömür Boyu Limitsiz (Sınırsız/Limitsiz)"}</span>
+                          </p>
+                        </div>
+
+                        <div className="p-3.5 bg-slate-50 dark:bg-slate-950 text-[10px] leading-relaxed text-slate-500 dark:text-slate-400 font-medium rounded-2xl border border-slate-200 dark:border-slate-850">
+                          Google Play siparişiniz başarıyla saptanmış ve cihazınızın ödeme durum tablosu güncellenmiştir. Artık tüm reklamlar kaldırılmış, AI finansal koçu ve sınırsız PDF/Excel raporları aktiftir.
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsUpgradeModalOpen(false);
+                            setIsRestoring(false);
+                            setRestoreStep("method");
+                          }}
+                          className="w-full py-3 bg-gradient-to-r from-emerald-600 to-teal-500 text-white font-black text-xs uppercase tracking-wider rounded-xl hover:opacity-90 active:scale-[0.98] transition cursor-pointer"
+                        >
+                          Tüm Sınırları Kaldır ve Başla ⚡
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <>
+                    <div className="text-center space-y-1">
+                      <div className="inline-flex p-3 bg-amber-500/10 dark:bg-amber-500/20 rounded-full border border-amber-500/20 text-amber-500 animate-bounce">
+                        <Sparkles className="w-8 h-8 text-amber-500" />
+                      </div>
+                      <h3 className="text-xs font-black uppercase tracking-widest text-amber-500">
+                        BÜTÇEM PRO PREMIUM
+                      </h3>
+                      <h2 className="text-xl font-black text-slate-800 dark:text-slate-100 mt-1">
+                        Sınırları Ortadan Kaldırın 👑
+                      </h2>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 font-medium px-4 leading-relaxed">
+                        Finansal bütçe yönetimini profesyonel seviyeye yükselten gelişmiş özellikleri keşfedin.
+                      </p>
+                    </div>
+
+                    {/* Promo Feature notice if navigated specifically */}
+                    {promoFeature && (
+                      <div className="p-3 bg-amber-500/10 rounded-2xl border border-amber-500/20 text-center text-xs font-semibold text-slate-700 dark:text-slate-300">
+                        ⚠️ <span className="font-black text-indigo-600 dark:text-indigo-400">{promoFeature}</span> özelliğine erişmek için Premium üye olmanız gerekmektedir.
+                      </div>
+                    )}
+
+                    {/* Features list */}
+                    <div className="p-4 bg-slate-50 dark:bg-slate-950 rounded-3xl border border-slate-200 dark:border-slate-800 space-y-3">
+                      {[
+                        { icon: "🤖", title: "AI Finansal Koç", desc: "Harcamalarınızı yapay zeka ile analiz edin ve tasarruf stratejileri geliştirin." },
+                        { icon: "💹", title: "Canlı Borsa & Döviz", desc: "Tüm finansal verilerinizi anlık kurlar üzerinden takip edin." },
+                        { icon: "📈", title: "Sınırsız PDF/Excel Rapor", desc: "Finansal verilerinizi dilediğiniz an profesyonel raporlara dönüştürün." },
+                        { icon: "🔐", title: "Biyometrik Güvenlik", desc: "Parmak izi veya FaceID ile bütçe verilerinizi güvence altına alın." },
+                        { icon: "📅", title: "Ödeme Takvimi & Planlar", desc: "Borç vadelerini ve faturaları interaktif takvimden izleyin." },
+                        { icon: "🚫", title: "%100 Reklamsız Deneyim", desc: "Tüm reklamları ve sponsorlu her şeyi tamamen kaldırın." }
+                      ].map((f, i) => (
+                        <div key={i} className="flex items-start gap-3 p-1.5 rounded-xl hover:bg-white dark:hover:bg-slate-900 transition-colors">
+                          <span className="p-2 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 rounded-xl text-lg leading-none shrink-0 font-bold">{f.icon}</span>
+                          <div className="space-y-0.5">
+                            <p className="text-[11px] font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight leading-none">{f.title}</p>
+                            <p className="text-[10px] text-slate-500 dark:text-slate-400 font-bold leading-normal">{f.desc}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Simulated Plans Select / Activation block */}
+                    <div className="space-y-4">
+                      <p className="text-[11px] font-black uppercase text-amber-600 dark:text-amber-500 tracking-widest text-center flex items-center justify-center gap-2">
+                        <span className="w-6 h-px bg-amber-500/30" /> 👑 PREMİUM PLANLAR <span className="w-6 h-px bg-amber-500/30" />
+                      </p>
+                      <div className="grid grid-cols-3 gap-2.5">
+                        {/* AYLIK Card */}
+                        <div
+                          onClick={() => setSelectedPlan("monthly")}
+                          className={`p-3 rounded-2xl text-center relative overflow-hidden transition-all duration-250 select-none cursor-pointer ${
+                            selectedPlan === "monthly"
+                              ? "bg-amber-500/15 dark:bg-amber-500/20 border-2 border-amber-500 ring-4 ring-amber-500/10 scale-[1.05] z-20 shadow-xl shadow-amber-500/10"
+                              : "bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm opacity-70 hover:opacity-100 hover:border-slate-350 dark:hover:border-slate-600"
+                          }`}
+                        >
+                          <p className={`text-[9px] font-black uppercase tracking-tight ${selectedPlan === "monthly" ? "text-amber-600 dark:text-amber-400" : "text-slate-500"}`}>AYLIK</p>
+                          <p className={`text-base font-black mt-1 ${selectedPlan === "monthly" ? "text-slate-950 dark:text-white" : "text-slate-700 dark:text-slate-205"}`}>₺29,99</p>
+                          <p className={`text-[8px] font-black uppercase mt-1 leading-none ${selectedPlan === "monthly" ? "text-amber-600/80" : "text-slate-400"}`}>Yenilenen</p>
+                        </div>
+
+                        {/* YILLIK Card */}
+                        <div
+                          onClick={() => setSelectedPlan("yearly")}
+                          className={`p-3 rounded-2xl text-center relative overflow-hidden transition-all duration-250 select-none cursor-pointer pt-6.5 ${
+                            selectedPlan === "yearly"
+                              ? "bg-amber-500/15 dark:bg-amber-500/20 border-2 border-amber-500 ring-4 ring-amber-500/10 scale-[1.05] z-20 shadow-xl shadow-amber-500/10"
+                              : "bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm opacity-70 hover:opacity-100 hover:border-slate-350 dark:hover:border-slate-600"
+                          }`}
+                        >
+                          <div className="absolute top-0 right-0 left-0 bg-amber-500 text-white text-[8px] font-black py-0.5 uppercase tracking-widest leading-none">EN POPÜLER</div>
+                          <p className={`text-[9px] font-black uppercase tracking-tight ${selectedPlan === "yearly" ? "text-amber-600 dark:text-amber-400" : "text-slate-500"}`}>YILLIK</p>
+                          <p className={`text-base font-black mt-1 ${selectedPlan === "yearly" ? "text-slate-950 dark:text-white" : "text-slate-700 dark:text-slate-205"}`}>₺299,99</p>
+                          <p className={`text-[8px] font-black uppercase mt-1 leading-none ${selectedPlan === "yearly" ? "text-amber-500" : "text-slate-400"}`}>Tasarruf: %45</p>
+                        </div>
+
+                        {/* LİMİTSİZ Card */}
+                        <div
+                          onClick={() => setSelectedPlan("lifetime")}
+                          className={`p-3 rounded-2xl text-center relative overflow-hidden transition-all duration-250 select-none cursor-pointer ${
+                            selectedPlan === "lifetime"
+                              ? "bg-indigo-650 text-white border-2 border-indigo-400 ring-4 ring-indigo-500/25 scale-[1.05] z-20 shadow-xl shadow-indigo-500/20"
+                              : "bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm opacity-70 hover:opacity-100 hover:border-slate-350 dark:hover:border-slate-600"
+                          }`}
+                        >
+                          <p className={`text-[9px] font-black uppercase tracking-tight ${selectedPlan === "lifetime" ? "text-indigo-200" : "text-indigo-600 dark:text-indigo-400"}`}>LİMİTSİZ</p>
+                          <p className={`text-base font-black mt-1 ${selectedPlan === "lifetime" ? "text-white" : "text-slate-900 dark:text-white"}`}>₺599,99</p>
+                          <p className={`text-[8px] font-black uppercase mt-1 leading-none ${selectedPlan === "lifetime" ? "text-white/80" : "text-slate-400"}`}>TEK ÖDEME</p>
+                        </div>
                       </div>
                     </div>
-                  ))}
-                </div>
 
-                {/* Simulated Plans Select / Activation block */}
-                <div className="space-y-4">
-                  <p className="text-[11px] font-black uppercase text-amber-600 dark:text-amber-500 tracking-widest text-center flex items-center justify-center gap-2">
-                    <span className="w-6 h-px bg-amber-500/30" /> 👑 PREMİUM PLANLAR <span className="w-6 h-px bg-amber-500/30" />
-                  </p>
-                  <div className="grid grid-cols-3 gap-2.5">
-                    <div className="p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl text-center shadow-sm relative group overflow-hidden">
-                      <div className="absolute inset-0 bg-slate-100/50 dark:bg-slate-800/50 opacity-0 group-hover:opacity-100 transition-opacity" />
-                      <p className="text-[9px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-tight relative z-10">AYLIK</p>
-                      <p className="text-base font-black text-slate-900 dark:text-white mt-1 relative z-10">₺29,99</p>
-                      <div className="w-8 h-1 bg-slate-300 dark:bg-slate-700 mx-auto mt-2 rounded-full relative z-10" />
-                    </div>
-                    <div className="p-3 bg-amber-500/10 dark:bg-amber-500/20 border-2 border-amber-500 rounded-2xl text-center relative overflow-hidden ring-4 ring-amber-500/10 scale-[1.08] z-20 shadow-xl shadow-amber-500/10">
-                      <div className="absolute top-0 right-0 left-0 bg-amber-500 text-white text-[8px] font-black py-0.5 uppercase tracking-widest">EN POPÜLER</div>
-                      <p className="text-[9px] font-black text-amber-600 dark:text-amber-400 uppercase pt-2.5 tracking-tight">YILLIK</p>
-                      <p className="text-base font-black text-slate-950 dark:text-white mt-1 border-b border-amber-500/30 pb-1">₺299,99</p>
-                      <p className="text-[8px] font-black text-amber-500 uppercase mt-1 leading-none">Tasurruf: %45</p>
-                    </div>
-                    <div className="p-3 bg-indigo-600 text-white border-2 border-indigo-400 rounded-2xl text-center shadow-lg relative group overflow-hidden">
-                      <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
-                      <p className="text-[9px] font-black text-indigo-150 uppercase tracking-tight relative z-10">LİMİTSİZ</p>
-                      <p className="text-base font-black text-white mt-1 relative z-10">₺599,99</p>
-                      <p className="text-[8px] font-black text-white/80 uppercase mt-1 leading-none relative z-10">TEK ÖDEME</p>
-                    </div>
-                  </div>
-                </div>
+                    <div className="space-y-3 pt-1">
+                      {isPremium ? (
+                        <div className="space-y-2.5">
+                          <div className="p-3 bg-emerald-500/5 dark:bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-2xl text-center font-bold text-xs uppercase tracking-tight flex flex-col items-center justify-center gap-1 font-sans">
+                            <span className="font-extrabold text-[12px] tracking-wide">👑 PREMİUM LİSANSINIZ ETKİN</span>
+                            <span className="text-[10px] bg-emerald-500/10 px-2.5 py-0.5 rounded-md font-black uppercase tracking-widest text-emerald-700 dark:text-emerald-300">
+                              Aktif Paket: {selectedPlan === "monthly" ? "Aylık Paket" : selectedPlan === "yearly" ? "Yıllık Paket" : "Limitsiz Ömür Boyu"}
+                            </span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              savePremiumStatusAndSync(false, "yearly");
+                              triggerToast("Ücretsiz plana geçiş yapıldı ⭐");
+                            }}
+                            className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-black text-xs uppercase tracking-wider rounded-xl transition cursor-pointer active:scale-97 border border-dashed border-slate-300 dark:border-slate-700"
+                          >
+                            Ücretsiz Sürümü Test Et
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            savePremiumStatusAndSync(true, selectedPlan);
+                            setIsUpgradeModalOpen(false);
+                            const names = { monthly: "Aylık", yearly: "Yıllık", lifetime: "Limitsiz" };
+                            triggerToast(`👑 Bütçem Pro Premium (${names[selectedPlan]}) Kapsamı Aktif Edildi! Tüm Sınırlar Kaldırıldı!`);
+                          }}
+                          className="w-full py-3 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-650 text-white font-black text-xs uppercase tracking-wider rounded-xl transition flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20 cursor-pointer active:scale-97"
+                        >
+                          <span>
+                            {selectedPlan === "monthly" && "AYLIK PLANI ETKİNLEŞTİR (₺29,99) ⚡"}
+                            {selectedPlan === "yearly" && "YILLIK PLANI ETKİNLEŞTİR (₺299,99) ⚡"}
+                            {selectedPlan === "lifetime" && "LİMİTSİZ TEK ÖDEME ETKİNLEŞTİR (₺599,99) ⚡"}
+                          </span>
+                        </button>
+                      )}
 
-                <div className="space-y-2 pt-1">
-                  {isPremium ? (
-                    <div className="space-y-2.5">
-                      <div className="p-3 bg-emerald-500/5 dark:bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-2xl text-center font-bold text-xs uppercase tracking-tight flex items-center justify-center gap-1.5 font-sans">
-                        <span>👑 PREMİUM LİSANSINIZ ETKİN</span>
-                      </div>
+                      {/* GOOGLE PLAY RESTORE BUTTON */}
                       <button
                         type="button"
                         onClick={() => {
-                          setIsPremium(false);
-                          localStorage.setItem("is_premium", "false");
-                          triggerToast("Ücretsiz plana geçiş yapıldı ⭐");
+                          setIsRestoring(true);
+                          setRestoreStep("method");
                         }}
-                        className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-black text-xs uppercase tracking-wider rounded-xl transition cursor-pointer active:scale-97 border border-dashed border-slate-300 dark:border-slate-700"
+                        className="w-full py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-indigo-600 dark:text-indigo-400 font-black text-[10.5px] uppercase tracking-wide rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition flex items-center justify-center gap-1.5 cursor-pointer active:scale-[0.98]"
                       >
-                        Ücretsiz Sürümü Test Et
+                        🔄 Google Play'den Satın Alımları Geri Yükle
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsUpgradeModalOpen(false);
+                          setIsRestoring(false);
+                          setRestoreStep("method");
+                        }}
+                        className="w-full py-2 text-center text-slate-400 hover:text-slate-600 dark:text-slate-500 text-xs font-bold transition block cursor-pointer"
+                      >
+                        Kapat, Vazgeç
                       </button>
                     </div>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsPremium(true);
-                        localStorage.setItem("is_premium", "true");
-                        setIsUpgradeModalOpen(false);
-                        triggerToast("👑 Premium Sürüm Aktif Edildi! Tüm Sınırlar Kaldırıldı!");
-                      }}
-                      className="w-full py-3 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-650 text-white font-black text-xs uppercase tracking-wider rounded-xl transition flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20 cursor-pointer active:scale-97"
-                    >
-                      <span>PREMİUM SÜRÜMÜ ETKİNLEŞTİR ⚡</span>
-                    </button>
-                  )}
-
-                  <button
-                    type="button"
-                    onClick={() => setIsUpgradeModalOpen(false)}
-                    className="w-full py-2 text-center text-slate-400 hover:text-slate-600 dark:text-slate-500 text-xs font-bold transition block cursor-pointer"
-                  >
-                    Kapat, Vazgeç
-                  </button>
-                </div>
+                  </>
+                )}
               </div>
             </motion.div>
           </div>

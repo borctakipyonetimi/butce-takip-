@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { PlusCircle, Printer, FileText, CheckCircle2, Circle, AlertCircle, Edit, Trash2, Calendar, ClipboardList, ArrowUpDown, Sparkles, Camera } from "lucide-react";
+import { PlusCircle, Printer, FileText, CheckCircle2, Circle, AlertCircle, Edit, Trash2, Calendar, ClipboardList, ArrowUpDown, Sparkles, Camera, X } from "lucide-react";
 import { Debt, InstallmentDebt, Expense } from "../types";
 import { useCurrency } from "../utils/CurrencyContext";
 import { DoughnutChart, BarChart } from "./BudgetCharts";
@@ -83,6 +83,9 @@ export const DebtList: React.FC<DebtListProps> = ({
   const [createAlarm, setCreateAlarm] = useState(false);
   const [isInstallment, setIsInstallment] = useState(false);
   const [installmentCount, setInstallmentCount] = useState("12");
+  
+  // Print & Report preview modal state
+  const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
 
   // AI OCR scanner state and callback
   const [isScannerOpen, setIsScannerOpen] = useState(false);
@@ -831,87 +834,105 @@ export const DebtList: React.FC<DebtListProps> = ({
     }
 
     const html = `
-      <html>
-        <head>
-          <title>Bütçem Pro Raporu</title>
-          <style>
-            body { font-family: sans-serif; padding: 25px; color: #1e293b; }
-            h2 { color: #0f172a; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; }
-            table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-            th, td { border: 1px solid #cbd5e1; padding: 10px; text-align: left; font-size: 13px; }
-            th { background: #f1f5f9; font-weight: bold; }
-            .total { font-weight: bold; background: #f8fafc; }
-            .footer { margin-top: 30px; font-size: 11px; text-align: center; color: #64748b; }
-          </style>
-        </head>
-        <body>
-          <h2>📄 Borç Durum Raporu (${activeTab === "unpaid" ? "Ödenmemiş" : activeTab === "paid" ? "Ödenmiş" : "Tümü"})</h2>
-          <p>Oluşturulma Tarihi: ${new Date().toLocaleDateString("tr-TR")} ${new Date().toLocaleTimeString("tr-TR")}</p>
-          <table>
-            <thead>
+      <div style="font-family: sans-serif; padding: 25px; color: #1e293b; background: white;">
+        <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #e2e8f0; padding-bottom: 12px; margin-bottom: 20px;">
+          <div>
+            <h2 style="color: #4f46e5; margin: 0; font-size: 24px; font-weight: 800;">BÜTÇEM PRO</h2>
+            <p style="margin: 3px 0 0 0; font-size: 11px; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Akıllı Bireysel Bütçe ve Borç Yönetim Sistemi</p>
+          </div>
+          <div style="text-align: right;">
+            <h3 style="margin: 0; font-size: 14px; color: #0f172a;">Borç Durum Raporu</h3>
+            <p style="margin: 3px 0 0 0; font-size: 11px; color: #64748b;">Tarih: ${new Date().toLocaleDateString("tr-TR")} ${new Date().toLocaleTimeString("tr-TR")}</p>
+          </div>
+        </div>
+        
+        <p style="font-size: 13px; color: #475569; margin-bottom: 15px;">
+          <strong>Rapor Tipi:</strong> ${activeTab === "unpaid" ? "Ödenmemiş Borçlar" : activeTab === "paid" ? "Ödenmiş Borçlar" : "Tüm Borçlar"}
+        </p>
+
+        <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
+          <thead>
+            <tr>
+              <th style="border: 1px solid #cbd5e1; padding: 8px 12px; text-align: left; font-size: 12px; background: #f1f5f9; font-weight: bold; color: #334155;">Borç Adı</th>
+              <th style="border: 1px solid #cbd5e1; padding: 8px 12px; text-align: left; font-size: 12px; background: #f1f5f9; font-weight: bold; color: #334155;">Kategori</th>
+              <th style="border: 1px solid #cbd5e1; padding: 8px 12px; text-align: left; font-size: 12px; background: #f1f5f9; font-weight: bold; color: #334155;">Son Ödeme</th>
+              <th style="border: 1px solid #cbd5e1; padding: 8px 12px; text-align: right; font-size: 12px; background: #f1f5f9; font-weight: bold; color: #334155;">Toplam Tutar</th>
+              <th style="border: 1px solid #cbd5e1; padding: 8px 12px; text-align: right; font-size: 12px; background: #f1f5f9; font-weight: bold; color: #334155;">Ödenen Tutar</th>
+              <th style="border: 1px solid #cbd5e1; padding: 8px 12px; text-align: right; font-size: 12px; background: #f1f5f9; font-weight: bold; color: #334155;">Kalan Tutar</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${filtered
+              .map(
+                (d) => `
               <tr>
-                <th>Borç Adı</th>
-                <th>Kategori</th>
-                <th>Son Ödeme</th>
-                <th>Toplam Tutar</th>
-                <th>Ödenen Tutar</th>
-                <th>Kalan Tutar</th>
+                <td style="border: 1px solid #cbd5e1; padding: 8px 12px; font-size: 12px; color: #1e293b;">${d.name}</td>
+                <td style="border: 1px solid #cbd5e1; padding: 8px 12px; font-size: 12px; color: #475569;">${d.category}</td>
+                <td style="border: 1px solid #cbd5e1; padding: 8px 12px; font-size: 12px; color: #475569;">${d.dueDate || "Belirtilmemiş"}</td>
+                <td style="border: 1px solid #cbd5e1; padding: 8px 12px; font-size: 12px; text-align: right; color: #1e293b; font-weight: 500;">${format(d.amount)}</td>
+                <td style="border: 1px solid #cbd5e1; padding: 8px 12px; font-size: 12px; text-align: right; color: #16a34a; font-weight: 500;">${format(d.paid)}</td>
+                <td style="border: 1px solid #cbd5e1; padding: 8px 12px; font-size: 12px; text-align: right; color: ${d.amount - d.paid > 0 ? '#dc2626' : '#1e293b'}; font-weight: bold;">${format(d.amount - d.paid)}</td>
               </tr>
-            </thead>
-            <tbody>
-              ${filtered
-                .map(
-                  (d) => `
-                <tr>
-                  <td>${d.name}</td>
-                  <td>${d.category}</td>
-                  <td>${d.dueDate || "Belirtilmemiş"}</td>
-                  <td>${format(d.amount)}</td>
-                  <td>${format(d.paid)}</td>
-                  <td>${format(d.amount - d.paid)}</td>
-                </tr>
-              `
-                )
-                .join("")}
-              <tr class="total">
-                <td colspan="3">Toplam Genel</td>
-                <td>${format(filtered.reduce((s, d) => s + d.amount, 0))}</td>
-                <td>${format(filtered.reduce((s, d) => s + d.paid, 0))}</td>
-                <td>${format(filtered.reduce((s, d) => s + (d.amount - d.paid), 0))}</td>
-              </tr>
-            </tbody>
-          </table>
-          <p class="footer">Bütçem Pro Finans Yönetim Sistemi | Serkan SAĞLAM | v5.0 Ultimate</p>
-        </body>
-      </html>
+            `
+              )
+              .join("")}
+            <tr style="font-weight: bold; background: #f8fafc;">
+              <td colspan="3" style="border: 1px solid #cbd5e1; padding: 10px 12px; font-size: 12px; color: #0f172a;">GENEL TOPLAM</td>
+              <td style="border: 1px solid #cbd5e1; padding: 10px 12px; font-size: 12px; text-align: right; color: #0f172a;">${format(filtered.reduce((s, d) => s + d.amount, 0))}</td>
+              <td style="border: 1px solid #cbd5e1; padding: 10px 12px; font-size: 12px; text-align: right; color: #16a34a;">${format(filtered.reduce((s, d) => s + d.paid, 0))}</td>
+              <td style="border: 1px solid #cbd5e1; padding: 10px 12px; font-size: 12px; text-align: right; color: #dc2626; font-weight: 900;">${format(filtered.reduce((s, d) => s + (d.amount - d.paid), 0))}</td>
+            </tr>
+          </tbody>
+        </table>
+        
+        <div style="margin-top: 35px; border-top: 1px solid #e2e8f0; padding-top: 15px; text-align: center; font-size: 11px; color: #94a3b8; font-weight: 600;">
+          Bütçem Pro Bireysel Finans ve Borç Yönetim Platformu | Güvenli & Şifreli Yerel Defter
+        </div>
+      </div>
     `;
 
-    // Invisible printing iframe to bypass popup blocker fully in any webview environment
-    const printFrame = document.createElement("iframe");
-    printFrame.style.position = "fixed";
-    printFrame.style.right = "0";
-    printFrame.style.bottom = "0";
-    printFrame.style.width = "0";
-    printFrame.style.height = "0";
-    printFrame.style.border = "0";
-    document.body.appendChild(printFrame);
+    // Direct DOM printing overlay to bypass iframe restrictions in any sandboxed webview environment completely
+    const printContainer = document.createElement("div");
+    printContainer.id = "print-container-temp";
+    printContainer.style.position = "absolute";
+    printContainer.style.left = "0";
+    printContainer.style.top = "0";
+    printContainer.style.width = "100%";
+    printContainer.style.backgroundColor = "white";
+    printContainer.style.color = "black";
+    printContainer.style.zIndex = "9999999";
+    printContainer.innerHTML = html;
+    document.body.appendChild(printContainer);
 
-    const doc = printFrame.contentWindow?.document || printFrame.contentDocument;
-    if (doc) {
-      doc.write(html);
-      doc.close();
-      setTimeout(() => {
-        try {
-          printFrame.contentWindow?.focus();
-          printFrame.contentWindow?.print();
-        } catch (e) {
-          console.error("Iframe print triggered but encountered system handler missing:", e);
+    const printStyle = document.createElement("style");
+    printStyle.id = "print-style-temp";
+    printStyle.innerHTML = `
+      @media print {
+        body {
+          background-color: white !important;
+          color: black !important;
         }
-        setTimeout(() => {
-          document.body.removeChild(printFrame);
-        }, 1500);
-      }, 500);
-    }
+        body > *:not(#print-container-temp) {
+          display: none !important;
+        }
+        #print-container-temp, #print-container-temp * {
+          visibility: visible !important;
+        }
+      }
+    `;
+    document.head.appendChild(printStyle);
+
+    setTimeout(() => {
+      try {
+        window.print();
+      } catch (err) {
+        console.error("Yazdırma işlemi sırasında hata oluştu:", err);
+      }
+      setTimeout(() => {
+        printContainer.remove();
+        printStyle.remove();
+      }, 1000);
+    }, 150);
   };
 
   return (
@@ -940,7 +961,7 @@ export const DebtList: React.FC<DebtListProps> = ({
       <div className="flex flex-col gap-3 justify-center sm:flex-row sm:items-center">
         <div className="flex items-center justify-center gap-2 flex-wrap">
           <button
-            onClick={() => handlePrint(false)}
+            onClick={() => setIsPrintModalOpen(true)}
             className="px-3 py-1.5 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-semibold flex items-center gap-1 hover:bg-slate-50 transition"
           >
             <Printer className="w-3.5 h-3.5" /> Yazdır
@@ -1527,6 +1548,124 @@ export const DebtList: React.FC<DebtListProps> = ({
             </button>
           </div>
         </motion.div>
+      )}
+
+      {isPrintModalOpen && (
+        <div id="print-preview-modal" className="fixed inset-0 bg-slate-900/60 dark:bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-50">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-2xl w-full max-w-3xl max-h-[85vh] flex flex-col overflow-hidden animate-in fade-in-50 zoom-in-95 duration-200">
+            {/* Header */}
+            <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-950 select-none">
+              <div className="flex items-center gap-2">
+                <Printer className="w-5 h-5 text-indigo-500 animate-pulse" />
+                <span className="font-extrabold text-sm text-slate-800 dark:text-slate-100 tracking-tight">RAPOR ÖNİZLEME VE YAZDIRMA MERKEZİ</span>
+              </div>
+              <button 
+                onClick={() => setIsPrintModalOpen(false)} 
+                className="p-1 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-lg text-slate-500 dark:text-slate-400 transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Warning / Explanation Box */}
+            <div className="p-4 bg-amber-500/10 border-b border-amber-500/15 text-amber-850 dark:text-amber-400 text-xs flex items-start gap-2.5">
+              <AlertCircle className="w-5 h-5 shrink-0 mt-0.5 text-amber-600" />
+              <div className="space-y-1">
+                <p className="font-bold">Önemli Çerçeve (Iframe) Kısıtlaması:</p>
+                <p className="font-medium text-[11px] opacity-90 leading-normal">
+                  Bütçem Pro güvenli bir sanal ortamda çalıştığından tarayıcınızın doğrudan yazıcı iletişim penceresi engellenmiş olabilir. 
+                  Bu ortamda en kararlı yöntem <strong>"PDF Raporu İndir"</strong> seçeneğidir. Raporunuzu kusursuz Türkçe karakterlerle PDF olarak indirebilir ve dilediğiniz zaman yazdırabilirsiniz.
+                </p>
+              </div>
+            </div>
+
+            {/* Document Preview (Simulated A4 Paper) */}
+            <div className="flex-1 overflow-y-auto p-4 bg-slate-100 dark:bg-slate-950/40 select-text">
+              <div className="bg-white text-slate-950 border border-slate-200 p-8 max-w-[21cm] mx-auto shadow-md rounded-xl text-left font-sans text-[11px] min-h-[14cm]">
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "2px solid #e2e8f0", paddingBottom: "12px", marginBottom: "20px" }}>
+                  <div>
+                    <h2 style={{ color: "#4f46e5", margin: 0, fontSize: "20px", fontWeight: 800 }}>BÜTÇEM PRO</h2>
+                    <p style={{ margin: "3px 0 0 0", fontSize: "10px", color: "#64748b", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>Akıllı Bireysel Bütçe ve Borç Yönetim Sistemi</p>
+                  </div>
+                  <div style={{ textAlign: "right" }}>
+                    <h3 style={{ margin: 0, fontSize: "12px", color: "#0f172a", fontWeight: "bold" }}>Borç Durum Raporu</h3>
+                    <p style={{ margin: "3px 0 0 0", fontSize: "10px", color: "#64748b" }}>Tarih: {new Date().toLocaleDateString("tr-TR")} {new Date().toLocaleTimeString("tr-TR")}</p>
+                  </div>
+                </div>
+
+                <p style={{ fontSize: "11px", color: "#475569", marginBottom: "15px" }}>
+                  <strong>Rapor Tipi:</strong> {activeTab === "unpaid" ? "Ödenmemiş Borçlar" : activeTab === "paid" ? "Ödenmiş Borçlar" : "Tüm Borçlar"}
+                </p>
+
+                <table style={{ width: "100%", borderCollapse: "collapse", marginTop: "15px" }}>
+                  <thead>
+                    <tr>
+                      <th style={{ border: "1px solid #cbd5e1", padding: "8px", textAlign: "left", fontSize: "10px", background: "#f1f5f9", fontWeight: "bold", color: "#334155" }}>Borç Adı</th>
+                      <th style={{ border: "1px solid #cbd5e1", padding: "8px", textAlign: "left", fontSize: "10px", background: "#f1f5f9", fontWeight: "bold", color: "#334155" }}>Kategori</th>
+                      <th style={{ border: "1px solid #cbd5e1", padding: "8px", textAlign: "left", fontSize: "10px", background: "#f1f5f9", fontWeight: "bold", color: "#334155" }}>Son Ödeme</th>
+                      <th style={{ border: "1px solid #cbd5e1", padding: "8px", textAlign: "right", fontSize: "10px", background: "#f1f5f9", fontWeight: "bold", color: "#334155" }}>Toplam Tutar</th>
+                      <th style={{ border: "1px solid #cbd5e1", padding: "8px", textAlign: "right", fontSize: "10px", background: "#f1f5f9", fontWeight: "bold", color: "#334155" }}>Ödenen Tutar</th>
+                      <th style={{ border: "1px solid #cbd5e1", padding: "8px", textAlign: "right", fontSize: "10px", background: "#f1f5f9", fontWeight: "bold", color: "#334155" }}>Kalan Tutar</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredDebts.map((d) => (
+                      <tr key={d.id}>
+                        <td style={{ border: "1px solid #cbd5e1", padding: "8px", color: "#1e293b" }}>{d.name}</td>
+                        <td style={{ border: "1px solid #cbd5e1", padding: "8px", color: "#475569" }}>{d.category}</td>
+                        <td style={{ border: "1px solid #cbd5e1", padding: "8px", color: "#475569" }}>{d.dueDate || "Belirtilmemiş"}</td>
+                        <td style={{ border: "1px solid #cbd5e1", padding: "8px", textAlign: "right", color: "#1e293b", fontWeight: "500" }}>{format(d.amount)}</td>
+                        <td style={{ border: "1px solid #cbd5e1", padding: "8px", textAlign: "right", color: "#16a34a", fontWeight: "500" }}>{format(d.paid)}</td>
+                        <td style={{ border: "1px solid #cbd5e1", padding: "8px", textAlign: "right", color: d.amount - d.paid > 0 ? '#dc2626' : '#1e293b', fontWeight: "bold" }}>{format(d.amount - d.paid)}</td>
+                      </tr>
+                    ))}
+                    <tr style={{ fontWeight: "bold", background: "#f8fafc" }}>
+                      <td colSpan={3} style={{ border: "1px solid #cbd5e1", padding: "10px", color: "#0f172a" }}>GENEL TOPLAM</td>
+                      <td style={{ border: "1px solid #cbd5e1", padding: "10px", textAlign: "right", color: "#0f172a" }}>{format(filteredDebts.reduce((s, d) => s + d.amount, 0))}</td>
+                      <td style={{ border: "1px solid #cbd5e1", padding: "10px", textAlign: "right", color: "#16a34a" }}>{format(filteredDebts.reduce((s, d) => s + d.paid, 0))}</td>
+                      <td style={{ border: "1px solid #cbd5e1", padding: "10px", textAlign: "right", color: "#dc2626", fontWeight: "900" }}>{format(filteredDebts.reduce((s, d) => s + (d.amount - d.paid), 0))}</td>
+                    </tr>
+                  </tbody>
+                </table>
+
+                <div style={{ marginTop: "40px", borderTop: "1px solid #e2e8f0", paddingTop: "15px", textAlign: "center", fontSize: "10px", color: "#94a3b8", fontWeight: "600" }}>
+                  Bütçem Pro Bireysel Finans ve Borç Yönetim Platformu | Güvenli & Şifreli Yerel Defter
+                </div>
+              </div>
+            </div>
+
+            {/* Actions Footer */}
+            <div className="p-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 flex flex-col sm:flex-row gap-2 justify-end select-none">
+              <button
+                onClick={() => {
+                  handlePrint(true); // Call existing highly-compatible jsPDF downloader
+                  setIsPrintModalOpen(false);
+                }}
+                className="px-4 py-2.5 bg-indigo-650 hover:bg-indigo-750 active:scale-95 text-white rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition cursor-pointer shadow-sm"
+              >
+                <FileText className="w-4 h-4" /> PDF Raporu Olarak İndir
+              </button>
+              <button
+                onClick={() => {
+                  try {
+                    window.print();
+                  } catch (e) {
+                    alert("Doğrudan yazdırma bu tarayıcıda engellenmiştir. Lütfen PDF İndir butonunu kullanın.");
+                  }
+                }}
+                className="px-4 py-2.5 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl font-semibold text-xs flex items-center justify-center gap-2 transition cursor-pointer"
+              >
+                <Printer className="w-4 h-4" /> Tarayıcı Yazıcısını Dene
+              </button>
+              <button
+                onClick={() => setIsPrintModalOpen(false)}
+                className="px-4 py-2.5 bg-slate-100 dark:bg-slate-900 hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-xl font-bold text-xs transition cursor-pointer"
+              >
+                Kapat
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {isScannerOpen && (
