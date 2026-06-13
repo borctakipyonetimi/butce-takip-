@@ -49,6 +49,7 @@ export const IncomesList: React.FC<IncomesListProps> = ({
   const [amount, setAmount] = useState("");
   const [date, setDate] = useState("");
   const [isRecurring, setIsRecurring] = useState<boolean>(true);
+  const [incomeAlarm, setIncomeAlarm] = useState(false);
 
   const handleOpenAdd = () => {
     setModalTitle("Gelir Ekle");
@@ -319,6 +320,30 @@ export const IncomesList: React.FC<IncomesListProps> = ({
                 />
                 <label htmlFor="isRecurring" className="text-xs font-bold text-slate-600 dark:text-slate-300 cursor-pointer select-none">
                   Sabit Gelir (Her Ay Otomatik Devretsin)
+                </label>
+              </div>
+              <div className="flex items-center gap-2 pt-1">
+                <input
+                  type="checkbox"
+                  id="incomeAlarmOpt"
+                  checked={isPremium && incomeAlarm}
+                  onChange={(e) => {
+                    if (!isPremium) {
+                      onUpgradeClick?.();
+                    } else {
+                      setIncomeAlarm(e.target.checked);
+                    }
+                  }}
+                  onClick={(e) => {
+                    if (!isPremium) {
+                      e.preventDefault();
+                      onUpgradeClick?.();
+                    }
+                  }}
+                  className="w-4 h-4 text-indigo-600 border-slate-200 dark:border-slate-700 accent-indigo-505 rounded focus:ring-indigo-500 cursor-pointer"
+                />
+                <label htmlFor="incomeAlarmOpt" className="text-xs font-bold text-slate-600 dark:text-slate-300 cursor-pointer select-none flex items-center gap-1">
+                  Gelir Tahsilat Alarmı Kur {!isPremium && <span className="text-[7px] bg-amber-500 text-white px-1 py-0.5 rounded-sm font-black">PRO</span>}
                 </label>
               </div>
             </div>

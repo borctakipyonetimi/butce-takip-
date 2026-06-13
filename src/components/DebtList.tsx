@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { PlusCircle, Printer, FileText, CheckCircle2, Circle, AlertCircle, Edit, Trash2, Calendar, ClipboardList, ArrowUpDown, Sparkles, Camera, X } from "lucide-react";
+import { PlusCircle, Printer, FileText, CheckCircle2, Circle, AlertCircle, Edit, Trash2, Calendar, ClipboardList, ArrowUpDown, Sparkles, Camera, X, BellRing } from "lucide-react";
 import { Debt, InstallmentDebt, Expense } from "../types";
 import { useCurrency } from "../utils/CurrencyContext";
 import { DoughnutChart, BarChart } from "./BudgetCharts";
@@ -961,24 +961,40 @@ export const DebtList: React.FC<DebtListProps> = ({
       <div className="flex flex-col gap-3 justify-center sm:flex-row sm:items-center">
         <div className="flex items-center justify-center gap-2 flex-wrap">
           <button
-            onClick={() => setIsPrintModalOpen(true)}
-            className="px-3 py-1.5 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-semibold flex items-center gap-1 hover:bg-slate-50 transition"
+            onClick={() => {
+              if (!isPremium) {
+                onUpgradeClick?.();
+              } else {
+                setIsPrintModalOpen(true);
+              }
+            }}
+            className="px-3 py-1.5 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-semibold flex items-center gap-1 hover:bg-slate-50 transition cursor-pointer"
           >
-            <Printer className="w-3.5 h-3.5" /> Yazdır
-          </button>
-          <button
-            onClick={() => handlePrint(true)}
-            className="px-3 py-1.5 bg-amber-500 text-white rounded-xl text-xs font-bold flex items-center gap-1 hover:bg-amber-600 transition"
-          >
-            <FileText className="w-3.5 h-3.5" /> PDF Al
+            <Printer className="w-3.5 h-3.5" /> Yazdır {!isPremium && <span className="ml-1 text-[8px] bg-amber-500 text-white px-1.5 py-0.5 rounded-sm font-black">PRO</span>}
           </button>
           <button
             onClick={() => {
-              setIsScannerOpen(true);
+              if (!isPremium) {
+                onUpgradeClick?.();
+              } else {
+                handlePrint(true);
+              }
+            }}
+            className="px-3 py-1.5 bg-amber-500 text-white rounded-xl text-xs font-bold flex items-center gap-1 hover:bg-amber-600 transition cursor-pointer"
+          >
+            <FileText className="w-3.5 h-3.5" /> PDF Al {!isPremium && <span className="ml-1 text-[8px] bg-slate-900 text-slate-100 dark:bg-amber-500 dark:text-slate-950 px-1.5 py-0.5 rounded-sm font-black">PRO</span>}
+          </button>
+          <button
+            onClick={() => {
+              if (!isPremium) {
+                onUpgradeClick?.();
+              } else {
+                setIsScannerOpen(true);
+              }
             }}
             className="px-3 py-1.5 bg-indigo-600/10 border border-indigo-500/25 text-indigo-600 dark:text-indigo-400 rounded-xl text-xs font-bold flex items-center gap-1 hover:bg-indigo-600/20 transition cursor-pointer"
           >
-            <Camera className="w-3.5 h-3.5" /> Fatura Tara (AI)
+            <Camera className="w-3.5 h-3.5" /> Fatura Tara (AI) {!isPremium && <span className="ml-1 text-[8px] bg-amber-500 text-white px-1.5 py-0.5 rounded-sm font-black">PRO</span>}
           </button>
           <button
             onClick={handleOpenAdd}
@@ -1103,6 +1119,17 @@ export const DebtList: React.FC<DebtListProps> = ({
                       return due < today;
                     } catch { return false; }
                   })();
+                  const isNearDue = !isPaid && d.dueDate && (() => {
+                    try {
+                      const today = new Date();
+                      today.setHours(0, 0, 0, 0);
+                      const due = new Date(d.dueDate);
+                      due.setHours(0, 0, 0, 0);
+                      const diffTime = due.getTime() - today.getTime();
+                      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                      return diffDays <= 3; // 3 days or less, including overdue (negative)
+                    } catch { return false; }
+                  })();
                   return (
                     <motion.div
                       key={d.id}
@@ -1111,10 +1138,16 @@ export const DebtList: React.FC<DebtListProps> = ({
                       animate={{ opacity: 1, scale: 1, y: 0 }}
                       exit={{ opacity: 0, scale: 0.95 }}
                       transition={{ type: "spring", stiffness: 350, damping: 25 }}
-                      className={`p-4 bg-white dark:bg-slate-800 rounded-2xl border-l-[6px] border border-slate-200/50 dark:border-slate-700/50 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-colors duration-300 ${
+                      className={`p-4 bg-white dark:bg-slate-800 rounded-2xl border-l-[6px] border border-slate-200/50 dark:border-slate-700/50 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-colors duration-300 relative ${
                         isPaid ? "border-l-emerald-500" : "border-l-rose-500"
                       }`}
                     >
+                      {isNearDue && (
+                        <div className="absolute top-2 right-2 flex items-center justify-center p-1 rounded-full bg-rose-50 dark:bg-rose-950/30 border border-rose-100 dark:border-rose-900/40 shadow-xs animate-bounce" title="Vadesine Az Kaldı veya Geçti! ⏰">
+                          <span className="absolute inset-0 rounded-full bg-rose-500/20 animate-ping" />
+                          <BellRing className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400 animate-pulse" />
+                        </div>
+                      )}
                       <div className="space-y-1.5 flex-1">
                         <div className="flex items-center flex-wrap gap-2 text-slate-800 dark:text-slate-100">
                           <span className="font-bold text-sm">{d.name}</span>
@@ -1415,12 +1448,16 @@ export const DebtList: React.FC<DebtListProps> = ({
             {/* Quick scanning action */}
             <button
               onClick={() => {
-                setIsModalOpen(false); // Close first to prevent backdrop overlap
-                setTimeout(() => setIsScannerOpen(true), 150);
+                if (!isPremium) {
+                  onUpgradeClick?.();
+                } else {
+                  setIsModalOpen(false); // Close first to prevent backdrop overlap
+                  setTimeout(() => setIsScannerOpen(true), 150);
+                }
               }}
               className="w-full py-2 bg-indigo-50 dark:bg-indigo-950/30 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 text-xs font-bold rounded-xl border border-dashed border-indigo-500/40 flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-3xs"
             >
-              <Sparkles className="w-3.5 h-3.5 text-indigo-500 animate-pulse animate-duration-1000" /> Fatura Fotoğrafı ile Otomatik Doldur
+              <Sparkles className="w-3.5 h-3.5 text-indigo-500 animate-pulse animate-duration-1000" /> Fatura Fotoğrafı ile Otomatik Doldur {!isPremium && <span className="ml-1 text-[8px] bg-amber-500 text-white px-1.5 py-0.5 rounded-md font-black">PRO</span>}
             </button>
 
             <div className="space-y-3">
@@ -1483,11 +1520,21 @@ export const DebtList: React.FC<DebtListProps> = ({
               </div>
               {debtId === undefined && (
                 <div className="space-y-3.5 bg-slate-50/50 dark:bg-slate-900/30 p-3 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700/80">
-                  <div className="flex items-center gap-2 cursor-pointer select-none" onClick={() => setCreateAlarm(!createAlarm)}>
+                  <div className="flex items-center gap-2 cursor-pointer select-none" 
+                    onClick={() => {
+                      if (!isPremium) {
+                        onUpgradeClick?.();
+                      } else {
+                        setCreateAlarm(!createAlarm);
+                      }
+                    }}
+                  >
                     <div className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all ${createAlarm ? "bg-indigo-600 border-indigo-600 text-white" : "border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900"}`}>
                       {createAlarm && <CheckCircle2 className="w-3.5 h-3.5" />}
                     </div>
-                    <span className="text-[10px] font-bold text-slate-600 dark:text-slate-300">ÖDEME HATIRLATICI ALARMI KUR</span>
+                    <span className="text-[10px] font-bold text-slate-600 dark:text-slate-300 flex items-center gap-1">
+                      ÖDEME HATIRLATICI ALARMI KUR {!isPremium && <span className="text-[8px] bg-amber-500 text-white px-1 py-0.5 rounded-sm font-black">PRO</span>}
+                    </span>
                   </div>
                   
                   <div className="flex items-center gap-2 cursor-pointer select-none" onClick={() => setIsInstallment(!isInstallment)}>
@@ -1512,8 +1559,20 @@ export const DebtList: React.FC<DebtListProps> = ({
                   )}
                 </div>
               )}
+
+              <div className="pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    onUpgradeClick?.();
+                  }}
+                  className="w-full py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-[10px] font-black uppercase tracking-wider rounded-xl flex items-center justify-center gap-1.5 transition active:scale-95 shadow-md shadow-amber-500/10 cursor-pointer"
+                >
+                  👑 BU BORCU PRO SÜRÜME EKLE
+                </button>
+              </div>
             </div>
-            <div className="flex gap-2 pt-2">
+            <div className="flex gap-2 pt-1">
               <button
                 onClick={() => setIsModalOpen(false)}
                 className="flex-1 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-slate-200 rounded-xl font-bold text-xs"

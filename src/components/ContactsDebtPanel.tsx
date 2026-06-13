@@ -59,6 +59,8 @@ interface ContactsDebtPanelProps {
   triggerToast?: (msg: string) => void;
   onAddAlarm?: (titleString: string, dateString: string) => void;
   language?: "tr" | "en";
+  isPremium?: boolean;
+  onUpgradeClick?: () => void;
 }
 
 export const ContactsDebtPanel: React.FC<ContactsDebtPanelProps> = ({
@@ -66,7 +68,9 @@ export const ContactsDebtPanel: React.FC<ContactsDebtPanelProps> = ({
   format,
   triggerToast,
   onAddAlarm,
-  language = "tr"
+  language = "tr",
+  isPremium = false,
+  onUpgradeClick
 }) => {
   const translate = (txt: string) => t(txt, language as "tr" | "en");
   const spaceKey = currentUser ? `user_${currentUser}` : "user_anonymous";
@@ -483,6 +487,225 @@ export const ContactsDebtPanel: React.FC<ContactsDebtPanelProps> = ({
         </p>
       </div>
 
+      {/* NEW SECTION: Contacts Add & List side-by-side at the very top */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        {/* Left column / Card: Yeni Kişi Ekleme */}
+        <div className="space-y-4">
+          <div className="p-5 bg-gradient-to-r from-indigo-500/10 via-slate-500/5 to-emerald-500/10 dark:from-indigo-500/15 dark:to-emerald-500/15 rounded-3xl border border-slate-200 dark:border-slate-800 space-y-3 shadow-xs h-full flex flex-col justify-between">
+            <div className="flex flex-col gap-2">
+              <div className="space-y-0.5">
+                <h3 className="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                  <UserPlus className="w-4 h-4 text-indigo-500" />
+                  YENİ KİŞİ / CARİ HESAP EKLEME
+                </h3>
+                <p className="text-[10px] text-slate-400 font-bold">Rehber ve manuel form üzerinden hızlıca yeni kişi tanımlayın</p>
+              </div>
+              
+              <div className="flex items-center gap-2 pt-1">
+                <button
+                  onClick={handleSelectFromDeviceContacts}
+                  type="button"
+                  className="flex-1 px-2 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center justify-center gap-1 transition-all active:scale-95 cursor-pointer shadow-sm shadow-emerald-600/15"
+                  title="Cihaz rehberinizden ya da hazır listeden hızlıca kişi aktarın"
+                >
+                  <Phone className="w-3.5 h-3.5 text-emerald-200 animate-pulse" /> REHBERDEN SEÇ 📱
+                </button>
+                <button
+                  onClick={() => setIsAddingContact((prev) => !prev)}
+                  type="button"
+                  className="flex-1 px-2 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center justify-center gap-1 transition-all active:scale-95 cursor-pointer shadow-sm shadow-indigo-600/15"
+                >
+                  <UserPlus className="w-3.5 h-3.5 text-indigo-200" /> MANUEL 👤
+                </button>
+              </div>
+            </div>
+
+            {/* Inline Add Contact Form */}
+            <AnimatePresence>
+              {isAddingContact && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="overflow-hidden bg-white dark:bg-slate-900 rounded-2xl border border-slate-205 dark:border-slate-800 p-3.5 mt-2"
+                >
+                  <form
+                    onSubmit={handleAddContactSubmit}
+                    className="space-y-3"
+                  >
+                    <div className="space-y-1 text-left">
+                      <label className="text-[9px] font-black text-slate-500 uppercase tracking-wider block">Kişi Adı Soyadı</label>
+                      <input
+                        required
+                        type="text"
+                        value={newContactName}
+                        onChange={(e) => setNewContactName(e.target.value)}
+                        placeholder="Örn: Ahmet Yılmaz"
+                        className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 text-xs text-slate-800 dark:text-white placeholder-slate-400 border border-slate-200 dark:border-slate-800 rounded-xl focus:outline-none focus:ring-1 focus:ring-indigo-500 font-semibold"
+                      />
+                    </div>
+
+                    <div className="space-y-1 text-left">
+                      <label className="text-[9px] font-black text-slate-500 uppercase tracking-wider block">Giriş Telefon Numarası</label>
+                      <input
+                        type="tel"
+                        value={newContactPhone}
+                        onChange={(e) => setNewContactPhone(e.target.value)}
+                        placeholder="Örn: 0532 123 4567"
+                        className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 text-xs text-slate-800 dark:text-white placeholder-slate-400 border border-slate-200 dark:border-slate-800 rounded-xl focus:outline-none focus:ring-1 focus:ring-indigo-500 font-semibold"
+                      />
+                    </div>
+
+                    <div className="space-y-1 text-left">
+                      <label className="text-[9px] font-black text-slate-500 uppercase tracking-wider block">Yakınlık Grubu / Kategori</label>
+                      <select
+                        value={newContactCategory}
+                        onChange={(e) => setNewContactCategory(e.target.value as any)}
+                        className="w-full px-2.5 py-2.5 bg-slate-50 dark:bg-slate-950 text-xs text-slate-800 dark:text-white border border-slate-200 dark:border-slate-800 rounded-xl focus:outline-none focus:ring-1 focus:ring-indigo-500 font-bold"
+                      >
+                        <option value="friend">Arkadaş</option>
+                        <option value="family">Aile / Akraba</option>
+                        <option value="work">İş / Ticaret</option>
+                        <option value="other">Diğer</option>
+                      </select>
+                    </div>
+
+                    <div className="flex justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                      <button
+                        type="button"
+                        onClick={() => setIsAddingContact(false)}
+                        className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-[10px] font-black uppercase tracking-wider active:scale-95 transition cursor-pointer"
+                      >
+                        VAZGEÇ
+                      </button>
+                      <button
+                        type="submit"
+                        className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-[10px] font-black uppercase tracking-wider active:scale-95 transition cursor-pointer shadow-indigo-500/20 shadow-md"
+                      >
+                        KAYDET 💾
+                      </button>
+                    </div>
+                  </form>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        </div>
+
+        {/* Right column / Card: Kişi Listesi */}
+        <div className="p-5 bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-dashed border-slate-200 dark:border-slate-800 pb-2">
+            <h3 className="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-slate-200 flex items-center gap-1.5 shrink-0">
+              <Users className="w-4 h-4 text-indigo-500" />
+              Kişi Listesi ({contacts.length})
+            </h3>
+          </div>
+
+          {/* Search Box */}
+          <div className="relative">
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Rehberde kişi arayın... 🔎"
+              className="w-full pl-9 pr-4 py-2 bg-slate-50 dark:bg-slate-800 text-xs text-slate-800 dark:text-white placeholder-slate-400 dark:placeholder:text-slate-500 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-1 focus:ring-indigo-500 font-semibold"
+            />
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+          </div>
+
+          {/* Directory Contact List Items */}
+          <div className="space-y-1.5 max-h-[300px] overflow-y-auto pr-1">
+            {filteredContacts.length === 0 ? (
+              <div className="p-6 text-center text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-800 rounded-2xl border border-slate-200/50 dark:border-slate-700 font-bold text-xs italic">
+                Arama kriterlerine uygun kişi bulunamadı.
+              </div>
+            ) : (
+              filteredContacts.map((contact) => {
+                const totals = getContactTotals(contact.id);
+                const isSelected = selectedContactId === contact.id;
+
+                return (
+                  <motion.div
+                    key={contact.id}
+                    onClick={() => setSelectedContactId(contact.id)}
+                    className={`p-3 bg-white dark:bg-slate-800 rounded-2xl border transition duration-200 cursor-pointer flex flex-col xs:flex-row xs:items-center justify-between gap-3 group active:scale-98 ${
+                      isSelected
+                        ? "border-indigo-600 ring-2 ring-indigo-500/10 dark:ring-indigo-500/20 shadow-md"
+                        : "border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      {/* Avatar visually colorful initial letter */}
+                      <div className={`w-8.5 h-8.5 rounded-full bg-gradient-to-tr ${contact.avatarColor} text-white flex items-center justify-center font-black text-xs shadow-xs uppercase shrink-0`}>
+                        {contact.name.charAt(0)}
+                      </div>
+
+                      <div className="min-w-0 leading-tight">
+                        <div className="flex items-center gap-1.5">
+                          <h4 className="text-[11px] font-black text-slate-800 dark:text-slate-100 truncate">
+                            {contact.name}
+                          </h4>
+                          <span className="shrink-0 p-0.5 bg-slate-50 dark:bg-slate-900 rounded-md border border-slate-100 dark:border-slate-800">
+                            {getCategoryIcon(contact.category)}
+                          </span>
+                        </div>
+                        <p className="text-[9.5px] text-slate-500 dark:text-slate-400 font-mono pt-1 truncate">
+                          📞 {contact.phone}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2.5 self-end xs:self-center shrink-0">
+                      <div className="text-right leading-none min-w-[70px]">
+                        <div className="text-[10px] font-mono leading-tight">
+                          {totals.net !== 0 ? (
+                            <span className={`font-black ${totals.net > 0 ? "text-emerald-500" : "text-rose-500"}`}>
+                              {totals.net > 0 ? "Alacak: " : "Borç: "}{format(Math.abs(totals.net))}
+                            </span>
+                          ) : (
+                            <span className="text-slate-600 dark:text-slate-300 font-extrabold text-[9px] uppercase tracking-wide">
+                              DENGELİ ✔️
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Card Action Buttons (Edit and Delete) */}
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setContactToEdit(contact);
+                            setEditName(contact.name);
+                            setEditPhone(contact.phone === "Belirtilmemiş 📞" ? "" : contact.phone);
+                            setEditCategory(contact.category);
+                          }}
+                          className="p-1 px-1.5 rounded-lg bg-indigo-50/80 hover:bg-indigo-150 text-indigo-600 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/50 dark:text-indigo-400 transition cursor-pointer flex items-center justify-center text-xs"
+                          title="Kişiyi Düzenle 📝"
+                        >
+                          <Edit className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setContactToDeleteId(contact.id);
+                          }}
+                          className="p-1 px-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 dark:bg-rose-950/20 dark:hover:bg-rose-900/30 dark:text-rose-400 transition cursor-pointer flex items-center gap-0.5 text-xs"
+                          title="Kişiyi Sil 🗑️"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span className="text-[9px] font-bold">Sil</span>
+                        </button>
+                      </div>
+                    </div>
+                  </motion.div>
+                );
+              })
+            )}
+          </div>
+        </div>
+      </div>
+
       {/* Grid Dashboard Widgets */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Card: Total Receivables */}
@@ -646,7 +869,7 @@ export const ContactsDebtPanel: React.FC<ContactsDebtPanelProps> = ({
                           ? "from-amber-400 to-orange-500"
                           : cat === "work"
                           ? "from-indigo-400 to-indigo-600"
-                          : "from-slate-400 to-slate-550"
+                          : "from-slate-400 to-slate-500"
                       }`}
                     />
                   </div>
@@ -657,215 +880,9 @@ export const ContactsDebtPanel: React.FC<ContactsDebtPanelProps> = ({
         </div>
       </div>
 
-      {/* Main Dual Panels: Local Contacts left vs. History ledger Right */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-        
-        {/* Left Side: Directory Contact List (5/12 columns) */}
-        <div className="lg:col-span-5 space-y-3">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-dashed border-slate-200 dark:border-slate-800 pb-2.5">
-            <h3 className="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-slate-200 flex items-center gap-1.5 shrink-0">
-              <Users className="w-4 h-4 text-indigo-500" />
-              Kişi Listesi ({contacts.length})
-            </h3>
-
-            <div className="flex items-center gap-1.5">
-              <button
-                onClick={handleSelectFromDeviceContacts}
-                type="button"
-                className="px-2 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[9px] font-black uppercase tracking-wider flex items-center gap-1 transition-all active:scale-95 cursor-pointer shadow-sm shadow-emerald-600/15"
-                title="Cihaz rehberinizden ya da hazır listeden hızlıca kişi aktarın"
-              >
-                <Phone className="w-3 h-3 text-emerald-200 animate-pulse" /> REHBERDEN SEÇ 📱
-              </button>
-              <button
-                onClick={() => setIsAddingContact((prev) => !prev)}
-                type="button"
-                className="px-2 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-[9px] font-black uppercase tracking-wider flex items-center gap-1 transition-all active:scale-95 cursor-pointer shadow-sm shadow-indigo-600/15"
-              >
-                <UserPlus className="w-3 h-3 text-indigo-200" /> MANUEL EKLE
-              </button>
-            </div>
-          </div>
-
-          {/* Inline Add Contact Form */}
-          <AnimatePresence>
-            {isAddingContact && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                exit={{ opacity: 0, height: 0 }}
-                className="overflow-hidden"
-              >
-                <form
-                  onSubmit={handleAddContactSubmit}
-                  className="p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-200/60 dark:border-slate-800 space-y-3"
-                >
-                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-700 dark:text-slate-300 block">👥 YENİ KİŞİ EKLE</span>
-                  
-                  <div className="space-y-1">
-                    <label className="text-[9px] font-black text-slate-500 uppercase tracking-wider block">Kişi Adı Soyadı</label>
-                    <input
-                      required
-                      type="text"
-                      value={newContactName}
-                      onChange={(e) => setNewContactName(e.target.value)}
-                      placeholder="Ahmet Yılmaz"
-                      className="w-full px-3 py-2 bg-white dark:bg-slate-950 text-xs text-slate-800 dark:text-white placeholder-slate-400 border border-slate-200 dark:border-slate-800 rounded-xl focus:outline-none focus:ring-1 focus:ring-indigo-500 font-semibold"
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-[9px] font-black text-slate-500 uppercase tracking-wider block">Giriş Telefon Numarası</label>
-                    <input
-                      type="tel"
-                      value={newContactPhone}
-                      onChange={(e) => setNewContactPhone(e.target.value)}
-                      placeholder="0532 123 4567"
-                      className="w-full px-3 py-2 bg-white dark:bg-slate-950 text-xs text-slate-800 dark:text-white placeholder-slate-400 border border-slate-200 dark:border-slate-800 rounded-xl focus:outline-none focus:ring-1 focus:ring-indigo-500 font-semibold"
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-[9px] font-black text-slate-500 uppercase tracking-wider block">Yakınlık Grubu / Kategori</label>
-                    <select
-                      value={newContactCategory}
-                      onChange={(e) => setNewContactCategory(e.target.value as any)}
-                      className="w-full px-2 py-2 bg-white dark:bg-slate-950 text-xs text-slate-800 dark:text-white border border-slate-200 dark:border-slate-800 rounded-xl focus:outline-none focus:ring-1 focus:ring-indigo-500 font-bold"
-                    >
-                      <option value="friend">Arkadaş</option>
-                      <option value="family">Aile / Akraba</option>
-                      <option value="work">İş / Ticaret</option>
-                      <option value="other">Diğer</option>
-                    </select>
-                  </div>
-
-                  <div className="flex gap-2 pt-1.5">
-                    <button
-                      type="button"
-                      onClick={() => setIsAddingContact(false)}
-                      className="flex-1 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-[10px] font-black uppercase tracking-wider active:scale-95 transition"
-                    >
-                      VAZGEÇ
-                    </button>
-                    <button
-                      type="submit"
-                      className="flex-1 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-[10px] font-black uppercase tracking-wider active:scale-95 transition"
-                    >
-                      KAYDET 💾
-                    </button>
-                  </div>
-                </form>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* Search Box */}
-          <div className="relative">
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Rehberde kişi arayın... 🔎"
-              className="w-full pl-9 pr-4 py-2 bg-white dark:bg-slate-800 text-xs text-slate-800 dark:text-white placeholder-slate-400 dark:placeholder:text-slate-500 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-1 focus:ring-indigo-500 font-semibold"
-            />
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
-          </div>
-
-          {/* Directory Contact List Items */}
-          <div className="space-y-1.5 max-h-[480px] overflow-y-auto pr-1">
-            {filteredContacts.length === 0 ? (
-              <div className="p-6 text-center text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/50 dark:border-slate-700 font-bold text-xs italic">
-                Arama kriterlerine uygun kişi bulunamadı.
-              </div>
-            ) : (
-              filteredContacts.map((contact) => {
-                const totals = getContactTotals(contact.id);
-                const isSelected = selectedContactId === contact.id;
-
-                return (
-                  <motion.div
-                    key={contact.id}
-                    onClick={() => setSelectedContactId(contact.id)}
-                    className={`p-3 bg-white dark:bg-slate-800 rounded-2xl border transition duration-200 cursor-pointer flex flex-col xs:flex-row xs:items-center justify-between gap-3 group active:scale-98 ${
-                      isSelected
-                        ? "border-indigo-600 ring-2 ring-indigo-500/10 dark:ring-indigo-500/20 shadow-md"
-                        : "border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600"
-                    }`}
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      {/* Avatar visually colorful initial letter */}
-                      <div className={`w-8.5 h-8.5 rounded-full bg-gradient-to-tr ${contact.avatarColor} text-white flex items-center justify-center font-black text-xs shadow-xs uppercase shrink-0`}>
-                        {contact.name.charAt(0)}
-                      </div>
-
-                      <div className="min-w-0 leading-tight">
-                        <div className="flex items-center gap-1.5">
-                          <h4 className="text-[11px] font-black text-slate-800 dark:text-slate-100 truncate">
-                            {contact.name}
-                          </h4>
-                          <span className="shrink-0 p-0.5 bg-slate-50 dark:bg-slate-900 rounded-md border border-slate-100 dark:border-slate-800">
-                            {getCategoryIcon(contact.category)}
-                          </span>
-                        </div>
-                        <p className="text-[9.5px] text-slate-500 dark:text-slate-400 font-mono pt-1 truncate">
-                          📞 {contact.phone}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2.5 self-end xs:self-center shrink-0">
-                      <div className="text-right leading-none min-w-[70px]">
-                        <div className="text-[10px] font-mono leading-tight">
-                          {totals.net !== 0 ? (
-                            <span className={`font-black ${totals.net > 0 ? "text-emerald-500" : "text-rose-500"}`}>
-                              {totals.net > 0 ? "Alacak: " : "Borç: "}{format(Math.abs(totals.net))}
-                            </span>
-                          ) : (
-                            <span className="text-slate-600 dark:text-slate-300 font-extrabold text-[9px] uppercase tracking-wide">
-                              DENGELİ ✔️
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Card Action Buttons (Edit and Delete) */}
-                      <div className="flex items-center gap-1">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setContactToEdit(contact);
-                            setEditName(contact.name);
-                            setEditPhone(contact.phone === "Belirtilmemiş 📞" ? "" : contact.phone);
-                            setEditCategory(contact.category);
-                          }}
-                          className="p-1 px-1.5 rounded-lg bg-indigo-50/80 hover:bg-indigo-150 text-indigo-600 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/50 dark:text-indigo-400 transition cursor-pointer flex items-center justify-center text-xs"
-                          title="Kişiyi Düzenle 📝"
-                        >
-                          <Edit className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setContactToDeleteId(contact.id);
-                          }}
-                          className="p-1 px-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 dark:bg-rose-950/20 dark:hover:bg-rose-900/30 dark:text-rose-400 transition cursor-pointer flex items-center gap-0.5 text-xs"
-                          title="Kişiyi Sil 🗑️"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                          <span className="text-[9px] font-bold">Sil</span>
-                        </button>
-                      </div>
-                    </div>
-                  </motion.div>
-                );
-              })
-            )}
-          </div>
-        </div>
-
-        {/* Right Side: Ledger history & Transaction controls (7/12 columns) */}
-        <div className="lg:col-span-7">
-          <AnimatePresence mode="wait">
+      {/* Selected contact Ledger History details - Full Width section */}
+      <div className="w-full">
+        <AnimatePresence mode="wait">
             {selectedContactId ? (() => {
               const contact = contacts.find((c) => c.id === selectedContactId);
               if (!contact) return null;
@@ -1104,15 +1121,20 @@ export const ContactsDebtPanel: React.FC<ContactsDebtPanelProps> = ({
                               {!tx.isPaid && onAddAlarm && (
                                 <button
                                   onClick={() => {
-                                    setReminderTx(tx);
-                                    setReminderOption("day_before");
-                                    setCustomReminderDate(tx.dueDate || "");
-                                    setCustomReminderTime("09:00");
+                                    if (!isPremium) {
+                                      onUpgradeClick?.();
+                                    } else {
+                                      setReminderTx(tx);
+                                      setReminderOption("day_before");
+                                      setCustomReminderDate(tx.dueDate || "");
+                                      setCustomReminderTime("09:00");
+                                    }
                                   }}
-                                  className="p-1 rounded-lg bg-indigo-50/80 hover:bg-indigo-100 dark:bg-slate-800 dark:hover:bg-slate-700 text-indigo-600 dark:text-indigo-400 shrink-0 cursor-pointer active:scale-95 transition flex items-center justify-center"
+                                  className="p-1 rounded-lg bg-indigo-50/80 hover:bg-indigo-100 dark:bg-slate-800 dark:hover:bg-slate-700 text-indigo-600 dark:text-indigo-400 shrink-0 cursor-pointer active:scale-95 transition flex items-center justify-center relative"
                                   title="Hatırlatıcı Alarm Kur ⏰"
                                 >
                                   <Bell className="w-3.5 h-3.5" />
+                                  {!isPremium && <span className="absolute -top-1 -right-1 flex h-1.5 w-1.5 rounded-full bg-amber-500" />}
                                 </button>
                               )}
                               <button
@@ -1672,6 +1694,5 @@ export const ContactsDebtPanel: React.FC<ContactsDebtPanelProps> = ({
           </AnimatePresence>
         </div>
       </div>
-    </div>
   );
 };

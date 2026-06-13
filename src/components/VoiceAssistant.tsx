@@ -215,6 +215,8 @@ interface VoiceAssistantProps {
   currentUser?: string | null;
   userApiKey?: string;
   triggerToast: (msg: string) => void;
+  isPremium?: boolean;
+  onUpgradeClick?: () => void;
 }
 
 export default function VoiceAssistant({
@@ -229,7 +231,9 @@ export default function VoiceAssistant({
   onSaveContactTx,
   currentUser,
   userApiKey,
-  triggerToast
+  triggerToast,
+  isPremium = false,
+  onUpgradeClick
 }: VoiceAssistantProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isListening, setIsListening] = useState(false);
@@ -744,6 +748,10 @@ export default function VoiceAssistant({
 
 
   const toggleOpen = () => {
+    if (!isPremium) {
+      onUpgradeClick?.();
+      return;
+    }
     if ("speechSynthesis" in window) {
       window.speechSynthesis.cancel();
     }
@@ -777,16 +785,22 @@ export default function VoiceAssistant({
             <div className="relative">
               <Mic className="w-6 h-6 animate-none" />
               {/* Pulsing indicator circle when audio/assistance is active */}
-              <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-pink-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-pink-500"></span>
-              </span>
+              {isPremium ? (
+                <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-pink-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-pink-500"></span>
+                </span>
+              ) : (
+                <span className="absolute -top-2.5 -right-2.5 bg-amber-500 text-[6.5px] scale-90 font-black px-1 py-0.5 rounded-sm select-none border border-amber-300 shadow-sm animate-pulse text-white font-mono">
+                  PRO
+                </span>
+              )}
             </div>
           )}
           
           {/* Label tooltip hovering slightly on desktop search */}
           <span className="absolute right-16 bg-slate-900 border border-slate-700 text-slate-100 text-[10px] font-black uppercase py-1 px-2.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none tracking-wider shadow-md whitespace-nowrap">
-            Sesli Asistan 🔊
+            {isPremium ? "Sesli Asistan 🔊" : "Sesli Asistan (PRO) 👑"}
           </span>
         </motion.button>
       </div>

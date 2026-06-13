@@ -21,6 +21,7 @@ interface InstallmentsListProps {
   onRevertPayment?: (id: number) => void;
   isPremium?: boolean;
   language?: "tr" | "en";
+  onUpgradeClick?: () => void;
 }
 
 export const InstallmentsList: React.FC<InstallmentsListProps> = ({
@@ -29,8 +30,9 @@ export const InstallmentsList: React.FC<InstallmentsListProps> = ({
   onDeleteInstallment,
   onPayInstallment,
   onRevertPayment,
-  isPremium,
+  isPremium = false,
   language = "tr",
+  onUpgradeClick,
 }) => {
   const translate = (txt: string) => t(txt, language as "tr" | "en");
   const { format } = useCurrency();
@@ -219,16 +221,28 @@ export const InstallmentsList: React.FC<InstallmentsListProps> = ({
       <div className="flex flex-col gap-3 justify-center sm:flex-row sm:items-center">
         <div className="flex items-center justify-center gap-2 flex-wrap">
           <button
-            onClick={() => handlePrint(false)}
-            className="px-3 py-1.5 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-semibold flex items-center gap-1 hover:bg-slate-50 transition"
+            onClick={() => {
+              if (!isPremium) {
+                onUpgradeClick?.();
+              } else {
+                handlePrint(false);
+              }
+            }}
+            className="px-3 py-1.5 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-semibold flex items-center gap-1 hover:bg-slate-50 transition cursor-pointer"
           >
-            <Printer className="w-3.5 h-3.5" /> Yazdır
+            <Printer className="w-3.5 h-3.5" /> Yazdır {!isPremium && <span className="ml-1 text-[8px] bg-amber-500 text-white px-1 py-0.5 rounded-sm font-black">PRO</span>}
           </button>
           <button
-            onClick={() => handlePrint(true)}
-            className="px-3 py-1.5 bg-amber-500 text-white rounded-xl text-xs font-bold flex items-center gap-1 hover:bg-amber-600 transition"
+            onClick={() => {
+              if (!isPremium) {
+                onUpgradeClick?.();
+              } else {
+                handlePrint(true);
+              }
+            }}
+            className="px-3 py-1.5 bg-amber-500 text-white rounded-xl text-xs font-bold flex items-center gap-1 hover:bg-amber-600 transition cursor-pointer"
           >
-            <FileText className="w-3.5 h-3.5" /> PDF Al
+            <FileText className="w-3.5 h-3.5" /> PDF Al {!isPremium && <span className="ml-1 text-[8px] bg-slate-900 text-slate-100 dark:bg-amber-500 dark:text-slate-950 px-1 py-0.5 rounded-sm font-black font-mono">PRO</span>}
           </button>
           <button
             onClick={handleOpenAdd}

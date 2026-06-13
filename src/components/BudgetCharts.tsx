@@ -516,6 +516,7 @@ export const InstallmentsPortalChart: React.FC<InstallmentsPortalChartProps> = (
 
   const currentRemainingTotal = getSimulatedRemainingTotal(0);
   const simulatedRemainingTotal = getSimulatedRemainingTotal(selectedMonthOffset);
+  const totalOriginalDebt = installmentDebts.reduce((sum, inst) => sum + inst.totalAmount, 0);
 
   // Calculates 12-Month repayment projection curve coordinates
   const projectionRange = Array.from({ length: 12 }, (_, i) => i);
@@ -600,6 +601,33 @@ export const InstallmentsPortalChart: React.FC<InstallmentsPortalChartProps> = (
               {m === 0 ? "Şimdi" : `+${m} Ay`}
             </button>
           ))}
+        </div>
+      </div>
+
+      {/* Toplam ve Kalan Taksitli Borç Göstergeleri */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-1">
+        <div className="p-3.5 bg-slate-850/60 rounded-2xl border border-slate-850 flex items-center justify-between">
+          <div>
+            <span className="text-[8.5px] text-slate-400 font-extrabold uppercase tracking-widest block leading-none mb-1">
+              TOPLAM TAKSİTLİ BORÇ
+            </span>
+            <span className="text-base font-black text-indigo-400 font-mono">
+              {format(totalOriginalDebt)}
+            </span>
+          </div>
+          <div className="text-indigo-400 text-lg">💳</div>
+        </div>
+
+        <div className="p-3.5 bg-slate-850/60 rounded-2xl border border-slate-850 flex items-center justify-between">
+          <div>
+            <span className="text-[8.5px] text-slate-400 font-extrabold uppercase tracking-widest block leading-none mb-1">
+              KALAN TAKSİTLİ BORÇ
+            </span>
+            <span className="text-base font-black text-rose-400 font-mono">
+              {format(currentRemainingTotal)}
+            </span>
+          </div>
+          <div className="text-rose-400 text-lg">⏳</div>
         </div>
       </div>
 

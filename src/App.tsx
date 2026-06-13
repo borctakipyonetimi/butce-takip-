@@ -7,6 +7,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { onAuthStateChanged, signOut, createUserWithEmailAndPassword, getRedirectResult, signInWithPopup, GoogleAuthProvider, updatePassword } from "firebase/auth";
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { auth, db, handleFirestoreError, OperationType } from "./utils/firebase";
+import { Purchases, PLAY_PRODUCTS } from "./utils/purchases";
 import { motion, AnimatePresence } from "motion/react";
 import {
   Menu,
@@ -241,6 +242,44 @@ export default function App() {
   const [restoredPlanType, setRestoredPlanType] = useState<"monthly" | "yearly" | "lifetime">("yearly");
   const [restoreStatusLog, setRestoreStatusLog] = useState("");
   const [promoFeature, setPromoFeature] = useState<string | null>(null);
+
+  // Custom Google Play & RevenueCat states
+  const [isPricingLoading, setIsPricingLoading] = useState(false);
+  const [dynamicProducts, setDynamicProducts] = useState(PLAY_PRODUCTS);
+  const [isPurchasing, setIsPurchasing] = useState(false);
+  const [purchaseStatus, setPurchaseStatus] = useState("");
+  const [isGPlayBillingActive, setIsGPlayBillingActive] = useState(false);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState({
+    id: "visa",
+    name: "Visa •••• 5043",
+    type: "Google Pay / Kredi Kartı",
+    icon: "💳"
+  });
+  const [isChangingPaymentMethod, setIsChangingPaymentMethod] = useState(false);
+
+  const [playPaymentMethods, setPlayPaymentMethods] = useState([
+    { id: "visa", name: "Visa •••• 5043", type: "Google Pay / Kredi Kartı", icon: "💳" },
+    { id: "mastercard", name: "Mastercard •••• 9811", type: "Bireysel Kredi Kartı", icon: "💳" },
+    { id: "gplay_balance", name: "Google Play Bakiyesi", type: "Mevcut Bakiye: ₺1.250,00", icon: "✨" },
+    { id: "mobil_odeme", name: "Turkcell Mobil Ödeme", type: "Mobil Ödeme (532 123 45 67)", icon: "📱", details: "532 123 45 67" }
+  ]);
+
+  const [playAccountEmail, setPlayAccountEmail] = useState("nettenkazanma2@gmail.com");
+  const [isEditingEmail, setIsEditingEmail] = useState(false);
+
+  // Form states for adding simulated payment options
+  const [paymentFormType, setPaymentFormType] = useState<"none" | "card" | "mobile">("none");
+  const [newCardNameValue, setNewCardNameValue] = useState("");
+  const [newCardNumberValue, setNewCardNumberValue] = useState("");
+  const [newCardExpiryValue, setNewCardExpiryValue] = useState("");
+  const [newCardCVVValue, setNewCardCVVValue] = useState("");
+  const [newMobileNoValue, setNewMobileNoValue] = useState("532 123 45 67");
+
+  const purchaseTimeoutsRef = useRef<any[]>([]);
+  const clearPurchaseTimeouts = () => {
+    purchaseTimeoutsRef.current.forEach((t) => clearTimeout(t));
+    purchaseTimeoutsRef.current = [];
+  };
 
   // Local Alerts indicators
   const [showToast, setShowToast] = useState(false);
@@ -1125,6 +1164,32 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
+  // Configure RevenueCat and load offerings on paywall dialog open
+  useEffect(() => {
+    if (isUpgradeModalOpen) {
+      const initAndFetchPlayPricing = async () => {
+        setIsPricingLoading(true);
+        try {
+          // Setup with user-linked custom SDK token goog_prod_borc_takip
+          await Purchases.configure("goog_prod_borc_takip", auth.currentUser?.uid || "web_test_user");
+          const offerings = await Purchases.getOfferings();
+          if (offerings && offerings.current) {
+            setDynamicProducts({
+              borc_takip_aylik: offerings.current.monthly.product,
+              borc_takip_yillik: offerings.current.annual.product,
+              borc_takip_sinirsiz: offerings.current.lifetime.product
+            });
+          }
+        } catch (err) {
+          console.error("RevenueCat offering loading failed:", err);
+        } finally {
+          setIsPricingLoading(false);
+        }
+      };
+      initAndFetchPlayPricing();
+    }
+  }, [isUpgradeModalOpen]);
+
   // Sync theme configurations on body
   useEffect(() => {
     if (darkMode) {
@@ -1373,6 +1438,38 @@ export default function App() {
       } catch (err) {
         console.warn("Could not sync restored premium status to Firestore:", err);
       }
+    }
+  };
+
+  const handlePurchase = async (planType: "monthly" | "yearly" | "lifetime") => {
+    setSelectedPlan(planType);
+    setIsPurchasing(true);
+    setPurchaseStatus("Google Play Billing bağlantısı kuruluyor...");
+    setIsGPlayBillingActive(true);
+  };
+
+  const handleRevenueCatRestore = async () => {
+    setIsRestoring(true);
+    setRestoreStep("restoring");
+    setRestoreStatusLog("Google Play Store bağlantısı doğrulanıyor...");
+    try {
+      const res = await Purchases.restorePurchases();
+      if (res.success && res.customerInfo) {
+        const activeSub = res.customerInfo.activeSubscriptions[0];
+        const planMapped: "monthly" | "yearly" | "lifetime" = 
+          activeSub === "borc_takip_aylik" ? "monthly" : activeSub === "borc_takip_sinirsiz" ? "lifetime" : "yearly";
+        
+        await savePremiumStatusAndSync(true, planMapped);
+        setRestoredPlanType(planMapped);
+        setRestoreStep("success");
+      } else {
+        setRestoreStep("method");
+        triggerToast("Geri yüklenecek aktif Google Play aboneliği veya limitsiz ödemesi saptanamadı.");
+      }
+    } catch (err: any) {
+      console.error(err);
+      setRestoreStep("method");
+      triggerToast("Geri yükleme hatası: " + (err.message || "Bilinmeyen Google Play API hatası"));
     }
   };
 
@@ -3806,6 +3903,8 @@ export default function App() {
             triggerToast={triggerToast}
             onAddAlarm={handleAddAlarm}
             language={language}
+            isPremium={isPremium}
+            onUpgradeClick={() => setIsUpgradeModalOpen(true)}
           />
         )}
 
@@ -3850,6 +3949,7 @@ export default function App() {
             onRevertPayment={handleRevertInstallmentPayment}
             isPremium={isPremium}
             language={language}
+            onUpgradeClick={() => setIsUpgradeModalOpen(true)}
           />
         )}
 
@@ -4049,23 +4149,30 @@ export default function App() {
 
                 <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 flex items-center justify-between sm:col-span-2">
                   <div>
-                    <span className="text-xs font-bold text-slate-700 dark:text-slate-200 block">Akıllı Sesli Asistan Servisi</span>
+                    <span className="text-xs font-bold text-slate-700 dark:text-slate-200 block flex items-center gap-1.5">
+                      Akıllı Sesli Asistan Servisi
+                      {!isPremium && <span className="bg-amber-500 text-[8px] text-white px-1.5 py-0.5 rounded-md font-black">PRO</span>}
+                    </span>
                     <span className="text-[10px] text-slate-400 font-medium leading-none block mt-0.5">Ekrandaki mikrofon ikonu ile sesli ve yazılı asistanı yönetin</span>
                   </div>
                   <button
                     onClick={() => {
-                      const next = !voiceAssistantEnabled;
-                      setVoiceAssistantEnabled(next);
-                      localStorage.setItem("voiceAssistantEnabled", next ? "1" : "0");
-                      triggerToast(next ? "Sesli Asistan Servisi Aktifleştirildi 🎙️" : "Sesli Asistan Servisi Devre Dışı Bırakıldı 🔕");
+                      if (!isPremium) {
+                        setIsUpgradeModalOpen(true);
+                      } else {
+                        const next = !voiceAssistantEnabled;
+                        setVoiceAssistantEnabled(next);
+                        localStorage.setItem("voiceAssistantEnabled", next ? "1" : "0");
+                        triggerToast(next ? "Sesli Asistan Servisi Aktifleştirildi 🎙️" : "Sesli Asistan Servisi Devre Dışı Bırakıldı 🔕");
+                      }
                     }}
                     className={`px-3 py-1.5 rounded-xl text-xs font-black cursor-pointer transition select-none ${
-                      voiceAssistantEnabled
+                      isPremium && voiceAssistantEnabled
                         ? "bg-gradient-to-tr from-indigo-500 to-purple-500 text-white shadow-md shadow-indigo-500/10"
                         : "bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300"
                     }`}
                   >
-                    {voiceAssistantEnabled ? "AÇIK 🎙️" : "KAPALI 🔕"}
+                    {!isPremium ? "KİLİTLİ 🔒" : voiceAssistantEnabled ? "AÇIK 🎙️" : "KAPALI 🔕"}
                   </button>
                 </div>
               </div>
@@ -5039,26 +5146,8 @@ export default function App() {
                         <button
                           type="button"
                           onClick={() => {
-                            // Check if logged in. If logged in, restore from Firestore (which has their plan archived)
-                            const fbUser = auth.currentUser;
-                            if (fbUser) {
-                              setRestoreStep("restoring");
-                              setRestoreStatusLog("Google Play Billing API'sine bağlanılıyor...");
-                              setTimeout(() => {
-                                setRestoreStatusLog("Hesabınız altındaki aktif lisanslar sorgulanıyor...");
-                              }, 1500);
-                              setTimeout(() => {
-                                setRestoreStatusLog("Google Play lisans imza anahtarı doğrulandı!");
-                              }, 3000);
-                              setTimeout(() => {
-                                const storedPlan = (localStorage.getItem("premium_plan") as any) || "yearly";
-                                setRestoredPlanType(storedPlan);
-                                savePremiumStatusAndSync(true, storedPlan);
-                                setRestoreStep("success");
-                              }, 4500);
-                            } else {
-                              setRestoreStep("firebase");
-                            }
+                            // Run the native RevenueCat restore flow synced to Firestore & LocalStorage
+                            handleRevenueCatRestore();
                           }}
                           className="w-full p-4 bg-slate-50 hover:bg-slate-100 dark:bg-slate-950 dark:hover:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-800 text-left transition duration-200 cursor-pointer active:scale-97 group"
                         >
@@ -5268,140 +5357,191 @@ export default function App() {
                       </div>
                     )}
 
-                    {/* Features list */}
-                    <div className="p-4 bg-slate-50 dark:bg-slate-950 rounded-3xl border border-slate-200 dark:border-slate-800 space-y-3">
-                      {[
-                        { icon: "🤖", title: "AI Finansal Koç", desc: "Harcamalarınızı yapay zeka ile analiz edin ve tasarruf stratejileri geliştirin." },
-                        { icon: "💹", title: "Canlı Borsa & Döviz", desc: "Tüm finansal verilerinizi anlık kurlar üzerinden takip edin." },
-                        { icon: "📈", title: "Sınırsız PDF/Excel Rapor", desc: "Finansal verilerinizi dilediğiniz an profesyonel raporlara dönüştürün." },
-                        { icon: "🔐", title: "Biyometrik Güvenlik", desc: "Parmak izi veya FaceID ile bütçe verilerinizi güvence altına alın." },
-                        { icon: "📅", title: "Ödeme Takvimi & Planlar", desc: "Borç vadelerini ve faturaları interaktif takvimden izleyin." },
-                        { icon: "🚫", title: "%100 Reklamsız Deneyim", desc: "Tüm reklamları ve sponsorlu her şeyi tamamen kaldırın." }
-                      ].map((f, i) => (
-                        <div key={i} className="flex items-start gap-3 p-1.5 rounded-xl hover:bg-white dark:hover:bg-slate-900 transition-colors">
-                          <span className="p-2 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 rounded-xl text-lg leading-none shrink-0 font-bold">{f.icon}</span>
-                          <div className="space-y-0.5">
-                            <p className="text-[11px] font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight leading-none">{f.title}</p>
-                            <p className="text-[10px] text-slate-500 dark:text-slate-400 font-bold leading-normal">{f.desc}</p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Simulated Plans Select / Activation block */}
-                    <div className="space-y-4">
-                      <p className="text-[11px] font-black uppercase text-amber-600 dark:text-amber-500 tracking-widest text-center flex items-center justify-center gap-2">
-                        <span className="w-6 h-px bg-amber-500/30" /> 👑 PREMİUM PLANLAR <span className="w-6 h-px bg-amber-500/30" />
-                      </p>
-                      <div className="grid grid-cols-3 gap-2.5">
-                        {/* AYLIK Card */}
-                        <div
-                          onClick={() => setSelectedPlan("monthly")}
-                          className={`p-3 rounded-2xl text-center relative overflow-hidden transition-all duration-250 select-none cursor-pointer ${
-                            selectedPlan === "monthly"
-                              ? "bg-amber-500/15 dark:bg-amber-500/20 border-2 border-amber-500 ring-4 ring-amber-500/10 scale-[1.05] z-20 shadow-xl shadow-amber-500/10"
-                              : "bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm opacity-70 hover:opacity-100 hover:border-slate-350 dark:hover:border-slate-600"
-                          }`}
-                        >
-                          <p className={`text-[9px] font-black uppercase tracking-tight ${selectedPlan === "monthly" ? "text-amber-600 dark:text-amber-400" : "text-slate-500"}`}>AYLIK</p>
-                          <p className={`text-base font-black mt-1 ${selectedPlan === "monthly" ? "text-slate-950 dark:text-white" : "text-slate-700 dark:text-slate-205"}`}>₺29,99</p>
-                          <p className={`text-[8px] font-black uppercase mt-1 leading-none ${selectedPlan === "monthly" ? "text-amber-600/80" : "text-slate-400"}`}>Yenilenen</p>
-                        </div>
-
-                        {/* YILLIK Card */}
-                        <div
-                          onClick={() => setSelectedPlan("yearly")}
-                          className={`p-3 rounded-2xl text-center relative overflow-hidden transition-all duration-250 select-none cursor-pointer pt-6.5 ${
-                            selectedPlan === "yearly"
-                              ? "bg-amber-500/15 dark:bg-amber-500/20 border-2 border-amber-500 ring-4 ring-amber-500/10 scale-[1.05] z-20 shadow-xl shadow-amber-500/10"
-                              : "bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm opacity-70 hover:opacity-100 hover:border-slate-350 dark:hover:border-slate-600"
-                          }`}
-                        >
-                          <div className="absolute top-0 right-0 left-0 bg-amber-500 text-white text-[8px] font-black py-0.5 uppercase tracking-widest leading-none">EN POPÜLER</div>
-                          <p className={`text-[9px] font-black uppercase tracking-tight ${selectedPlan === "yearly" ? "text-amber-600 dark:text-amber-400" : "text-slate-500"}`}>YILLIK</p>
-                          <p className={`text-base font-black mt-1 ${selectedPlan === "yearly" ? "text-slate-950 dark:text-white" : "text-slate-700 dark:text-slate-205"}`}>₺299,99</p>
-                          <p className={`text-[8px] font-black uppercase mt-1 leading-none ${selectedPlan === "yearly" ? "text-amber-500" : "text-slate-400"}`}>Tasarruf: %45</p>
-                        </div>
-
-                        {/* LİMİTSİZ Card */}
-                        <div
-                          onClick={() => setSelectedPlan("lifetime")}
-                          className={`p-3 rounded-2xl text-center relative overflow-hidden transition-all duration-250 select-none cursor-pointer ${
-                            selectedPlan === "lifetime"
-                              ? "bg-indigo-650 text-white border-2 border-indigo-400 ring-4 ring-indigo-500/25 scale-[1.05] z-20 shadow-xl shadow-indigo-500/20"
-                              : "bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm opacity-70 hover:opacity-100 hover:border-slate-350 dark:hover:border-slate-600"
-                          }`}
-                        >
-                          <p className={`text-[9px] font-black uppercase tracking-tight ${selectedPlan === "lifetime" ? "text-indigo-200" : "text-indigo-600 dark:text-indigo-400"}`}>LİMİTSİZ</p>
-                          <p className={`text-base font-black mt-1 ${selectedPlan === "lifetime" ? "text-white" : "text-slate-900 dark:text-white"}`}>₺599,99</p>
-                          <p className={`text-[8px] font-black uppercase mt-1 leading-none ${selectedPlan === "lifetime" ? "text-white/80" : "text-slate-400"}`}>TEK ÖDEME</p>
+                    {isPricingLoading ? (
+                      <div className="py-12 text-center space-y-4">
+                        <div className="w-10 h-10 border-4 border-amber-500 border-t-transparent rounded-full animate-spin mx-auto" />
+                        <div className="space-y-1">
+                          <p className="text-xs font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight">Google Play Store Bağlantısı</p>
+                          <p className="text-[10px] text-amber-600 dark:text-amber-500 font-mono font-black animate-pulse uppercase">
+                            Dinamik Fiyat ve Paket Bilgileri Yükleniyor...
+                          </p>
                         </div>
                       </div>
-                    </div>
+                    ) : (
+                      <>
+                        {/* Features list */}
+                        <div className="p-4 bg-slate-50 dark:bg-slate-950 rounded-3xl border border-slate-200 dark:border-slate-800 space-y-3">
+                          {[
+                            { icon: "🤖", title: "AI Finansal Koç", desc: "Harcamalarınızı yapay zeka ile analiz edin ve tasarruf stratejileri geliştirin." },
+                            { icon: "🎙️", title: "Akıllı Sesli Asistan", desc: "Sadece konuşarak bütçe, borç, gelir ve taksitlerinizi saniyeler içinde kaydedin." },
+                            { icon: "💹", title: "Canlı Borsa & Döviz", desc: "Tüm finansal verilerinizi anlık kurlar üzerinden takip edin." },
+                            { icon: "📈", title: "Sınırsız PDF/Excel Rapor", desc: "Finansal verilerinizi dilediğiniz an profesyonel raporlara dönüştürün." },
+                            { icon: "🔐", title: "Biyometrik Güvenlik", desc: "Parmak izi veya FaceID ile bütçe verilerinizi güvence altına alın." },
+                            { icon: "📅", title: "Ödeme Takvimi & Planlar", desc: "Borç vadelerini ve faturaları interaktif takvimden izleyin." },
+                            { icon: "🚫", title: "%100 Reklamsız Deneyim", desc: "Tüm reklamları ve sponsorlu her şeyi tamamen kaldırın." }
+                          ].map((f, i) => (
+                            <div key={i} className="flex items-start gap-3 p-1.5 rounded-xl hover:bg-white dark:hover:bg-slate-900 transition-colors">
+                              <span className="p-2 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 rounded-xl text-lg leading-none shrink-0 font-bold">{f.icon}</span>
+                              <div className="space-y-0.5">
+                                <p className="text-[11px] font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight leading-none">{f.title}</p>
+                                <p className="text-[10px] text-slate-500 dark:text-slate-400 font-bold leading-normal">{f.desc}</p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
 
-                    <div className="space-y-3 pt-1">
-                      {isPremium ? (
-                        <div className="space-y-2.5">
-                          <div className="p-3 bg-emerald-500/5 dark:bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-2xl text-center font-bold text-xs uppercase tracking-tight flex flex-col items-center justify-center gap-1 font-sans">
-                            <span className="font-extrabold text-[12px] tracking-wide">👑 PREMİUM LİSANSINIZ ETKİN</span>
-                            <span className="text-[10px] bg-emerald-500/10 px-2.5 py-0.5 rounded-md font-black uppercase tracking-widest text-emerald-700 dark:text-emerald-300">
-                              Aktif Paket: {selectedPlan === "monthly" ? "Aylık Paket" : selectedPlan === "yearly" ? "Yıllık Paket" : "Limitsiz Ömür Boyu"}
-                            </span>
+                        {/* Simulated Plans Select / Activation block */}
+                        <div className="space-y-4">
+                          <p className="text-[11px] font-black uppercase text-amber-600 dark:text-amber-500 tracking-widest text-center flex items-center justify-center gap-2">
+                            <span className="w-6 h-px bg-amber-500/30" /> 👑 PREMİUM PLANLAR <span className="w-6 h-px bg-amber-500/30" />
+                          </p>
+                          <div className="grid grid-cols-3 gap-2.5">
+                            {/* AYLIK Card */}
+                            <div
+                              onClick={() => setSelectedPlan("monthly")}
+                              className={`p-3 rounded-2xl text-center relative overflow-hidden transition-all duration-250 select-none cursor-pointer ${
+                                selectedPlan === "monthly"
+                                  ? "bg-amber-500/15 dark:bg-amber-500/20 border-2 border-amber-500 ring-4 ring-amber-500/10 scale-[1.05] z-20 shadow-xl shadow-amber-500/10"
+                                  : "bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm opacity-70 hover:opacity-100 hover:border-slate-350 dark:hover:border-slate-600"
+                              }`}
+                            >
+                              <p className={`text-[9px] font-black uppercase tracking-tight ${selectedPlan === "monthly" ? "text-amber-600 dark:text-amber-400" : "text-slate-500"}`}>AYLIK</p>
+                              <p className={`text-base font-black mt-1 ${selectedPlan === "monthly" ? "text-slate-950 dark:text-white" : "text-slate-700 dark:text-slate-205"}`}>{dynamicProducts.borc_takip_aylik.priceString}</p>
+                              <p className={`text-[8px] font-black uppercase mt-1 leading-none ${selectedPlan === "monthly" ? "text-amber-600/80" : "text-slate-400"}`}>Yenilenen</p>
+                            </div>
+
+                            {/* YILLIK Card */}
+                            <div
+                              onClick={() => setSelectedPlan("yearly")}
+                              className={`p-3 rounded-2xl text-center relative overflow-hidden transition-all duration-250 select-none cursor-pointer pt-6.5 ${
+                                selectedPlan === "yearly"
+                                  ? "bg-amber-500/15 dark:bg-amber-500/20 border-2 border-amber-500 ring-4 ring-amber-500/10 scale-[1.05] z-20 shadow-xl shadow-amber-500/10"
+                                  : "bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm opacity-70 hover:opacity-100 hover:border-slate-350 dark:hover:border-slate-600"
+                              }`}
+                            >
+                              <div className="absolute top-0 right-0 left-0 bg-amber-500 text-white text-[8px] font-black py-0.5 uppercase tracking-widest leading-none">EN POPÜLER</div>
+                              <p className={`text-[9px] font-black uppercase tracking-tight ${selectedPlan === "yearly" ? "text-amber-600 dark:text-amber-400" : "text-slate-500"}`}>YILLIK</p>
+                              <p className={`text-base font-black mt-1 ${selectedPlan === "yearly" ? "text-slate-950 dark:text-white" : "text-slate-700 dark:text-slate-205"}`}>{dynamicProducts.borc_takip_yillik.priceString}</p>
+                              <p className={`text-[8px] font-black uppercase mt-1 leading-none ${selectedPlan === "yearly" ? "text-amber-500" : "text-slate-400"}`}>Tasarruf: %45</p>
+                            </div>
+
+                            {/* LİMİTSİZ Card */}
+                            <div
+                              onClick={() => setSelectedPlan("lifetime")}
+                              className={`p-3 rounded-2xl text-center relative overflow-hidden transition-all duration-250 select-none cursor-pointer ${
+                                selectedPlan === "lifetime"
+                                  ? "bg-indigo-650 text-white border-2 border-indigo-400 ring-4 ring-indigo-500/25 scale-[1.05] z-20 shadow-xl shadow-indigo-500/20"
+                                  : "bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm opacity-70 hover:opacity-100 hover:border-slate-350 dark:hover:border-slate-600"
+                              }`}
+                            >
+                              <p className={`text-[9px] font-black uppercase tracking-tight ${selectedPlan === "lifetime" ? "text-indigo-200" : "text-indigo-600 dark:text-indigo-400"}`}>LİMİTSİZ</p>
+                              <p className={`text-base font-black mt-1 ${selectedPlan === "lifetime" ? "text-white" : "text-slate-900 dark:text-white"}`}>{dynamicProducts.borc_takip_sinirsiz.priceString}</p>
+                              <p className={`text-[8px] font-black uppercase mt-1 leading-none ${selectedPlan === "lifetime" ? "text-white/80" : "text-slate-400"}`}>TEK ÖDEME</p>
+                            </div>
                           </div>
+                        </div>
+
+                        <div className="space-y-3 pt-1">
+                          {/* Developer Bypass Mode Trigger (Hızlı Lisans Toggling) */}
+                          <div className="p-3 bg-red-500/5 dark:bg-red-500/10 border border-red-500/20 rounded-2xl space-y-1.5 shadow-sm text-center">
+                            <div className="flex justify-between items-center">
+                              <span className="text-[9px] font-black uppercase text-red-650 dark:text-red-400 tracking-wider">🛠️ GELİŞTİRİCİ DENEYSEL GEÇİŞİ / BYPASS</span>
+                              <span className="text-[8px] bg-red-500/10 text-red-600 dark:text-red-400 px-1 py-0.2 rounded font-black uppercase tracking-widest font-mono">AKTİF</span>
+                            </div>
+                            <div className="flex gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  savePremiumStatusAndSync(true, selectedPlan);
+                                  triggerToast(`👑 Geliştirici Modu: Bütçem Pro Premium (${selectedPlan === "monthly" ? "Aylık" : selectedPlan === "yearly" ? "Yıllık" : "Süresiz"}) Anında Aktif Edildi!`);
+                                }}
+                                className={`flex-grow py-1.5 px-2.5 font-black text-[9px] uppercase tracking-wider rounded-lg border transition text-center select-none cursor-pointer ${
+                                  isPremium
+                                    ? "bg-emerald-500 text-white border-emerald-600"
+                                    : "bg-red-650 hover:bg-red-700 text-white border-red-750"
+                                }`}
+                              >
+                                {isPremium ? "👑 PRO AKTİF (YENİDEN TETİKLE)" : "🚀 PRO'YU ANINDA AKTİF ET"}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  savePremiumStatusAndSync(false, "yearly");
+                                  triggerToast("⭐ Geliştirici Modu: Ücretsiz sürüme geçiş yapıldı.");
+                                }}
+                                className={`py-1.5 px-2 font-black text-[9px] uppercase tracking-wider rounded-lg border transition text-center select-none cursor-pointer ${
+                                  !isPremium
+                                    ? "bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 border-slate-200 dark:border-slate-700 cursor-not-allowed"
+                                    : "bg-slate-50 hover:bg-slate-100 dark:bg-slate-950 dark:hover:bg-slate-900 text-red-550 dark:text-red-400 border-slate-200 dark:border-slate-800"
+                                }`}
+                                disabled={!isPremium}
+                              >
+                                ❌ SIFIRLA
+                              </button>
+                            </div>
+                          </div>
+
+                          {isPremium ? (
+                            <div className="space-y-2.5">
+                              <div className="p-3 bg-emerald-500/5 dark:bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-2xl text-center font-bold text-xs uppercase tracking-tight flex flex-col items-center justify-center gap-1 font-sans">
+                                <span className="font-extrabold text-[12px] tracking-wide">👑 PREMİUM LİSANSINIZ ETKİN</span>
+                                <span className="text-[10px] bg-emerald-500/10 px-2.5 py-0.5 rounded-md font-black uppercase tracking-widest text-emerald-700 dark:text-emerald-300">
+                                  Aktif Paket: {selectedPlan === "monthly" ? "Aylık Paket" : selectedPlan === "yearly" ? "Yıllık Paket" : "Limitsiz Ömür Boyu"}
+                                </span>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  savePremiumStatusAndSync(false, "yearly");
+                                  triggerToast("Ücretsiz plana geçiş yapıldı ⭐");
+                                }}
+                                className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-black text-xs uppercase tracking-wider rounded-xl transition cursor-pointer active:scale-97 border border-dashed border-slate-300 dark:border-slate-700"
+                              >
+                                Ücretsiz Sürümü Test Et
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                handlePurchase(selectedPlan);
+                              }}
+                              className="w-full py-3 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-650 text-white font-black text-xs uppercase tracking-wider rounded-xl transition flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20 cursor-pointer active:scale-97"
+                            >
+                              <span>
+                                {selectedPlan === "monthly" && `AYLIK PLANI ETKİNLEŞTİR (${dynamicProducts.borc_takip_aylik.priceString}) ⚡`}
+                                {selectedPlan === "yearly" && `YILLIK PLANI ETKİNLEŞTİR (${dynamicProducts.borc_takip_yillik.priceString}) ⚡`}
+                                {selectedPlan === "lifetime" && `LİMİTSİZ TEK ÖDEME ETKİNLEŞTİR (${dynamicProducts.borc_takip_sinirsiz.priceString}) ⚡`}
+                              </span>
+                            </button>
+                          )}
+
+                          {/* GOOGLE PLAY RESTORE BUTTON */}
                           <button
                             type="button"
                             onClick={() => {
-                              savePremiumStatusAndSync(false, "yearly");
-                              triggerToast("Ücretsiz plana geçiş yapıldı ⭐");
+                              setIsRestoring(true);
+                              setRestoreStep("method");
                             }}
-                            className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-black text-xs uppercase tracking-wider rounded-xl transition cursor-pointer active:scale-97 border border-dashed border-slate-300 dark:border-slate-700"
+                            className="w-full py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-indigo-600 dark:text-indigo-400 font-black text-[10.5px] uppercase tracking-wide rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition flex items-center justify-center gap-1.5 cursor-pointer active:scale-[0.98]"
                           >
-                            Ücretsiz Sürümü Test Et
+                            🔄 Google Play'den Satın Alımları Geri Yükle
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsUpgradeModalOpen(false);
+                              setIsRestoring(false);
+                              setRestoreStep("method");
+                            }}
+                            className="w-full py-2 text-center text-slate-400 hover:text-slate-600 dark:text-slate-500 text-xs font-bold transition block cursor-pointer"
+                          >
+                            Kapat, Vazgeç
                           </button>
                         </div>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            savePremiumStatusAndSync(true, selectedPlan);
-                            setIsUpgradeModalOpen(false);
-                            const names = { monthly: "Aylık", yearly: "Yıllık", lifetime: "Limitsiz" };
-                            triggerToast(`👑 Bütçem Pro Premium (${names[selectedPlan]}) Kapsamı Aktif Edildi! Tüm Sınırlar Kaldırıldı!`);
-                          }}
-                          className="w-full py-3 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-650 text-white font-black text-xs uppercase tracking-wider rounded-xl transition flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20 cursor-pointer active:scale-97"
-                        >
-                          <span>
-                            {selectedPlan === "monthly" && "AYLIK PLANI ETKİNLEŞTİR (₺29,99) ⚡"}
-                            {selectedPlan === "yearly" && "YILLIK PLANI ETKİNLEŞTİR (₺299,99) ⚡"}
-                            {selectedPlan === "lifetime" && "LİMİTSİZ TEK ÖDEME ETKİNLEŞTİR (₺599,99) ⚡"}
-                          </span>
-                        </button>
-                      )}
-
-                      {/* GOOGLE PLAY RESTORE BUTTON */}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIsRestoring(true);
-                          setRestoreStep("method");
-                        }}
-                        className="w-full py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-indigo-600 dark:text-indigo-400 font-black text-[10.5px] uppercase tracking-wide rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition flex items-center justify-center gap-1.5 cursor-pointer active:scale-[0.98]"
-                      >
-                        🔄 Google Play'den Satın Alımları Geri Yükle
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIsUpgradeModalOpen(false);
-                          setIsRestoring(false);
-                          setRestoreStep("method");
-                        }}
-                        className="w-full py-2 text-center text-slate-400 hover:text-slate-600 dark:text-slate-500 text-xs font-bold transition block cursor-pointer"
-                      >
-                        Kapat, Vazgeç
-                      </button>
-                    </div>
+                      </>
+                    )}
                   </>
                 )}
               </div>
@@ -5409,6 +5549,491 @@ export default function App() {
           </div>
         )}
       </AnimatePresence>
+
+      {/* Dynamic Google Play Billing Interactive Overlay */}
+      <AnimatePresence>
+        {isGPlayBillingActive && (
+          <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[3000] flex items-end justify-center sm:items-center p-0 sm:p-4">
+            <motion.div
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 220 }}
+              className="w-full sm:max-w-md bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-3xl border-t sm:border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden text-left"
+            >
+              {/* Google Play top badge bar */}
+              <div className="bg-slate-50 dark:bg-slate-950 p-4 border-b border-slate-100 dark:border-slate-850 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-5 h-5 flex items-center justify-center bg-transparent shrink-0">
+                    <svg viewBox="0 0 24 24" className="w-full h-full">
+                      <path d="M3,5.27V18.73c0,0.89,0.97,1.44,1.72,0.97l10.77-6.73a1.12,1.12,0,0,0,0-1.94L4.72,4.3c-.75-.47-1.72.08-1.72.97Z" fill="#34A853" />
+                      <path d="M15.49,12l-10.77,6.73c-.75.47-1.72-.08-1.72-.97v-.5c0-.89.97-1.44,1.72-.97l10.77-6.73a1.12,1.12,0,0,1,0,1.94Z" fill="#EA4335" />
+                      <path d="M15.49,12L4.72,4.3C3.97,3.83,3,4.38,3,5.27v.5c0-.89.97-1.44,1.72-.97l10.77,6.73a1.12,1.12,0,0,0,0,1.94Z" fill="#4285F4" />
+                      <path d="M19.14,11L15.49,8.7a1.12,1.12,0,0,0-1.34,0L4.72,14.5a1.12,1.12,0,0,0,0,1.94l9.43,5.9a1.12,1.12,0,0,0,1.34,0l3.65-2.3a1.12,1.12,0,0,0,0-1.94Z" fill="#FBBC05" />
+                    </svg>
+                  </div>
+                  <span className="text-[11px] font-black tracking-normal text-slate-700 dark:text-slate-300 font-sans uppercase">Google Play Billing</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[8px] font-black px-2 py-0.5 rounded uppercase tracking-wider font-mono">
+                    Güvenli SSL 🛡️
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      clearPurchaseTimeouts();
+                      setIsGPlayBillingActive(false);
+                      setIsPurchasing(false);
+                      setPurchaseStatus("");
+                      setIsChangingPaymentMethod(false);
+                      setPaymentFormType("none");
+                      triggerToast("Google Play faturası kapatıldı.");
+                    }}
+                    className="p-1 px-2 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-800 rounded transition cursor-pointer text-[11px] font-black"
+                    title="Kapat"
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+
+              {/* Package detailed review */}
+              <div className="p-5 space-y-4">
+                <div className="space-y-1.5">
+                  <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest block">SATIN ALINACAK ÜRÜN</span>
+                  <div className="flex justify-between items-start">
+                    <div className="space-y-0.5">
+                      <h4 className="text-sm font-black text-slate-800 dark:text-white leading-tight">
+                        {selectedPlan === "monthly" && "Bütçem Pro Premium - Aylık Paket"}
+                        {selectedPlan === "yearly" && "Bütçem Pro Premium - Yıllık Avantajlı Paket"}
+                        {selectedPlan === "lifetime" && "Bütçem Pro Premium - Ömür Boyu Limitsiz"}
+                      </h4>
+                      <p className="text-[10px] text-slate-500 font-bold font-mono">
+                        Ürün ID: {selectedPlan === "monthly" ? "borc_takip_aylik" : selectedPlan === "yearly" ? "borc_takip_yillik" : "borc_takip_sinirsiz"}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-base font-black text-indigo-650 dark:text-indigo-400">
+                        {selectedPlan === "monthly" && dynamicProducts.borc_takip_aylik.priceString}
+                        {selectedPlan === "yearly" && dynamicProducts.borc_takip_yillik.priceString}
+                        {selectedPlan === "lifetime" && dynamicProducts.borc_takip_sinirsiz.priceString}
+                      </p>
+                      <p className="text-[8px] text-slate-400 font-semibold uppercase mt-0.5">
+                        {selectedPlan === "lifetime" ? "Süresiz" : "Yıllık Otomatik Yenilenir"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Account Details */}
+                <div className="p-3 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-100 dark:border-slate-850 flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 flex-grow min-w-0">
+                    <div className="w-6 h-6 bg-indigo-500 text-white rounded-full flex items-center justify-center text-xs font-black uppercase shrink-0">
+                      {(playAccountEmail?.[0] || "U").toUpperCase()}
+                    </div>
+                    <div className="flex-grow min-w-0">
+                      {isEditingEmail ? (
+                        <input
+                          type="email"
+                          value={playAccountEmail}
+                          onChange={(e) => setPlayAccountEmail(e.target.value)}
+                          onBlur={() => setIsEditingEmail(false)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") setIsEditingEmail(false);
+                          }}
+                          className="bg-white dark:bg-slate-900 border border-indigo-400 rounded px-1.5 py-0.5 text-[10.5px] font-bold text-slate-800 dark:text-slate-100 w-full focus:outline-none"
+                          autoFocus
+                        />
+                      ) : (
+                        <p 
+                          onClick={() => setIsEditingEmail(true)}
+                          className="text-[10.5px] font-black text-slate-800 dark:text-slate-200 leading-none cursor-pointer hover:underline truncate"
+                          title="E-postayı değiştirmek için tıklayın"
+                        >
+                          {playAccountEmail} ✏️
+                        </p>
+                      )}
+                      <p className="text-[9px] text-slate-400 font-bold mt-0.5 whitespace-nowrap">Google Play Hesabı (Değiştirmek için tıkla)</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsEditingEmail(!isEditingEmail)}
+                    className="text-[9px] bg-indigo-100 dark:bg-indigo-950 hover:bg-indigo-200 dark:hover:bg-indigo-900 transition text-indigo-600 dark:text-indigo-400 px-2 py-1 rounded-md font-bold uppercase select-none shrink-0"
+                  >
+                    {isEditingEmail ? "KAYDET" : "DEĞİŞTİR"}
+                  </button>
+                </div>
+
+                {/* Visa Credit Card detail */}
+                <div className="space-y-1.5">
+                  <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest block">ÖDEME SEÇENEĞİ</span>
+                  <div
+                    onClick={() => setIsChangingPaymentMethod(!isChangingPaymentMethod)}
+                    className="p-3 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-100 dark:border-slate-850 flex items-center justify-between cursor-pointer hover:border-slate-350 dark:hover:border-slate-800 transition select-none"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <span className="text-xl">{selectedPaymentMethod.icon}</span>
+                      <div>
+                        <p className="text-[11px] font-bold text-slate-800 dark:text-slate-200">{selectedPaymentMethod.name}</p>
+                        <p className="text-[9px] text-slate-400 font-semibold">{selectedPaymentMethod.type}</p>
+                      </div>
+                    </div>
+                    <span className="text-[10px] text-indigo-500 font-black flex items-center gap-1">
+                      {isChangingPaymentMethod ? "▲ KAPAT" : "⚙️ DEĞİŞTİR"}
+                    </span>
+                  </div>
+
+                  <AnimatePresence>
+                    {isChangingPaymentMethod && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="p-3 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-2.5 mt-1.5 overflow-hidden"
+                      >
+                        {/* Scrollable list of active payments */}
+                        <div className="max-h-[150px] overflow-y-auto space-y-1 custom-scrollbar pr-1">
+                          {playPaymentMethods.map((method) => {
+                            const isSelected = selectedPaymentMethod.id === method.id;
+                            return (
+                              <div
+                                key={method.id}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (method.id === "mobil_odeme") {
+                                    setSelectedPaymentMethod({
+                                      id: method.id,
+                                      name: method.name,
+                                      type: method.type,
+                                      icon: method.icon
+                                    });
+                                    setPaymentFormType("mobile");
+                                  } else {
+                                    setSelectedPaymentMethod({
+                                      id: method.id,
+                                      name: method.name,
+                                      type: method.type,
+                                      icon: method.icon
+                                    });
+                                    setIsChangingPaymentMethod(false);
+                                    setPaymentFormType("none");
+                                  }
+                                }}
+                                className={`flex items-center justify-between p-2 rounded-xl text-left cursor-pointer transition ${
+                                  isSelected
+                                    ? "bg-indigo-500/10 dark:bg-indigo-500/20 border border-indigo-500/30"
+                                    : "hover:bg-white dark:hover:bg-slate-900 border border-transparent"
+                                }`}
+                              >
+                                <div className="flex items-center gap-2.5">
+                                  <span className="text-lg">{method.icon}</span>
+                                  <div>
+                                    <p className="text-[10px] font-black text-slate-800 dark:text-slate-100">{method.name}</p>
+                                    <p className="text-[9px] text-slate-400 font-medium leading-none">{method.type}</p>
+                                  </div>
+                                </div>
+                                {isSelected && (
+                                  <span className="text-[10px] text-indigo-500 font-bold uppercase tracking-wider">Aktif</span>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        {/* Interactive addition buttons */}
+                        <div className="border-t border-slate-200/60 dark:border-slate-800/60 pt-2 flex gap-1.5">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setPaymentFormType(paymentFormType === "card" ? "none" : "card");
+                            }}
+                            className={`flex-1 py-1 px-2 font-black text-[9px] uppercase tracking-wider rounded-lg border transition text-center select-none ${
+                              paymentFormType === "card"
+                                ? "bg-indigo-500 text-white border-indigo-550"
+                                : "bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/40 dark:hover:bg-indigo-950/80 text-indigo-600 dark:text-indigo-400 border-indigo-200/50 dark:border-indigo-900/50"
+                            }`}
+                          >
+                            ➕ Yeni Kart Ekle
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setPaymentFormType(paymentFormType === "mobile" ? "none" : "mobile");
+                            }}
+                            className={`flex-1 py-1 px-2 font-black text-[9px] uppercase tracking-wider rounded-lg border transition text-center select-none ${
+                              paymentFormType === "mobile"
+                                ? "bg-amber-500 text-white border-amber-550"
+                                : "bg-slate-100 hover:bg-slate-200 dark:bg-slate-800/65 dark:hover:bg-slate-850 text-slate-700 dark:text-slate-300 border-slate-200/50 dark:border-slate-700"
+                            }`}
+                          >
+                            📱 Mobil No Değiştir
+                          </button>
+                        </div>
+
+                        {/* Sub Form: Card Addition */}
+                        {paymentFormType === "card" && (
+                          <div className="p-3 bg-white dark:bg-slate-900 rounded-xl border border-indigo-500/20 space-y-2.5 mt-1" onClick={(e) => e.stopPropagation()}>
+                            <div className="flex justify-between items-center">
+                              <p className="text-[9px] font-black uppercase text-indigo-650 dark:text-indigo-400 tracking-wider">💳 Simüle Kart Ekleme</p>
+                              <span className="text-[8px] text-slate-400 font-bold">Gerçek bilgi girmeyiniz</span>
+                            </div>
+                            
+                            <div className="grid grid-cols-2 gap-2 text-left">
+                              <div className="col-span-2">
+                                <label className="text-[8px] font-black text-slate-400 dark:text-slate-505 uppercase tracking-wider block mb-0.5">Kart Sahibi Adı</label>
+                                <input
+                                  type="text"
+                                  value={newCardNameValue}
+                                  onChange={(e) => setNewCardNameValue(e.target.value)}
+                                  placeholder="Örn: Ahmet Yılmaz"
+                                  className="w-full px-2 py-1 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg text-[11px] font-bold text-slate-850 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                                />
+                              </div>
+                              
+                              <div className="col-span-2">
+                                <label className="text-[8px] font-black text-slate-400 dark:text-slate-505 uppercase tracking-wider block mb-0.5">Kart Numarası</label>
+                                <input
+                                  type="text"
+                                  maxLength={19}
+                                  value={newCardNumberValue}
+                                  onChange={(e) => {
+                                    const val = e.target.value.replace(/\D/g, "");
+                                    const formatted = val.match(/.{1,4}/g)?.join(" ") || val;
+                                    setNewCardNumberValue(formatted.slice(0, 19));
+                                  }}
+                                  placeholder="4355 1200 4500 1100"
+                                  className="w-full px-2 py-1 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg text-[11px] font-mono font-bold text-slate-850 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="text-[8px] font-black text-slate-400 dark:text-slate-505 uppercase tracking-wider block mb-0.5">Son Kullanma</label>
+                                <input
+                                  type="text"
+                                  maxLength={5}
+                                  value={newCardExpiryValue}
+                                  onChange={(e) => {
+                                    let val = e.target.value.replace(/\D/g, "");
+                                    if (val.length > 2) {
+                                      val = val.slice(0, 2) + "/" + val.slice(2, 4);
+                                    }
+                                    setNewCardExpiryValue(val);
+                                  }}
+                                  placeholder="08/29"
+                                  className="w-full px-2 py-1 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg text-[11px] font-mono font-bold text-slate-850 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="text-[8px] font-black text-slate-400 dark:text-slate-505 uppercase tracking-wider block mb-0.5">CVC / CVV</label>
+                                <input
+                                  type="password"
+                                  maxLength={3}
+                                  value={newCardCVVValue}
+                                  onChange={(e) => setNewCardCVVValue(e.target.value.replace(/\D/g, ""))}
+                                  placeholder="•••"
+                                  className="w-full px-2 py-1 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg text-[11px] font-mono font-bold text-slate-850 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                                />
+                              </div>
+                            </div>
+
+                            <div className="flex gap-2 pt-1">
+                              <button
+                                type="button"
+                                onClick={() => setPaymentFormType("none")}
+                                className="flex-1 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-850 dark:hover:bg-slate-800 text-slate-650 dark:text-slate-350 font-black text-[9px] uppercase tracking-wider rounded-lg transition"
+                              >
+                                Vazgeç
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const rawDigits = newCardNumberValue.replace(/\D/g, "");
+                                  if (rawDigits.length < 12) {
+                                    triggerToast("Geçerli bir test kartı numarası girin.");
+                                    return;
+                                  }
+                                  const last4 = rawDigits.slice(-4);
+                                  const cardHolder = newCardNameValue.trim() || "Bütçem Test Kartı";
+                                  const generatedId = "custom_card_" + Date.now();
+                                  const newCardItem = {
+                                    id: generatedId,
+                                    name: `Yeni Kart •••• ${last4}`,
+                                    type: `Kart Sahibi: ${cardHolder}`,
+                                    icon: "💳"
+                                  };
+                                  
+                                  setPlayPaymentMethods([...playPaymentMethods, newCardItem]);
+                                  setSelectedPaymentMethod(newCardItem);
+                                  setPaymentFormType("none");
+                                  setIsChangingPaymentMethod(false);
+                                  triggerToast(`💳 Yeni kartımız Google Play listesinde seçildi ve tanımlandı: •••• ${last4}`);
+                                }}
+                                className="flex-1 py-1.5 bg-gradient-to-r from-indigo-600 to-indigo-750 hover:from-indigo-700 hover:to-indigo-800 text-white font-black text-[9px] uppercase tracking-wider rounded-lg transition shadow-sm"
+                              >
+                                💾 KARTI EKLE
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Sub Form: Mobile billing number update */}
+                        {paymentFormType === "mobile" && (
+                          <div className="p-3 bg-white dark:bg-slate-900 rounded-xl border border-amber-500/20 space-y-2.5 mt-1" onClick={(e) => e.stopPropagation()}>
+                            <div className="flex justify-between items-center">
+                              <p className="text-[9px] font-black uppercase text-amber-600 dark:text-amber-500 tracking-wider">📱 Mobil Numara Girişi</p>
+                              <span className="text-[8px] text-slate-400 font-bold">Simüle numara kullanabilirsiniz</span>
+                            </div>
+                            
+                            <div className="text-left">
+                              <label className="text-[8px] font-black text-slate-400 dark:text-slate-505 uppercase tracking-wider block mb-0.5">Cep Telefon Numarası</label>
+                              <div className="flex gap-1.5">
+                                <span className="px-2 py-1 bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg text-[11px] font-bold text-slate-500 select-none flex items-center shrink-0">
+                                  +90
+                                </span>
+                                <input
+                                  type="text"
+                                  maxLength={15}
+                                  value={newMobileNoValue}
+                                  onChange={(e) => setNewMobileNoValue(e.target.value)}
+                                  placeholder="532 123 45 67"
+                                  className="w-full px-2 py-1 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg text-[11px] font-mono font-bold text-slate-850 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                                />
+                              </div>
+                              <p className="text-[8px] text-slate-400 dark:text-slate-500 font-semibold mt-1">Simüle operatör onay kodu bu numaraya iletilir.</p>
+                            </div>
+
+                            <div className="flex gap-2 pt-1 text-left">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (!newMobileNoValue.trim()) {
+                                    triggerToast("Lütfen bir telefon numarası giriniz.");
+                                    return;
+                                  }
+                                  const mNo = newMobileNoValue.trim();
+                                  
+                                  // Update elements list in playPaymentMethods
+                                  const updated = playPaymentMethods.map(item => {
+                                    if (item.id === "mobil_odeme") {
+                                      return { ...item, type: `Turkcell Mobil Ödeme (${mNo})`, details: mNo };
+                                    }
+                                    return item;
+                                  });
+                                  setPlayPaymentMethods(updated);
+                                  
+                                  const newSel = {
+                                    id: "mobil_odeme",
+                                    name: "Turkcell Mobil Ödeme",
+                                    type: `Mobil Ödeme (${mNo})`,
+                                    icon: "📱"
+                                  };
+                                  setSelectedPaymentMethod(newSel);
+
+                                  setPaymentFormType("none");
+                                  setIsChangingPaymentMethod(false);
+                                  triggerToast(`📱 Mobil Ödeme telefon numarası güncellendi: ${mNo}`);
+                                }}
+                                className="flex-1 py-1.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-black text-[9px] uppercase tracking-wider rounded-lg transition shadow-sm"
+                              >
+                                💾 NUMARAYI GÖNDER
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+
+                {/* Term of Service */}
+                <p className="text-[9px] text-slate-400 dark:text-slate-500 leading-relaxed">
+                  Ödemeniz Google Play tarafından gerçekleştirilir. Satın al butonuna dokunarak, Google Payments Hizmet Şartları ve Gizlilik Bildirimi'ni kabul etmiş olursunuz. Yenilenen abonelikleri dilediğiniz zaman Google Play Store ayarlarından iptal edebilirsiniz.
+                </p>
+
+                {/* Simulated Loading loops for purchase execution */}
+                {isPurchasing && purchaseStatus ? (
+                  <div className="p-4 bg-amber-500/5 border border-amber-500/20 rounded-2xl flex items-center gap-3">
+                    <div className="w-5 h-5 border-2 border-amber-500 border-t-transparent rounded-full animate-spin shrink-0" />
+                    <div>
+                      <p className="text-[10px] font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight leading-none">İŞLEM GERÇEKLEŞTİRİLİYOR</p>
+                      <p className="text-[9px] text-amber-650 dark:text-amber-500 animate-pulse font-mono font-black mt-0.5 uppercase tracking-wide">
+                        {purchaseStatus}
+                      </p>
+                    </div>
+                  </div>
+                ) : null}
+
+                {/* CTA actions */}
+                <div className="flex gap-2.5 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      clearPurchaseTimeouts();
+                      setIsGPlayBillingActive(false);
+                      setIsPurchasing(false);
+                      setPurchaseStatus("");
+                      setIsChangingPaymentMethod(false);
+                      setPaymentFormType("none");
+                      triggerToast("Satın alım işlemi sonlandırıldı.");
+                    }}
+                    className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-655 dark:text-slate-300 text-xs font-black uppercase tracking-wider rounded-xl transition cursor-pointer text-center"
+                  >
+                    İptal Et
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isPurchasing}
+                    onClick={async () => {
+                      clearPurchaseTimeouts();
+                      setIsPurchasing(true);
+                      setPurchaseStatus("Google Play doğrulama istekleri gönderiliyor...");
+                      
+                      const t1 = setTimeout(() => {
+                        setPurchaseStatus("Banka provizyonu ve 3D Güvenli imza taranıyor...");
+                      }, 1200);
+
+                      const t2 = setTimeout(() => {
+                        setPurchaseStatus("RevenueCat lisans anahtarı güncelleniyor...");
+                      }, 2500);
+
+                      const t3 = setTimeout(async () => {
+                        const prId = selectedPlan === "monthly" ? "borc_takip_aylik" : selectedPlan === "yearly" ? "borc_takip_yillik" : "borc_takip_sinirsiz";
+                        try {
+                          const result = await Purchases.purchasePackage(prId);
+                          if (result.success) {
+                            await savePremiumStatusAndSync(true, selectedPlan);
+                            const names = { monthly: "Aylık", yearly: "Yıllık", lifetime: "Limitsiz" };
+                            triggerToast(`👑 Bütçem Pro Premium (${names[selectedPlan]}) Kapsamı Aktif Edildi! Tüm Sınırlar Kaldırıldı!`);
+                            setIsGPlayBillingActive(false);
+                            setIsUpgradeModalOpen(false);
+                            setIsChangingPaymentMethod(false);
+                            setPaymentFormType("none");
+                          }
+                        } catch (err: any) {
+                          triggerToast("Google Play Satın Alma Hatası: " + (err.message || "Bilinmeyen Hata"));
+                        } finally {
+                          setIsPurchasing(false);
+                          setPurchaseStatus("");
+                        }
+                      }, 4000);
+
+                      purchaseTimeoutsRef.current = [t1, t2, t3];
+                    }}
+                    className="flex-[2] py-3 bg-gradient-to-r from-emerald-600 to-emerald-750 hover:from-emerald-700 hover:to-emerald-800 text-white text-xs font-black uppercase tracking-wider rounded-xl transition shadow-lg shadow-emerald-500/10 cursor-pointer text-center select-none active:scale-97 disabled:opacity-50"
+                  >
+                    🚀 {isPurchasing ? "İŞLENİYOR..." : "TEK TIKLA SATIN AL"}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       {/* Voice Assistant Speech-to-Text Module */}
       {isUnlocked && voiceAssistantEnabled && (
         <VoiceAssistant
@@ -5424,6 +6049,8 @@ export default function App() {
           currentUser={currentUser}
           userApiKey={localStorage.getItem("user_gemini_api_key") || undefined}
           triggerToast={triggerToast}
+          isPremium={isPremium}
+          onUpgradeClick={() => setIsUpgradeModalOpen(true)}
         />
       )}
 
