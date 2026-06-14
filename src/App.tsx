@@ -5109,7 +5109,7 @@ export default function App() {
       {/* Premium Plan Upgrade / Subscription Management Modal */}
       <AnimatePresence>
         {isUpgradeModalOpen && (
-          <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[2000] flex items-center justify-center p-4 overflow-y-auto">
+          <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[2000] flex items-start sm:items-center justify-center p-4 overflow-y-auto pt-10 sm:pt-4 pb-10">
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 30 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}

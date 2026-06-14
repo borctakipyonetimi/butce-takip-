@@ -54,6 +54,14 @@ export const ProviderLoginModal: React.FC<ProviderLoginModalProps> = ({
   const [error, setError] = useState("");
   const [syncLogs, setSyncLogs] = useState<string[]>([]);
   const [syncCode, setSyncCode] = useState("");
+  const [showAndroidFix, setShowAndroidFix] = useState(false);
+
+  const checkIsWebView = () => {
+    if (typeof window === "undefined" || !navigator) return false;
+    const ua = navigator.userAgent || "";
+    return /Android/i.test(ua) && (ua.includes("; wv") || /Version\/[0-9.]+/i.test(ua));
+  };
+  const isWebView = checkIsWebView();
 
   const resetForm = () => {
     setStep("email");
@@ -62,6 +70,7 @@ export const ProviderLoginModal: React.FC<ProviderLoginModalProps> = ({
     setError("");
     setSyncLogs([]);
     setSyncCode("");
+    setShowAndroidFix(false);
   };
 
   const handleClose = () => {
@@ -121,7 +130,9 @@ export const ProviderLoginModal: React.FC<ProviderLoginModalProps> = ({
       console.warn(`${platformLabel} Auth Error:`, err);
       let errorMsg = `Ortam kısıtlaması nedeniyle veya Firebase üzerinde ${platformLabel} yapılandırma ayarı henüz eklenmediği için pop-up penceresi tamamlanamadı.`;
       
-      if (err?.code === "auth/unauthorized-domain" || err?.message?.includes("unauthorized-domain")) {
+      if (isWebView && platform === "gmail") {
+        errorMsg = "Google güvenlik politikaları (disallowed_useragent) engeline takıldınız. Giriş yapabilmek için lütfen aşağıdaki manuel form alanına e-posta adresinizi girip belirlediğiniz bir şifreyle anında devam edin!";
+      } else if (err?.code === "auth/unauthorized-domain" || err?.message?.includes("unauthorized-domain")) {
         errorMsg = "Bu site henüz Firebase projenizin Yetkilendirilmiş Etki Alanları listesinde ekli değil. Lütfen Firebase Console'dan bu adresi ekleyin.";
       }
 
@@ -133,7 +144,7 @@ export const ProviderLoginModal: React.FC<ProviderLoginModalProps> = ({
       ]);
 
       setTimeout(() => {
-        setError(errorMsg + " Lütfen aşağıdaki manuel e-posta formunu kullanarak devam edin.");
+        setError(errorMsg + " Aşağıdaki manuel hızlı e-posta formunu kullanarak hemen giriş yapabilirsiniz.");
         setStep("email");
       }, 1500);
     }
@@ -284,16 +295,100 @@ export const ProviderLoginModal: React.FC<ProviderLoginModalProps> = ({
                   </p>
                 </div>
 
-                {/* Google/Gmail Sign In Buttons inside the Modal */}
                 <div className="space-y-2">
-                  <button
-                    type="button"
-                    onClick={() => handleSocialLogin("gmail")}
-                    className="w-full py-2.5 bg-rose-600 hover:bg-rose-700 active:scale-95 text-white rounded-xl text-[10.5px] font-black uppercase tracking-wider flex items-center justify-center gap-2 transition duration-250 shadow-md shadow-rose-600/15 cursor-pointer border border-rose-500/10"
-                  >
-                    <Chrome className="w-4 h-4 text-rose-100" />
-                    <span>GMAIL / GOOGLE İLE ANINDA GİRİŞ YAP 🔴</span>
-                  </button>
+                  {/* Webview bypass button for opening in natural Chrome browser */}
+                  {isWebView ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        // Dynamically compile intent URL to open in Chrome on Android
+                        const targetUrl = window.location.href.split("?")[0].replace(/^https?:\/\//, "");
+                        const intentUrl = `intent://${targetUrl}#Intent;scheme=https;package=com.android.chrome;end`;
+                        window.location.href = intentUrl;
+                      }}
+                      className="w-full py-3 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 active:scale-95 text-white rounded-xl text-[10.5px] font-black uppercase tracking-wider flex items-center justify-center gap-2 transition duration-250 shadow-md shadow-amber-500/10 cursor-pointer border border-amber-400/20"
+                    >
+                      <Chrome className="w-4 h-4 text-white" />
+                      <span>GÜVENLİ CHROME TARAYICISINDA AÇ 🌐</span>
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => handleSocialLogin("gmail")}
+                      className="w-full py-2.5 bg-rose-600 hover:bg-rose-700 active:scale-95 text-white rounded-xl text-[10.5px] font-black uppercase tracking-wider flex items-center justify-center gap-2 transition duration-250 shadow-md shadow-rose-600/15 cursor-pointer border border-rose-500/10"
+                    >
+                      <Chrome className="w-4 h-4 text-rose-100" />
+                      <span>GMAIL / GOOGLE İLE ANINDA GİRİŞ YAP 🔴</span>
+                    </button>
+                  )}
+
+                  {/* WebView / APK Warning & Developer Solution Details */}
+                  {isWebView && (
+                    <div className="p-3.5 bg-amber-500/10 dark:bg-amber-500/5 border border-amber-500/30 rounded-2xl space-y-2.5 text-left text-xs mb-1">
+                      <div className="flex items-start gap-2">
+                        <AlertCircle className="w-4 h-4 mt-0.5 shrink-0 text-amber-600 dark:text-amber-550" />
+                        <div className="space-y-1">
+                          <p className="font-extrabold text-[12px] text-amber-950 dark:text-amber-300 leading-tight">
+                            Google Güvenlik Engeli Algılandı (WebView 403)
+                          </p>
+                          <p className="font-semibold text-[10.5px] leading-relaxed text-slate-700 dark:text-slate-305">
+                            APK uygulamasının içinden Google (Gmail) hesabıyla giriş yapmaya çalıştığınızda, Google güvenlik filtreleri gereği <span className="font-extrabold text-rose-600 dark:text-rose-450">disallowed_useragent</span> hatası alınır. Bu sorunu doğrudan aşmak için aşağıdaki 2 kolay çözüm yönteminden birini seçebilirsiniz:
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2 pt-1">
+                        <div className="p-2.5 bg-rose-500/10 dark:bg-rose-500/5 border border-rose-500/20 rounded-xl space-y-1">
+                          <p className="font-extrabold text-rose-700 dark:text-rose-400 text-[11px] leading-tight">
+                            ⚡ 1. PRATİK ÇÖZÜM (Web'de Oturum Açma)
+                          </p>
+                          <p className="font-semibold text-slate-600 dark:text-slate-300 text-[10px] leading-normal">
+                            Yukarıdaki <span className="font-black text-amber-600">"GÜVENLİ CHROME TARAYICISINDA AÇ 🌐"</span> butonuna basın. Uygulamanız telefonunuzun orijinal Chrome tarayıcısında açılacak ve tek butonla sorunsuz giriş yapabileceksiniz! Verileriniz senkronize şekilde her yere aktarılacaktır.
+                          </p>
+                        </div>
+
+                        <div className="p-2.5 bg-indigo-500/10 dark:bg-indigo-500/5 border border-indigo-500/20 rounded-xl space-y-1">
+                          <p className="font-extrabold text-indigo-700 dark:text-indigo-400 text-[11px] leading-tight">
+                            🔒 2. ALTERNATİF HIZLI E-POSTA GİRİŞİ
+                          </p>
+                          <p className="font-semibold text-slate-600 dark:text-slate-300 text-[10px] leading-normal">
+                            Sistem dışına çıkmadan doğrudan APK içinden devam etmek için aşağıdaki alana e-postanızı girip dilediğiniz şifreyi belirleyerek giriş yapın. Şifrenizi ilk kez girdiğinizde hesabınız bulutta anında otomatik kurulacaktır!
+                          </p>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center gap-2 pt-1 font-black text-[9px] uppercase">
+                        <button
+                          type="button"
+                          onClick={() => setShowAndroidFix(!showAndroidFix)}
+                          className="px-2.5 py-1 bg-amber-500 hover:bg-amber-600 text-white rounded-lg transition active:scale-95 cursor-pointer shadow-sm select-none"
+                        >
+                          {showAndroidFix ? "Kodu Kapat ✕" : "🤖 APK GELİŞTİRİCİ ÇÖZÜM KODUNU GÖSTER"}
+                        </button>
+                      </div>
+
+                      {showAndroidFix && (
+                        <div className="p-3 bg-slate-950 text-slate-300 rounded-xl font-mono text-[9px] space-y-2 select-text border border-slate-800 shadow-inner max-h-48 overflow-y-auto leading-relaxed">
+                          <p className="text-amber-500 font-bold leading-none mb-1">Android Kotlin Çözümü (Kotlin):</p>
+                          <pre className="text-emerald-400 overflow-x-auto p-1 bg-slate-900 rounded select-all">
+{`val webSettings = myWebView.settings
+val standardUA = webSettings.userAgentString
+// WebView ifadesini (; wv) silerek Google Güvenlik filtresini geçin
+webSettings.userAgentString = standardUA.replace("; wv", "")`}
+                          </pre>
+                          <p className="text-amber-500 font-bold leading-none mt-2 mb-1">Android Java Çözümü (Java):</p>
+                          <pre className="text-emerald-400 overflow-x-auto p-1 bg-slate-900 rounded select-all">
+{`WebSettings webSettings = myWebView.getSettings();
+String standardUA = webSettings.getUserAgentString();
+webSettings.setUserAgentString(standardUA.replace("; wv", ""));`}
+                          </pre>
+                          <p className="text-[8.5px] text-slate-400 pt-1 border-t border-slate-800 leading-normal">
+                            WebView ayarlarınıza bu replace satırını ekleyip APK'yi tekrar derlerseniz, yerleşik Google / Gmail butonu da hatasız çalışacaktır.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   <div className="flex items-center gap-2 py-1">
                     <span className="h-[1px] bg-slate-200 dark:bg-slate-800 flex-1" />
